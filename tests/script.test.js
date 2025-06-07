@@ -55,6 +55,13 @@ describe('GitHub Actions Status Functions', () => {
             expect(result).toBe('in_progress');
         });
 
+        test('should detect in_progress status from SVG containing "in progress"', () => {
+            const svgWithInProgress = '<svg><text>build in progress</text></svg>';
+            const result = utils.parseStatusFromSVG(svgWithInProgress);
+            expect(result).toBe('in_progress');
+            expect(console.log).toHaveBeenCalledWith('🔄 Found "pending" or "running" in SVG');
+        });
+
         test('should detect unknown status from SVG containing "no status"', () => {
             const svgWithNoStatus = '<svg><text>no status</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithNoStatus);
@@ -78,6 +85,24 @@ describe('GitHub Actions Status Functions', () => {
             const emptySvg = '<svg></svg>';
             const result = utils.parseStatusFromSVG(emptySvg);
             expect(result).toBe('unknown');
+        });
+
+        test('should trigger regex matching and logging for unrecognized status', () => {
+            const svgWithText = '<svg><text>some text</text><text>other text</text></svg>';
+            const result = utils.parseStatusFromSVG(svgWithText);
+            expect(result).toBe('unknown');
+            // This should trigger the regex matching logic and logging
+            expect(console.log).toHaveBeenCalledWith(
+                '⚠️ No recognized status words found. SVG might contain:',
+                expect.any(Array)
+            );
+        });
+
+        test('should handle SVG with no text content for regex matching', () => {
+            const svgWithoutText = '<svg><rect width="100" height="20"/></svg>';
+            const result = utils.parseStatusFromSVG(svgWithoutText);
+            expect(result).toBe('unknown');
+            // This should trigger the regex matching with null result
         });
     });
 
@@ -154,6 +179,16 @@ describe('GitHub Actions Status Functions', () => {
             expect(result).toBe('in_progress');
         });
 
+        test('should return in_progress for "in progress"', () => {
+            const result = utils.parseShieldsStatus('in progress');
+            expect(result).toBe('in_progress');
+        });
+
+        test('should return in_progress for strings containing "in progress" as substring', () => {
+            const result = utils.parseShieldsStatus('build in progress now');
+            expect(result).toBe('in_progress');
+        });
+
         test('should return unknown for null input', () => {
             const result = utils.parseShieldsStatus(null);
             expect(result).toBe('unknown');
@@ -166,6 +201,11 @@ describe('GitHub Actions Status Functions', () => {
 
         test('should return unknown for unrecognized status', () => {
             const result = utils.parseShieldsStatus('some-other-status');
+            expect(result).toBe('unknown');
+        });
+
+        test('should return unknown for "no status"', () => {
+            const result = utils.parseShieldsStatus('no status');
             expect(result).toBe('unknown');
         });
 
@@ -201,5 +241,107 @@ describe('Integration Tests', () => {
         const exactlyOneMinute = new Date(Date.now() - 60000);
         const result = utils.getTimeAgo(exactlyOneMinute);
         expect(result).toBe('1m ago');
+    });
+});
+
+describe('parseBadgeSVG function', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        global.fetch = jest.fn();
+        console.log = jest.fn();
+        console.error = jest.fn();
+    });
+
+    test('should successfully parse SVG from a valid URL', async () => {
+        const mockSVG = '<svg><text>build passing</text></svg>';
+        global.fetch.mockResolvedValueOnce({
+            ok: true,
+            text: jest.fn().mockResolvedValueOnce(mockSVG)
+        });
+
+        const result = await utils.parseBadgeSVG('https://example.com/badge.svg');
+        
+        expect(result).toBe('success');
+        expect(console.log).toHaveBeenCalledWith('Badge SVG content:', mockSVG);
+    });
+
+    test('should handle HTTP errors gracefully', async () => {
+        global.fetch.mockResolvedValueOnce({
+            ok: false,
+            status: 404
+        });
+
+        const result = await utils.parseBadgeSVG('https://example.com/nonexistent.svg');
+        
+        expect(result).toBe('unknown');
+        expect(console.error).toHaveBeenCalledWith(
+            'Error fetching SVG badge:',
+            expect.any(Error)
+        );
+    });
+
+    test('should handle network errors gracefully', async () => {
+        global.fetch.mockRejectedValueOnce(new Error('Network error'));
+
+        const result = await utils.parseBadgeSVG('https://example.com/badge.svg');
+        
+        expect(result).toBe('unknown');
+        expect(console.error).toHaveBeenCalledWith(
+            'Error fetching SVG badge:',
+            expect.any(Error)
+        );
+    });
+
+    test('should append timestamp to URL to avoid caching', async () => {
+        const mockSVG = '<svg><text>build failing</text></svg>';
+        global.fetch.mockResolvedValueOnce({
+            ok: true,
+            text: jest.fn().mockResolvedValueOnce(mockSVG)
+        });
+
+        const baseUrl = 'https://example.com/badge.svg';
+        await utils.parseBadgeSVG(baseUrl);
+        
+        expect(global.fetch).toHaveBeenCalledWith(
+            expect.stringMatching(`${baseUrl}\\?t=\\d+`)
+        );
+    });
+});
+
+describe('Browser environment compatibility and edge cases', () => {
+    test('should handle Node.js environment export', () => {
+        const mockModule = { exports: {} };
+        const result = utils.exportUtilities(mockModule, null);
+        
+        expect(result).toBe('node');
+        expect(mockModule.exports.parseStatusFromSVG).toBeDefined();
+        expect(mockModule.exports.getTimeAgo).toBeDefined();
+        expect(mockModule.exports.parseShieldsStatus).toBeDefined();
+        expect(mockModule.exports.parseBadgeSVG).toBeDefined();
+    });
+
+    test('should handle browser environment export', () => {
+        const mockWindow = {};
+        const result = utils.exportUtilities(null, mockWindow);
+        
+        expect(result).toBe('browser');
+        expect(mockWindow.GitHubUtils).toBeDefined();
+        expect(mockWindow.GitHubUtils.parseStatusFromSVG).toBeDefined();
+        expect(mockWindow.GitHubUtils.getTimeAgo).toBeDefined();
+        expect(mockWindow.GitHubUtils.parseShieldsStatus).toBeDefined();
+        expect(mockWindow.GitHubUtils.parseBadgeSVG).toBeDefined();
+    });
+
+    test('should handle unknown environment', () => {
+        const result = utils.exportUtilities(null, null);
+        expect(result).toBe('unknown');
+    });
+
+    test('should handle missing SVG text content in parseStatusFromSVG', () => {
+        // Test the SVG regex matching logic to cover line 64
+        const svgWithComplexMatching = '<svg><g><text>status: unknown</text><text>other content</text></g></svg>';
+        const result = utils.parseStatusFromSVG(svgWithComplexMatching);
+        expect(result).toBe('unknown');
+        // This should trigger the regex matching logic on line 64
     });
 }); 

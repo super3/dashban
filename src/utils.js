@@ -91,20 +91,33 @@ async function parseBadgeSVG(badgeUrl) {
 }
 
 // Export functions for both Node.js and browser environments
+function exportUtilities(moduleObj, windowObj) {
+    const utilities = {
+        parseStatusFromSVG,
+        getTimeAgo,
+        parseShieldsStatus,
+        parseBadgeSVG
+    };
+    
+    if (moduleObj && moduleObj.exports) {
+        // Node.js environment
+        moduleObj.exports = utilities;
+        return 'node';
+    } else if (windowObj) {
+        // Browser environment - attach to window
+        windowObj.GitHubUtils = utilities;
+        return 'browser';
+    }
+    return 'unknown';
+}
+
+// Call the export function with actual global objects
+const exportResult = exportUtilities(
+    typeof module !== 'undefined' ? module : null,
+    typeof window !== 'undefined' ? window : null
+);
+
+// Export the exportUtilities function for testing
 if (typeof module !== 'undefined' && module.exports) {
-    // Node.js environment
-    module.exports = {
-        parseStatusFromSVG,
-        getTimeAgo,
-        parseShieldsStatus,
-        parseBadgeSVG
-    };
-} else if (typeof window !== 'undefined') {
-    // Browser environment - attach to window
-    window.GitHubUtils = {
-        parseStatusFromSVG,
-        getTimeAgo,
-        parseShieldsStatus,
-        parseBadgeSVG
-    };
+    module.exports.exportUtilities = exportUtilities;
 } 
