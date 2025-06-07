@@ -102,6 +102,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'unknown';
     }
 
+    function getTimeAgo(date) {
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+        return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    }
+
 
 
     function parseShieldsStatus(statusValue) {
@@ -487,4 +497,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }).observe(doneColumn, { childList: true });
 
     console.log('Kanban Board initialized successfully!');
-}); 
+});
+
+// Export functions for testing (Node.js environment only)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        parseStatusFromSVG,
+        getTimeAgo,
+        parseShieldsStatus,
+        updateWorkflowStatusUI: typeof updateWorkflowStatusUI !== 'undefined' ? updateWorkflowStatusUI : null
+    };
+} 
