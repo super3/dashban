@@ -215,14 +215,158 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Fetch workflow status on page load
+    // GitHub CI Tests status fetcher
+    async function fetchCIStatus() {
+        const owner = 'super3';
+        const repo = 'dashban';
+        const workflowFile = 'test.yml';
+        
+        try {
+            const badgeUrl = `https://img.shields.io/github/actions/workflow/status/${owner}/${repo}/${workflowFile}`;
+            const status = await GitHubUtils.parseBadgeSVG(badgeUrl);
+            
+            updateCIStatusUI({
+                status: status,
+                updatedAt: new Date(),
+                htmlUrl: `https://github.com/${owner}/${repo}/actions/workflows/${workflowFile}`
+            });
+        } catch (error) {
+            console.error('Error fetching CI status:', error);
+            updateCIStatusUI({
+                status: 'unknown',
+                updatedAt: new Date(),
+                htmlUrl: '#'
+            });
+        }
+    }
+
+    // Coverage status fetcher
+    async function fetchCoverageStatus() {
+        const owner = 'super3';
+        const repo = 'dashban';
+        
+        try {
+            // Use shields.io as a proxy to avoid CORS issues
+            const badgeUrl = `https://img.shields.io/coveralls/github/${owner}/${repo}/main.svg`;
+            const svgText = await fetch(badgeUrl + `?t=${Date.now()}`).then(r => r.text());
+            
+            // Parse coverage percentage from shields.io SVG
+            const coverage = parseCoverageFromSVG(svgText);
+            
+            updateCoverageStatusUI({
+                coverage: coverage,
+                updatedAt: new Date(),
+                htmlUrl: `https://coveralls.io/github/${owner}/${repo}?branch=main`
+            });
+        } catch (error) {
+            console.error('Error fetching coverage status:', error);
+            updateCoverageStatusUI({
+                coverage: 'unknown',
+                updatedAt: new Date(),
+                htmlUrl: `https://coveralls.io/github/${owner}/${repo}?branch=main`
+            });
+        }
+    }
+
+    function parseCoverageFromSVG(svgText) {
+        console.log('📊 Parsing coverage SVG...');
+        
+        // Method 1: Look for percentage patterns in SVG text content
+        const percentMatch = svgText.match(/(\d+(?:\.\d+)?)%/);
+        if (percentMatch) {
+            const percent = parseFloat(percentMatch[1]);
+            console.log(`📊 Found coverage percentage: ${percent}%`);
+            return percent;
+        }
+        
+        // Method 2: Look for text elements with percentage (shields.io format)
+        const textMatch = svgText.match(/>([^<]*\d+(?:\.\d+)?%[^<]*)</);
+        if (textMatch) {
+            const textContent = textMatch[1];
+            const percentInText = textContent.match(/(\d+(?:\.\d+)?)%/);
+            if (percentInText) {
+                const percent = parseFloat(percentInText[1]);
+                console.log(`📊 Found coverage in text: ${percent}%`);
+                return percent;
+            }
+        }
+        
+        // Method 3: Look for common status words
+        const lowerText = svgText.toLowerCase();
+        if (lowerText.includes('unknown') || lowerText.includes('pending') || lowerText.includes('inaccessible')) {
+            console.log('📊 Coverage status: unknown/pending/inaccessible');
+            return 'unknown';
+        }
+        
+        // If no percentage found, log the SVG for debugging
+        console.log('📊 No coverage percentage found. SVG content preview:', svgText.substring(0, 200) + '...');
+        return 'unknown';
+    }
+
+    function updateCIStatusUI(ciData) {
+        const statusElement = document.querySelector('[data-ci-status]');
+        if (!statusElement) return;
+        
+        const statusConfig = {
+            success: { icon: 'fas fa-check-circle', color: 'text-green-500', text: 'Passing', bgColor: 'text-green-600' },
+            failure: { icon: 'fas fa-times-circle', color: 'text-red-500', text: 'Failing', bgColor: 'text-red-600' },
+            in_progress: { icon: 'fas fa-spinner fa-spin', color: 'text-blue-500', text: 'Running', bgColor: 'text-blue-600' },
+            unknown: { icon: 'fas fa-question-circle', color: 'text-gray-500', text: 'Unknown', bgColor: 'text-gray-600' }
+        };
+        
+        const config = statusConfig[ciData.status] || statusConfig.unknown;
+        
+        statusElement.innerHTML = `
+            <div class="flex items-center space-x-1">
+                <i class="${config.icon} ${config.color} text-sm"></i>
+                <span class="text-sm ${config.bgColor} font-medium">${config.text}</span>
+            </div>
+        `;
+        
+        // Make the status clickable to view on GitHub
+        statusElement.style.cursor = 'pointer';
+        statusElement.onclick = () => window.open(ciData.htmlUrl, '_blank');
+    }
+
+    function updateCoverageStatusUI(coverageData) {
+        const statusElement = document.querySelector('[data-coverage-status]');
+        if (!statusElement) return;
+        
+        if (typeof coverageData.coverage === 'number') {
+            const percent = coverageData.coverage;
+            let color = 'text-red-600';
+            
+            if (percent >= 90) color = 'text-green-600';
+            else if (percent >= 75) color = 'text-yellow-600';
+            
+            statusElement.innerHTML = `
+                <span class="text-sm font-medium ${color}">${percent}%</span>
+            `;
+        } else {
+            statusElement.innerHTML = `
+                <span class="text-sm font-medium text-gray-600">Unknown</span>
+            `;
+        }
+        
+        // Make the status clickable to view on Coveralls
+        statusElement.style.cursor = 'pointer';
+        statusElement.onclick = () => window.open(coverageData.htmlUrl, '_blank');
+    }
+
+    // Fetch all statuses on page load
     fetchWorkflowStatus();
+    fetchCIStatus();
+    fetchCoverageStatus();
     
     // Setup badge debugging
     setupBadgeDebugging();
     
-    // Optionally refresh every 5 minutes
-    setInterval(fetchWorkflowStatus, 5 * 60 * 1000);
+    // Refresh all statuses every 5 minutes
+    setInterval(() => {
+        fetchWorkflowStatus();
+        fetchCIStatus();
+        fetchCoverageStatus();
+    }, 5 * 60 * 1000);
 
     // Modal elements
     const addTaskBtn = document.getElementById('addTaskBtn');
