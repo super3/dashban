@@ -255,6 +255,41 @@ document.addEventListener('DOMContentLoaded', function() {
         statusElement.onclick = () => window.open(coverageData.htmlUrl, '_blank');
     }
 
+    // GitHub traffic statistics fetcher using badge parsing
+    async function fetchTrafficData() {
+        const owner = 'super3';
+        const repo = 'dashban';
+        const badgeUrl = `https://visitor-badge.laobi.icu/badge?page_id=${owner}.${repo}`;
+
+        try {
+            const svgText = await fetch(badgeUrl + `&t=${Date.now()}`).then(r => r.text());
+            const count = GitHubUtils.parseNumberFromSVG(svgText);
+
+            updateTrafficUI({
+                views: count,
+                visitors: count
+            });
+        } catch (error) {
+            console.error('Error fetching traffic data:', error);
+            updateTrafficUI({
+                views: 'unknown',
+                visitors: 'unknown'
+            });
+        }
+    }
+
+    function updateTrafficUI(data) {
+        const viewsEl = document.querySelector('[data-traffic-views]');
+        const visitorsEl = document.querySelector('[data-traffic-visitors]');
+
+        if (viewsEl) {
+            viewsEl.textContent = typeof data.views === 'number' ? data.views.toLocaleString() : data.views;
+        }
+        if (visitorsEl) {
+            visitorsEl.textContent = typeof data.visitors === 'number' ? data.visitors.toLocaleString() : data.visitors;
+        }
+    }
+
     // Track last update time for status refresh (initialize to 1 minute ago)
     let lastStatusUpdate = new Date(Date.now() - 60 * 1000);
     
@@ -273,6 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchWorkflowStatus();
         fetchCIStatus();
         fetchCoverageStatus();
+        fetchTrafficData();
         updateTimestamp();
     }
     
@@ -281,6 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchWorkflowStatus(true); // Skip timestamp update on initial load
         fetchCIStatus();
         fetchCoverageStatus();
+        fetchTrafficData();
     }
     
     // Fetch all statuses on page load (without updating timestamp)
