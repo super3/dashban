@@ -1,7 +1,7 @@
 // Kanban Board JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize sortable lists for each column
-    const columns = ['backlog', 'inprogress', 'review', 'done'];
+    const columns = ['info', 'backlog', 'inprogress', 'review', 'done'];
     
     columns.forEach(columnId => {
         new Sortable(document.getElementById(columnId), {

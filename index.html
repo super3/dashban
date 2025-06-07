@@ -19,9 +19,11 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
         .column-collapsed {
+            flex: 0 0 48px !important;
             width: 48px !important;
             min-width: 48px !important;
-            transition: width 0.3s ease;
+            max-width: 48px !important;
+            transition: all 0.3s ease;
         }
         .column-collapsed .column-content {
             display: none;
@@ -36,7 +38,8 @@
         .column-collapsed .bg-blue-100,
         .column-collapsed .bg-yellow-100,
         .column-collapsed .bg-green-100,
-        .column-collapsed .bg-orange-100 {
+        .column-collapsed .bg-orange-100,
+        .column-collapsed .bg-purple-100 {
             font-size: 10px !important;
             padding: 0 !important;
             width: 20px !important;
@@ -85,14 +88,16 @@
             transform: translateX(-3px);
         }
         .column-expanded {
-            width: 320px !important;
-            transition: width 0.3s ease;
+            flex: 1 1 0% !important;
+            min-width: 250px !important;
+            transition: all 0.3s ease;
         }
         .column-header .bg-gray-100,
         .column-header .bg-blue-100,
         .column-header .bg-yellow-100,
         .column-header .bg-green-100,
-        .column-header .bg-orange-100 {
+        .column-header .bg-orange-100,
+        .column-header .bg-purple-100 {
             padding: 0 !important;
             width: 20px !important;
             height: 20px !important;
@@ -144,8 +149,29 @@
 
         <!-- Kanban Board -->
         <div class="flex space-x-4 overflow-x-auto pb-4">
+            <!-- Info Column -->
+            <div class="flex-1 column-expanded" data-column="info">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div class="px-4 py-3 border-b border-gray-200 column-header">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-purple-400 rounded-full"></div>
+                                <h3 class="font-semibold text-gray-900 column-title">Info</h3>
+                                <span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="info">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="info" class="p-4 space-y-3 min-h-[200px] column-content">
+                        <!-- Empty column ready for tasks -->
+                    </div>
+                </div>
+            </div>
+
             <!-- Backlog Column -->
-            <div class="flex-shrink-0 w-80 column-expanded" data-column="backlog">
+            <div class="flex-1 column-expanded" data-column="backlog">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200">
                     <div class="px-4 py-3 border-b border-gray-200 column-header">
                         <div class="flex items-center justify-between">
@@ -210,7 +236,7 @@
             </div>
 
             <!-- In Progress Column -->
-            <div class="flex-shrink-0 w-80 column-expanded" data-column="inprogress">
+            <div class="flex-1 column-expanded" data-column="inprogress">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200">
                     <div class="px-4 py-3 border-b border-gray-200 column-header">
                         <div class="flex items-center justify-between">
@@ -267,7 +293,7 @@
             </div>
 
             <!-- Review Column -->
-            <div class="flex-shrink-0 w-80 column-expanded" data-column="review">
+            <div class="flex-1 column-expanded" data-column="review">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200">
                     <div class="px-4 py-3 border-b border-gray-200 column-header">
                         <div class="flex items-center justify-between">
@@ -305,7 +331,7 @@
             </div>
 
             <!-- Done Column -->
-            <div class="flex-shrink-0 w-80 column-expanded" data-column="done">
+            <div class="flex-1 column-expanded" data-column="done">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200">
                     <div class="px-4 py-3 border-b border-gray-200 column-header">
                         <div class="flex items-center justify-between">
