@@ -18,6 +18,202 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // GitHub workflow status fetcher using SVG text parsing
+    async function fetchWorkflowStatus() {
+        const owner = 'super3';
+        const repo = 'dashban';
+        const workflowFile = 'frontend.yml';
+        
+        try {
+            // Use shields.io badge for better reliability
+            const badgeUrl = `https://img.shields.io/github/actions/workflow/status/${owner}/${repo}/${workflowFile}`;
+            const status = await parseBadgeSVG(badgeUrl)
+            
+            updateWorkflowStatusUI({
+                status: status,
+                updatedAt: new Date(),
+                htmlUrl: `https://github.com/${owner}/${repo}/actions/workflows/${workflowFile}`,
+                runNumber: '?'
+            });
+        } catch (error) {
+            console.error('Error fetching workflow status:', error);
+            updateWorkflowStatusUI({
+                status: 'unknown',
+                updatedAt: new Date(),
+                htmlUrl: `https://github.com/${owner}/${repo}/actions/workflows/${workflowFile}`,
+                runNumber: '?'
+            });
+        }
+    }
+
+    // Parse SVG badge text to determine status
+    async function parseBadgeSVG(badgeUrl) {
+        try {
+            const response = await fetch(badgeUrl + `?t=${Date.now()}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const svgText = await response.text();
+            console.log('Badge SVG content:', svgText);
+            
+            // Parse the SVG text for status words
+            const status = parseStatusFromSVG(svgText);
+            return status;
+            
+        } catch (error) {
+            console.error('Error fetching SVG badge:', error);
+            return 'unknown';
+        }
+    }
+
+    function parseStatusFromSVG(svgText) {
+        // Convert to lowercase for easier matching
+        const lowerText = svgText.toLowerCase();
+        
+        console.log('Searching for status words in SVG...');
+        
+        // Look for common status words
+        if (lowerText.includes('passing') || lowerText.includes('success')) {
+            console.log('✅ Found "passing" or "success" in SVG');
+            return 'success';
+        }
+        
+        if (lowerText.includes('failing') || lowerText.includes('failure') || lowerText.includes('failed')) {
+            console.log('❌ Found "failing" or "failure" in SVG');
+            return 'failure';
+        }
+        
+        if (lowerText.includes('pending') || lowerText.includes('running') || lowerText.includes('in progress')) {
+            console.log('🔄 Found "pending" or "running" in SVG');
+            return 'in_progress';
+        }
+        
+        if (lowerText.includes('no status') || lowerText.includes('unknown')) {
+            console.log('❔ Found "no status" or "unknown" in SVG');
+            return 'unknown';
+        }
+        
+        // If we can't find specific status words, log what we found
+        console.log('⚠️ No recognized status words found. SVG might contain:', 
+                   svgText.match(/>([^<]+)</g)?.map(match => match.slice(1, -1)).filter(text => text.trim()));
+        
+        return 'unknown';
+    }
+
+
+
+    function parseShieldsStatus(statusValue) {
+        if (!statusValue) return 'unknown';
+        
+        const status = statusValue.toLowerCase();
+        console.log('Status value from shields.io:', status);
+        
+        // Map shields.io status values to our status system
+        if (status.includes('passing') || status.includes('success')) {
+            return 'success';
+        }
+        if (status.includes('failing') || status.includes('failure') || status.includes('error')) {
+            return 'failure';
+        }
+        if (status.includes('pending') || status.includes('running') || status.includes('in progress')) {
+            return 'in_progress';
+        }
+        if (status.includes('no status') || status.includes('unknown')) {
+            return 'unknown';
+        }
+        
+        // Default case
+        return 'unknown';
+    }
+
+    function updateWorkflowStatusUI(workflowData) {
+        const statusElement = document.querySelector('[data-frontend-status]');
+        const timeElement = document.querySelector('[data-frontend-time]');
+        
+        if (!statusElement || !timeElement) return;
+        
+        const statusConfig = {
+            success: { icon: 'fas fa-check-circle', color: 'text-green-500', text: 'Deployed', bgColor: 'text-green-600' },
+            failure: { icon: 'fas fa-times-circle', color: 'text-red-500', text: 'Failed', bgColor: 'text-red-600' },
+            in_progress: { icon: 'fas fa-spinner fa-spin', color: 'text-blue-500', text: 'Deploying', bgColor: 'text-blue-600' },
+            queued: { icon: 'fas fa-clock', color: 'text-yellow-500', text: 'Queued', bgColor: 'text-yellow-600' },
+            unknown: { icon: 'fas fa-question-circle', color: 'text-gray-500', text: 'Unknown', bgColor: 'text-gray-600' }
+        };
+        
+        const config = statusConfig[workflowData.status] || statusConfig.unknown;
+        
+        statusElement.innerHTML = `
+            <div class="flex items-center space-x-1">
+                <i class="${config.icon} ${config.color} text-sm"></i>
+                <span class="text-sm ${config.bgColor} font-medium">${config.text}</span>
+            </div>
+        `;
+        
+        const timeAgo = getTimeAgo(workflowData.updatedAt);
+        timeElement.innerHTML = `
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-sync text-gray-400 text-xs"></i>
+                <span class="text-xs text-gray-500">Updated ${timeAgo}</span>
+            </div>
+        `;
+        
+        // Make the status clickable to view on GitHub
+        statusElement.style.cursor = 'pointer';
+        statusElement.onclick = () => window.open(workflowData.htmlUrl, '_blank');
+    }
+
+    function getTimeAgo(date) {
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+        return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    }
+
+    // Badge debugging functionality
+    function setupBadgeDebugging() {
+        const badgeImg = document.getElementById('github-badge');
+        const refreshBtn = document.getElementById('refresh-badge');
+        
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                // Refresh the badge with a cache buster
+                const baseUrl = 'https://img.shields.io/github/actions/workflow/status/super3/dashban/frontend.yml';
+                badgeImg.src = baseUrl + '?t=' + Date.now();
+                
+                // Also refresh our status detection
+                fetchWorkflowStatus();
+                
+                console.log('Badge refreshed manually');
+            });
+        }
+        
+        if (badgeImg) {
+            badgeImg.addEventListener('load', function() {
+                console.log('Badge loaded successfully');
+                console.log('Badge dimensions:', this.naturalWidth, 'x', this.naturalHeight);
+                console.log('Badge src:', this.src);
+            });
+            
+            badgeImg.addEventListener('error', function() {
+                console.error('Badge failed to load');
+            });
+        }
+    }
+
+    // Fetch workflow status on page load
+    fetchWorkflowStatus();
+    
+    // Setup badge debugging
+    setupBadgeDebugging();
+    
+    // Optionally refresh every 5 minutes
+    setInterval(fetchWorkflowStatus, 5 * 60 * 1000);
+
     // Modal elements
     const addTaskBtn = document.getElementById('addTaskBtn');
     const addTaskModal = document.getElementById('addTaskModal');
