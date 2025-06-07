@@ -107,11 +107,11 @@ describe('GitHub Actions Status Functions', () => {
     });
 
     describe('getTimeAgo', () => {
-        test('should return seconds ago for recent dates', () => {
+        test('should return <1m ago for recent dates', () => {
             const now = new Date();
             const fiveSecondsAgo = new Date(now.getTime() - 5000);
             const result = utils.getTimeAgo(fiveSecondsAgo);
-            expect(result).toBe('5s ago');
+            expect(result).toBe('<1m ago');
         });
 
         test('should return minutes ago for dates within an hour', () => {
@@ -139,7 +139,7 @@ describe('GitHub Actions Status Functions', () => {
             const now = new Date();
             const future = new Date(now.getTime() + 5000);
             const result = utils.getTimeAgo(future);
-            expect(result).toBe('-5s ago');
+            expect(result).toBe('<1m ago');
         });
     });
 
@@ -315,10 +315,10 @@ describe('parseNumberFromSVG', () => {
         expect(result).toBe(123);
     });
 
-    test('should handle shorthand numbers', () => {
-        const svg = '<svg><text>views</text><text>1.2k</text></svg>';
+    test('should parse decimal numbers', () => {
+        const svg = '<svg><text>percentage</text><text>87.5</text></svg>';
         const result = utils.parseNumberFromSVG(svg);
-        expect(result).toBeCloseTo(1200);
+        expect(result).toBe(87.5);
     });
 
     test('should return null when no number is found', () => {

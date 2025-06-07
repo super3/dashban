@@ -38,7 +38,7 @@ function getTimeAgo(date) {
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
     
-    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+    if (diffInSeconds < 60) return `<1m ago`;
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     return `${Math.floor(diffInSeconds / 86400)}d ago`;
@@ -92,17 +92,9 @@ async function parseBadgeSVG(badgeUrl) {
 
 // Parse a numeric value from an SVG badge
 function parseNumberFromSVG(svgText) {
-    const match = svgText.match(/(\d+(?:\.\d+)?[kM]?)/i);
+    const match = svgText.match(/(\d+(?:\.\d+)?)/);
     if (!match) return null;
-
-    let value = match[1].replace(/,/g, '');
-    const lower = value.toLowerCase();
-    if (lower.endsWith('k')) {
-        return parseFloat(lower) * 1000;
-    } else if (lower.endsWith('m')) {
-        return parseFloat(lower) * 1000000;
-    }
-    return parseFloat(value);
+    return parseFloat(match[1]);
 }
 
 // Export functions for both Node.js and browser environments
