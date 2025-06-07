@@ -18,6 +18,63 @@
             transform: rotate(5deg);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
+        .column-collapsed {
+            width: 48px !important;
+            min-width: 48px !important;
+            transition: width 0.3s ease;
+        }
+        .column-collapsed .column-content {
+            display: none;
+        }
+        .column-collapsed .w-3 {
+            width: 8px !important;
+            height: 8px !important;
+            margin: 2px 0;
+        }
+        .column-collapsed .bg-gray-100,
+        .column-collapsed .bg-blue-100,
+        .column-collapsed .bg-yellow-100,
+        .column-collapsed .bg-green-100,
+        .column-collapsed .bg-orange-100 {
+            display: none;
+        }
+        .column-collapsed .space-x-2 {
+            gap: 2px;
+        }
+        .column-collapsed .column-header {
+            padding: 12px 0;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: center;
+            width: 100%;
+        }
+        .column-collapsed .column-header .flex {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+        }
+        .column-collapsed .column-title {
+            font-size: 16px;
+            font-weight: 600;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            line-height: 1.1;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 8px 0;
+        }
+        .column-expanded {
+            width: 320px !important;
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -60,21 +117,21 @@
         <!-- Kanban Board -->
         <div class="flex space-x-4 overflow-x-auto pb-4">
             <!-- Backlog Column -->
-            <div class="flex-shrink-0 w-72">
+            <div class="flex-shrink-0 w-80 column-expanded" data-column="backlog">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div class="px-4 py-3 border-b border-gray-200">
+                    <div class="px-4 py-3 border-b border-gray-200 column-header">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-2">
                                 <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
-                                <h3 class="font-semibold text-gray-900">Backlog</h3>
+                                <h3 class="font-semibold text-gray-900 column-title">Backlog</h3>
                                 <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium">3</span>
                             </div>
-                            <button class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-ellipsis-h"></i>
+                            <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="backlog">
+                                <i class="fas fa-chevron-left"></i>
                             </button>
                         </div>
                     </div>
-                    <div id="backlog" class="p-4 space-y-3 min-h-[200px]">
+                    <div id="backlog" class="p-4 space-y-3 min-h-[200px] column-content">
                         <!-- Task Card -->
                         <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
                             <div class="flex items-start justify-between mb-2">
@@ -125,21 +182,21 @@
             </div>
 
             <!-- In Progress Column -->
-            <div class="flex-shrink-0 w-72">
+            <div class="flex-shrink-0 w-80 column-expanded" data-column="inprogress">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div class="px-4 py-3 border-b border-gray-200">
+                    <div class="px-4 py-3 border-b border-gray-200 column-header">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-2">
                                 <div class="w-3 h-3 bg-blue-400 rounded-full"></div>
-                                <h3 class="font-semibold text-gray-900">In Progress</h3>
+                                <h3 class="font-semibold text-gray-900 column-title">In Progress</h3>
                                 <span class="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full font-medium">2</span>
                             </div>
-                            <button class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-ellipsis-h"></i>
+                            <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="inprogress">
+                                <i class="fas fa-chevron-left"></i>
                             </button>
                         </div>
                     </div>
-                    <div id="inprogress" class="p-4 space-y-3 min-h-[200px]">
+                    <div id="inprogress" class="p-4 space-y-3 min-h-[200px] column-content">
                         <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
                             <div class="flex items-start justify-between mb-2">
                                 <h4 class="font-medium text-gray-900 text-sm">API Endpoints</h4>
@@ -170,7 +227,7 @@
                                     <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">Low</span>
                                     <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full font-medium">Frontend</span>
                                 </div>
-                                <img src="https://images.unsplash.com/photo-1494790108755-2616b612b77c?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Assignee" class="w-6 h-6 rounded-full">
+                                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=256&h=256&q=80" alt="Assignee" class="w-6 h-6 rounded-full">
                             </div>
                             <div class="w-full bg-gray-200 rounded-full h-2">
                                 <div class="bg-blue-600 h-2 rounded-full" style="width: 30%"></div>
@@ -182,21 +239,21 @@
             </div>
 
             <!-- Review Column -->
-            <div class="flex-shrink-0 w-72">
+            <div class="flex-shrink-0 w-80 column-expanded" data-column="review">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div class="px-4 py-3 border-b border-gray-200">
+                    <div class="px-4 py-3 border-b border-gray-200 column-header">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-2">
                                 <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                                <h3 class="font-semibold text-gray-900">Review</h3>
+                                <h3 class="font-semibold text-gray-900 column-title">Review</h3>
                                 <span class="bg-yellow-100 text-yellow-600 text-xs px-2 py-1 rounded-full font-medium">1</span>
                             </div>
-                            <button class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-ellipsis-h"></i>
+                            <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="review">
+                                <i class="fas fa-chevron-left"></i>
                             </button>
                         </div>
                     </div>
-                    <div id="review" class="p-4 space-y-3 min-h-[200px]">
+                    <div id="review" class="p-4 space-y-3 min-h-[200px] column-content">
                         <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
                             <div class="flex items-start justify-between mb-2">
                                 <h4 class="font-medium text-gray-900 text-sm">Unit Tests</h4>
@@ -220,21 +277,21 @@
             </div>
 
             <!-- Done Column -->
-            <div class="flex-shrink-0 w-72">
+            <div class="flex-shrink-0 w-80 column-expanded" data-column="done">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div class="px-4 py-3 border-b border-gray-200">
+                    <div class="px-4 py-3 border-b border-gray-200 column-header">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-2">
                                 <div class="w-3 h-3 bg-green-400 rounded-full"></div>
-                                <h3 class="font-semibold text-gray-900">Done</h3>
+                                <h3 class="font-semibold text-gray-900 column-title">Done</h3>
                                 <span class="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full font-medium">2</span>
                             </div>
-                            <button class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-ellipsis-h"></i>
+                            <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="done">
+                                <i class="fas fa-chevron-left"></i>
                             </button>
                         </div>
                     </div>
-                    <div id="done" class="p-4 space-y-3 min-h-[200px]">
+                    <div id="done" class="p-4 space-y-3 min-h-[200px] column-content">
                         <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
                             <div class="flex items-start justify-between mb-2">
                                 <h4 class="font-medium text-gray-900 text-sm">Project Setup</h4>

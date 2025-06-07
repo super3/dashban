@@ -157,6 +157,40 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize column counts
     updateColumnCounts();
 
+    // Add column collapse/expand functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.column-collapse-btn')) {
+            const button = e.target.closest('.column-collapse-btn');
+            const columnId = button.getAttribute('data-column');
+            const columnElement = document.querySelector(`[data-column="${columnId}"]`);
+            const icon = button.querySelector('i');
+            
+            if (columnElement.classList.contains('column-collapsed')) {
+                // Expand column
+                columnElement.classList.remove('column-collapsed');
+                columnElement.classList.add('column-expanded');
+                icon.className = 'fas fa-chevron-left';
+                
+                // Re-enable sortable
+                const sortableElement = columnElement.querySelector('[id]');
+                if (sortableElement && sortableElement._sortable) {
+                    sortableElement._sortable.option("disabled", false);
+                }
+            } else {
+                // Collapse column
+                columnElement.classList.remove('column-expanded');
+                columnElement.classList.add('column-collapsed');
+                icon.className = 'fas fa-chevron-right';
+                
+                // Disable sortable for collapsed column
+                const sortableElement = columnElement.querySelector('[id]');
+                if (sortableElement && sortableElement._sortable) {
+                    sortableElement._sortable.option("disabled", true);
+                }
+            }
+        }
+    });
+
     // Add task deletion functionality
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('delete-task')) {
