@@ -111,13 +111,41 @@ function exportUtilities(moduleObj, windowObj) {
     return 'unknown';
 }
 
-// Call the export function with actual global objects
-const exportResult = exportUtilities(
-    typeof module !== 'undefined' ? module : null,
-    typeof window !== 'undefined' ? window : null
-);
+// Environment detection function for testing
+function detectEnvironment(moduleGlobal, windowGlobal) {
+    // Allow injection for testing, otherwise use actual globals
+    const hasModule = moduleGlobal !== undefined ? moduleGlobal !== null : typeof module !== 'undefined';
+    const hasWindow = windowGlobal !== undefined ? windowGlobal !== null : typeof window !== 'undefined';
+    
+    return {
+        hasModule,
+        hasWindow,
+        module: hasModule ? (moduleGlobal !== undefined ? moduleGlobal : module) : null,
+        window: hasWindow ? (windowGlobal !== undefined ? windowGlobal : window) : null
+    };
+}
 
-// Export the exportUtilities function for testing
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports.exportUtilities = exportUtilities;
-} 
+// Initialize exports based on environment
+function initializeExports() {
+    const env = detectEnvironment();
+    return exportUtilities(env.module, env.window);
+}
+
+// Call the initialization
+const exportResult = initializeExports();
+
+// Export functions for testing
+function addTestExports(moduleObj) {
+    if (moduleObj && moduleObj.exports) {
+        moduleObj.exports.exportUtilities = exportUtilities;
+        moduleObj.exports.detectEnvironment = detectEnvironment;
+        moduleObj.exports.initializeExports = initializeExports;
+        moduleObj.exports.addTestExports = addTestExports; // Export for testing
+        return true;
+    }
+    return false;
+}
+
+// Add test exports if in Node.js environment
+const env = detectEnvironment();
+const testExportsResult = addTestExports(env.module); 

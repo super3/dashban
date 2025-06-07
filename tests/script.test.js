@@ -337,6 +337,131 @@ describe('Browser environment compatibility and edge cases', () => {
         expect(result).toBe('unknown');
     });
 
+    test('should detect Node.js environment correctly', () => {
+        const env = utils.detectEnvironment();
+        expect(env.hasModule).toBe(true);
+        // Jest might have a global window object, so let's be flexible here
+        expect(typeof env.hasWindow).toBe('boolean');
+        expect(env.module).toBeDefined();
+        // Window might be defined in Jest environment, so check for defined/null
+        expect(env.window === null || typeof env.window === 'object').toBe(true);
+    });
+
+    test('should test all environment detection branches', () => {
+        // Test case 1: Both module and window present
+        const env1 = utils.detectEnvironment({ exports: {} }, { some: 'object' });
+        expect(env1.hasModule).toBe(true);
+        expect(env1.hasWindow).toBe(true);
+        expect(env1.module).toEqual({ exports: {} });
+        expect(env1.window).toEqual({ some: 'object' });
+
+        // Test case 2: Only module present
+        const env2 = utils.detectEnvironment({ exports: {} }, null);
+        expect(env2.hasModule).toBe(true);
+        expect(env2.hasWindow).toBe(false);
+        expect(env2.module).toEqual({ exports: {} });
+        expect(env2.window).toBeNull();
+
+        // Test case 3: Only window present
+        const env3 = utils.detectEnvironment(null, { some: 'object' });
+        expect(env3.hasModule).toBe(false);
+        expect(env3.hasWindow).toBe(true);
+        expect(env3.module).toBeNull();
+        expect(env3.window).toEqual({ some: 'object' });
+
+        // Test case 4: Neither present
+        const env4 = utils.detectEnvironment(null, null);
+        expect(env4.hasModule).toBe(false);
+        expect(env4.hasWindow).toBe(false);
+        expect(env4.module).toBeNull();
+        expect(env4.window).toBeNull();
+    });
+
+    test('should initialize exports correctly', () => {
+        const result = utils.initializeExports();
+        expect(result).toBe('node'); // Should be 'node' in Jest environment
+    });
+
+    test('should handle environment detection with mocked globals', () => {
+        // Since typeof checks happen at evaluation time, we'll test the branches
+        // by calling the functions directly with different parameters
+        
+        // Test case 1: Browser environment simulation
+        const mockWindow = { some: 'object' };
+        const browserResult = utils.exportUtilities(null, mockWindow);
+        expect(browserResult).toBe('browser');
+        
+        // Test case 2: Unknown environment simulation  
+        const unknownResult = utils.exportUtilities(null, null);
+        expect(unknownResult).toBe('unknown');
+        
+        // Test case 3: Node environment (current environment)
+        const mockModule = { exports: {} };
+        const nodeResult = utils.exportUtilities(mockModule, null);
+        expect(nodeResult).toBe('node');
+    });
+
+    test('should test addTestExports function coverage', () => {
+        // Create a function to test the addTestExports logic with both branches
+        function testAddTestExports(moduleObj) {
+            if (moduleObj && moduleObj.exports) {
+                moduleObj.exports.testFunction = () => 'test';
+                return true;
+            }
+            return false;
+        }
+        
+        // Test with valid module object (first branch: moduleObj && moduleObj.exports)
+        const mockModule = { exports: {} };
+        const result1 = testAddTestExports(mockModule);
+        expect(result1).toBe(true);
+        expect(mockModule.exports.testFunction).toBeDefined();
+        
+        // Test with null module object (second branch: !moduleObj)
+        const result2 = testAddTestExports(null);
+        expect(result2).toBe(false);
+        
+        // Test with module object without exports (third branch: moduleObj && !moduleObj.exports)
+        const result3 = testAddTestExports({});
+        expect(result3).toBe(false);
+
+        // Test with undefined module object
+        const result4 = testAddTestExports(undefined);
+        expect(result4).toBe(false);
+    });
+
+    test('should test the actual addTestExports function', () => {
+        // Now we can test the actual addTestExports function since it's exported
+        
+        // Test with valid module object
+        const validModule = { exports: {} };
+        const result1 = utils.addTestExports(validModule);
+        expect(result1).toBe(true);
+        expect(validModule.exports.exportUtilities).toBeDefined();
+        expect(validModule.exports.detectEnvironment).toBeDefined();
+        expect(validModule.exports.initializeExports).toBeDefined();
+        
+        // Test with null module object  
+        const result2 = utils.addTestExports(null);
+        expect(result2).toBe(false);
+        
+        // Test with undefined module object
+        const result3 = utils.addTestExports(undefined);
+        expect(result3).toBe(false);
+        
+        // Test with module object without exports property
+        const result4 = utils.addTestExports({});
+        expect(result4).toBe(false);
+        
+        // Test with module object with null exports
+        const result5 = utils.addTestExports({ exports: null });
+        expect(result5).toBe(false);
+        
+        // Test with module object with undefined exports
+        const result6 = utils.addTestExports({ exports: undefined });
+        expect(result6).toBe(false);
+    });
+
     test('should handle missing SVG text content in parseStatusFromSVG', () => {
         // Test the SVG regex matching logic to cover line 64
         const svgWithComplexMatching = '<svg><g><text>status: unknown</text><text>other content</text></g></svg>';
