@@ -1,4 +1,4 @@
-# Dashban
+# Dashban - Everything. One board. 
 
 A modern, responsive Kanban board application built with HTML, TailwindCSS, and JavaScript. Dashban provides an intuitive drag-and-drop interface for effective task management and project tracking.
 
