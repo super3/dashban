@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // GitHub workflow status fetcher using SVG text parsing
-    async function fetchWorkflowStatus() {
+    async function fetchWorkflowStatus(skipTimeUpdate = false) {
         const owner = 'super3';
         const repo = 'dashban';
         const workflowFile = 'frontend.yml';
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 updatedAt: new Date(),
                 htmlUrl: `https://github.com/${owner}/${repo}/actions/workflows/${workflowFile}`,
                 runNumber: '?'
-            });
+            }, skipTimeUpdate);
         } catch (error) {
             console.error('Error fetching workflow status:', error);
             updateWorkflowStatusUI({
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 updatedAt: new Date(),
                 htmlUrl: `https://github.com/${owner}/${repo}/actions/workflows/${workflowFile}`,
                 runNumber: '?'
-            });
+            }, skipTimeUpdate);
         }
     }
 
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const now = new Date();
         const diffInSeconds = Math.floor((now - date) / 1000);
         
-        if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+        if (diffInSeconds < 60) return `<1m ago`;
         if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
         if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
         return `${Math.floor(diffInSeconds / 86400)}d ago`;
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'unknown';
     }
 
-    function updateWorkflowStatusUI(workflowData) {
+    function updateWorkflowStatusUI(workflowData, skipTimeUpdate = false) {
         const statusElement = document.querySelector('[data-frontend-status]');
         const timeElement = document.querySelector('[data-frontend-time]');
         
@@ -161,27 +161,20 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
-        const timeAgo = getTimeAgo(workflowData.updatedAt);
-        timeElement.innerHTML = `
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-sync text-gray-400 text-xs"></i>
-                <span class="text-xs text-gray-500">Updated ${timeAgo}</span>
-            </div>
-        `;
+        // Only update timestamp if not skipping
+        if (!skipTimeUpdate) {
+            const timeAgo = getTimeAgo(workflowData.updatedAt);
+            timeElement.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-sync text-gray-400 text-xs"></i>
+                    <span class="text-xs text-gray-500">Updated ${timeAgo}</span>
+                </div>
+            `;
+        }
         
         // Make the status clickable to view on GitHub
         statusElement.style.cursor = 'pointer';
         statusElement.onclick = () => window.open(workflowData.htmlUrl, '_blank');
-    }
-
-    function getTimeAgo(date) {
-        const now = new Date();
-        const diffInSeconds = Math.floor((now - date) / 1000);
-        
-        if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
-        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-        return `${Math.floor(diffInSeconds / 86400)}d ago`;
     }
 
     // Badge debugging functionality
@@ -195,8 +188,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const baseUrl = 'https://img.shields.io/github/actions/workflow/status/super3/dashban/frontend.yml';
                 badgeImg.src = baseUrl + '?t=' + Date.now();
                 
-                // Also refresh our status detection
-                fetchWorkflowStatus();
+                // Also refresh our status detection and timestamp
+                refreshAllStatuses();
                 
                 console.log('Badge refreshed manually');
             });
@@ -353,20 +346,45 @@ document.addEventListener('DOMContentLoaded', function() {
         statusElement.onclick = () => window.open(coverageData.htmlUrl, '_blank');
     }
 
-    // Fetch all statuses on page load
-    fetchWorkflowStatus();
-    fetchCIStatus();
-    fetchCoverageStatus();
+    // Track last update time for status refresh (initialize to 1 minute ago)
+    let lastStatusUpdate = new Date(Date.now() - 60 * 1000);
+    
+    // Function to update the timestamp display
+    function updateTimestamp() {
+        const timeElement = document.querySelector('[data-frontend-time] span');
+        if (timeElement) {
+            const timeSinceUpdate = getTimeAgo(lastStatusUpdate);
+            timeElement.textContent = `Updated ${timeSinceUpdate}`;
+        }
+    }
+    
+    // Function to refresh all statuses and update timestamp
+    function refreshAllStatuses() {
+        lastStatusUpdate = new Date();
+        fetchWorkflowStatus();
+        fetchCIStatus();
+        fetchCoverageStatus();
+        updateTimestamp();
+    }
+    
+    // Function to refresh statuses without updating timestamp (for initial load)
+    function initialStatusLoad() {
+        fetchWorkflowStatus(true); // Skip timestamp update on initial load
+        fetchCIStatus();
+        fetchCoverageStatus();
+    }
+    
+    // Fetch all statuses on page load (without updating timestamp)
+    initialStatusLoad();
     
     // Setup badge debugging
     setupBadgeDebugging();
     
+    // Update timestamp every minute
+    setInterval(updateTimestamp, 60 * 1000);
+    
     // Refresh all statuses every 5 minutes
-    setInterval(() => {
-        fetchWorkflowStatus();
-        fetchCIStatus();
-        fetchCoverageStatus();
-    }, 5 * 60 * 1000);
+    setInterval(refreshAllStatuses, 5 * 60 * 1000);
 
     // Modal elements
     const addTaskBtn = document.getElementById('addTaskBtn');
