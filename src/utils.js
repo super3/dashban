@@ -90,13 +90,29 @@ async function parseBadgeSVG(badgeUrl) {
     }
 }
 
+// Parse a numeric value from an SVG badge
+function parseNumberFromSVG(svgText) {
+    const match = svgText.match(/(\d+(?:\.\d+)?[kM]?)/i);
+    if (!match) return null;
+
+    let value = match[1].replace(/,/g, '');
+    const lower = value.toLowerCase();
+    if (lower.endsWith('k')) {
+        return parseFloat(lower) * 1000;
+    } else if (lower.endsWith('m')) {
+        return parseFloat(lower) * 1000000;
+    }
+    return parseFloat(value);
+}
+
 // Export functions for both Node.js and browser environments
 function exportUtilities(moduleObj, windowObj) {
     const utilities = {
         parseStatusFromSVG,
         getTimeAgo,
         parseShieldsStatus,
-        parseBadgeSVG
+        parseBadgeSVG,
+        parseNumberFromSVG
     };
     
     if (moduleObj && moduleObj.exports) {
