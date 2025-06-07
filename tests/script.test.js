@@ -308,6 +308,26 @@ describe('parseBadgeSVG function', () => {
     });
 });
 
+describe('parseNumberFromSVG', () => {
+    test('should parse simple numeric values', () => {
+        const svg = '<svg><text>views</text><text>123</text></svg>';
+        const result = utils.parseNumberFromSVG(svg);
+        expect(result).toBe(123);
+    });
+
+    test('should handle shorthand numbers', () => {
+        const svg = '<svg><text>views</text><text>1.2k</text></svg>';
+        const result = utils.parseNumberFromSVG(svg);
+        expect(result).toBeCloseTo(1200);
+    });
+
+    test('should return null when no number is found', () => {
+        const svg = '<svg><text>no numbers here</text></svg>';
+        const result = utils.parseNumberFromSVG(svg);
+        expect(result).toBeNull();
+    });
+});
+
 describe('Browser environment compatibility and edge cases', () => {
     test('should handle Node.js environment export', () => {
         const mockModule = { exports: {} };
@@ -318,6 +338,7 @@ describe('Browser environment compatibility and edge cases', () => {
         expect(mockModule.exports.getTimeAgo).toBeDefined();
         expect(mockModule.exports.parseShieldsStatus).toBeDefined();
         expect(mockModule.exports.parseBadgeSVG).toBeDefined();
+        expect(mockModule.exports.parseNumberFromSVG).toBeDefined();
     });
 
     test('should handle browser environment export', () => {
@@ -330,6 +351,7 @@ describe('Browser environment compatibility and edge cases', () => {
         expect(mockWindow.GitHubUtils.getTimeAgo).toBeDefined();
         expect(mockWindow.GitHubUtils.parseShieldsStatus).toBeDefined();
         expect(mockWindow.GitHubUtils.parseBadgeSVG).toBeDefined();
+        expect(mockWindow.GitHubUtils.parseNumberFromSVG).toBeDefined();
     });
 
     test('should handle unknown environment', () => {
