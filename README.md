@@ -1,23 +1,25 @@
-# Dashban - Everything. One board. 
+<h1 align="center">
+  Dashban
+  <br>
+</h1>
 
-A modern, responsive Kanban board application built with HTML, TailwindCSS, and JavaScript. Dashban provides an intuitive drag-and-drop interface for effective task management and project tracking.
+<h4 align="center">A modern, responsive Kanban board application built with <a href="https://developer.mozilla.org/en-US/docs/Web/HTML">HTML</a>, <a href="https://tailwindcss.com">TailwindCSS</a>, and <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript">JavaScript</a>.</h4>
 
-## Features
+<div align="center">
 
-### ✨ Core Functionality
-- **Drag & Drop**: Seamlessly move tasks between columns (Backlog, In Progress, Review, Done)
-- **Add New Tasks**: Create tasks with title, description, priority, and category
-- **Task Management**: Each task displays priority level, category, assignee, and progress
-- **Real-time Updates**: Column counters update automatically as tasks are moved
-- **Responsive Design**: Works perfectly on desktop, tablet, and mobile devices
+[![Frontend Build Status](https://img.shields.io/github/actions/workflow/status/super3/dashban/frontend.yml?label=frontend)](https://github.com/super3/dashban/actions/workflows/frontend.yml)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/super3/dashban/test.yml?label=tests)](https://github.com/super3/dashban/actions/workflows/test.yml)
+[![Coverage Status](https://coveralls.io/repos/github/super3/dashban/badge.svg?branch=main)](https://coveralls.io/github/super3/dashban?branch=main)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg?label=license)](https://github.com/super3/dashban/blob/main/LICENSE)
 
-### 🎨 User Interface
-- **Modern Design**: Clean, professional interface using TailwindCSS
-- **Visual Feedback**: Hover effects, animations, and drag indicators
-- **Color-coded Priority**: High (Red), Medium (Yellow), Low (Green)
-- **Category Labels**: Frontend, Backend, Design, Testing, Database, Setup
-- **Progress Tracking**: Visual progress bars for in-progress tasks
-- **Avatar Integration**: User profile pictures for task assignment
+</div>
+
+## Quick Start
+```bash
+git clone https://github.com/super3/dashban.git && cd dashban
+npm install && npm test
+```
+Open `index.html` in your browser to start using Dashban.
 
 ### ⌨️ Keyboard Shortcuts
 - `Ctrl/Cmd + N`: Add new task
