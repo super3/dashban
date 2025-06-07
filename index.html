@@ -27,19 +27,30 @@
             display: none;
         }
         .column-collapsed .w-3 {
-            width: 8px !important;
-            height: 8px !important;
-            margin: 2px 0;
+            width: 12px !important;
+            height: 12px !important;
+            margin: 0;
+            align-self: center !important;
         }
         .column-collapsed .bg-gray-100,
         .column-collapsed .bg-blue-100,
         .column-collapsed .bg-yellow-100,
         .column-collapsed .bg-green-100,
         .column-collapsed .bg-orange-100 {
-            display: none;
+            font-size: 10px !important;
+            padding: 0 !important;
+            width: 20px !important;
+            height: 20px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 0 !important;
+            writing-mode: vertical-rl !important;
+            text-orientation: mixed !important;
         }
         .column-collapsed .space-x-2 {
-            gap: 2px;
+            gap: 0;
         }
         .column-collapsed .column-header {
             padding: 12px 0;
@@ -55,7 +66,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 0.5rem;
             width: 100%;
         }
         .column-collapsed .column-title {
@@ -69,11 +80,28 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 8px 0;
+            margin: 0;
+            align-self: center !important;
+            transform: translateX(-3px);
         }
         .column-expanded {
             width: 320px !important;
             transition: width 0.3s ease;
+        }
+        .column-header .bg-gray-100,
+        .column-header .bg-blue-100,
+        .column-header .bg-yellow-100,
+        .column-header .bg-green-100,
+        .column-header .bg-orange-100 {
+            padding: 0 !important;
+            width: 20px !important;
+            height: 20px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
         }
     </style>
 </head>
