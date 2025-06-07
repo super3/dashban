@@ -157,6 +157,63 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize column counts
     updateColumnCounts();
 
+    // Load and apply saved collapse states
+    function loadCollapseStates() {
+        const savedStates = localStorage.getItem('kanban-column-states');
+        if (savedStates) {
+            const states = JSON.parse(savedStates);
+            
+            // Temporarily disable transitions to prevent animation on page load
+            const style = document.createElement('style');
+            style.textContent = `
+                .column-expanded, .column-collapsed {
+                    transition: none !important;
+                }
+                .column-expanded *, .column-collapsed * {
+                    transition: none !important;
+                }
+            `;
+            document.head.appendChild(style);
+            
+            columns.forEach(columnId => {
+                if (states[columnId] === 'collapsed') {
+                    const columnElement = document.querySelector(`[data-column="${columnId}"]`);
+                    const button = columnElement.querySelector('.column-collapse-btn');
+                    const icon = button.querySelector('i');
+                    
+                    // Apply collapsed state
+                    columnElement.classList.remove('column-expanded');
+                    columnElement.classList.add('column-collapsed');
+                    icon.className = 'fas fa-chevron-right';
+                    
+                    // Disable sortable for collapsed column
+                    const sortableElement = columnElement.querySelector('[id]');
+                    if (sortableElement && sortableElement._sortable) {
+                        sortableElement._sortable.option("disabled", true);
+                    }
+                }
+            });
+            
+            // Re-enable transitions after a brief delay
+            setTimeout(() => {
+                document.head.removeChild(style);
+            }, 100);
+        }
+    }
+
+    // Save collapse states to localStorage
+    function saveCollapseStates() {
+        const states = {};
+        columns.forEach(columnId => {
+            const columnElement = document.querySelector(`[data-column="${columnId}"]`);
+            states[columnId] = columnElement.classList.contains('column-collapsed') ? 'collapsed' : 'expanded';
+        });
+        localStorage.setItem('kanban-column-states', JSON.stringify(states));
+    }
+
+    // Load saved states on page load
+    loadCollapseStates();
+
     // Add column collapse/expand functionality
     document.addEventListener('click', function(e) {
         if (e.target.closest('.column-collapse-btn')) {
@@ -188,6 +245,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     sortableElement._sortable.option("disabled", true);
                 }
             }
+            
+            // Save the new state
+            saveCollapseStates();
         }
     });
 
