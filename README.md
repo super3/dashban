@@ -1,6 +1,6 @@
-# Kanban Board - Waffle.io Clone
+# Dashban
 
-A modern, responsive Kanban board application built with HTML, TailwindCSS, and JavaScript. This project replicates the functionality of waffle.io with drag-and-drop task management.
+A modern, responsive Kanban board application built with HTML, TailwindCSS, and JavaScript. Dashban provides an intuitive drag-and-drop interface for effective task management and project tracking.
 
 ## Features
 
@@ -128,7 +128,7 @@ The application uses TailwindCSS classes. Modify styles by:
 
 ## File Structure
 ```
-kanban-board/
+dashban/
 ├── index.html          # Main HTML file
 ├── script.js           # JavaScript functionality
 ├── README.md           # Documentation
@@ -160,9 +160,9 @@ This project is open source and available under the MIT License.
 
 ## Acknowledgments
 
-- Inspired by the original waffle.io project management tool
 - Built with modern web technologies for optimal performance
 - Designed with user experience and accessibility in mind
+- Inspired by popular project management tools
 
 ---
 
