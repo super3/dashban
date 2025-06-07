@@ -605,4 +605,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }).observe(doneColumn, { childList: true });
 
     console.log('Kanban Board initialized successfully!');
+
+    // Export certain functions for testing environments
+    const testAPI = {
+        createTaskElement,
+        updateColumnCounts,
+        hideModal,
+        addTaskBtn,
+        addTaskModal,
+        cancelTaskBtn,
+        addTaskForm
+    };
+
+    // Attach to global for browser/Node access
+    if (typeof globalThis !== 'undefined') {
+        globalThis.testExports = testAPI;
+    }
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = testAPI;
+    }
 });
