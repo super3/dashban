@@ -141,12 +141,6 @@
 
     <!-- Main Content -->
     <main class="max-w-none mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Board Header -->
-        <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">Development Board</h2>
-            <p class="text-gray-600">Track your team's progress with this Kanban board</p>
-        </div>
-
         <!-- Kanban Board -->
         <div class="flex space-x-4 overflow-x-auto pb-4">
             <!-- Info Column -->
@@ -157,7 +151,7 @@
                             <div class="flex items-center space-x-2">
                                 <div class="w-3 h-3 bg-purple-400 rounded-full"></div>
                                 <h3 class="font-semibold text-gray-900 column-title">Info</h3>
-                                <span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
+                                <span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full font-medium">2</span>
                             </div>
                             <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="info">
                                 <i class="fas fa-chevron-left"></i>
@@ -165,7 +159,121 @@
                         </div>
                     </div>
                     <div id="info" class="p-4 space-y-3 min-h-[200px] column-content">
-                        <!-- Empty column ready for tasks -->
+                        <!-- Project Status Card -->
+                        <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 mb-1">E-Commerce Platform</h4>
+                                    <p class="text-sm text-gray-600">Project Overview</p>
+                                </div>
+                                <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">PROJECT</span>
+                            </div>
+                            
+                            <!-- Website Update Status -->
+                            <div class="mb-3">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm font-medium text-gray-700">Website Update</span>
+                                    <span class="text-sm text-blue-600">75%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-500 h-2 rounded-full" style="width: 75%"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- GitHub Testing Status -->
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fab fa-github text-gray-700"></i>
+                                    <span class="text-sm text-gray-700">CI Tests</span>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                    <i class="fas fa-check-circle text-green-500 text-sm"></i>
+                                    <span class="text-sm text-green-600 font-medium">Passing</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Code Coverage Status -->
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-shield-alt text-gray-700"></i>
+                                    <span class="text-sm text-gray-700">Coverage</span>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                    <span class="text-sm font-medium text-green-600">87%</span>
+                                    <i class="fas fa-arrow-up text-green-500 text-xs"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-calendar text-gray-400 text-xs"></i>
+                                    <span class="text-xs text-gray-500">Updated 2h ago</span>
+                                </div>
+                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Project Lead" class="w-6 h-6 rounded-full">
+                            </div>
+                        </div>
+                        
+                        <!-- Website Analytics Card -->
+                        <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 mb-1">Website Analytics</h4>
+                                    <p class="text-sm text-gray-600">Last 30 days</p>
+                                </div>
+                                <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">ANALYTICS</span>
+                            </div>
+                            
+                            <!-- Page Views -->
+                            <div class="mb-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-eye text-blue-500"></i>
+                                        <span class="text-sm font-medium text-gray-700">Page Views</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-lg font-bold text-gray-900">124,567</div>
+                                        <div class="flex items-center space-x-1">
+                                            <i class="fas fa-arrow-up text-green-500 text-xs"></i>
+                                            <span class="text-xs text-green-600">+12.5%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Unique Visitors -->
+                            <div class="mb-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-users text-green-500"></i>
+                                        <span class="text-sm font-medium text-gray-700">Unique Visitors</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-lg font-bold text-gray-900">23,891</div>
+                                        <div class="flex items-center space-x-1">
+                                            <i class="fas fa-arrow-up text-green-500 text-xs"></i>
+                                            <span class="text-xs text-green-600">+8.3%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Average Session Duration -->
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-clock text-orange-500"></i>
+                                    <span class="text-sm text-gray-700">Avg. Session</span>
+                                </div>
+                                <span class="text-sm font-medium text-gray-900">2m 34s</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-sync text-gray-400 text-xs"></i>
+                                    <span class="text-xs text-gray-500">Updated 15m ago</span>
+                                </div>
+                                <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Analytics Manager" class="w-6 h-6 rounded-full">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
