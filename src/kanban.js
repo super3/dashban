@@ -362,8 +362,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span class="${getPriorityColor(priority)} text-xs px-2 py-1 rounded-full font-medium">${priority}</span>
                     <span class="${getCategoryColor(category)} text-xs px-2 py-1 rounded-full font-medium">${category}</span>
                 </div>
-                ${issue.assignee ? 
-                    `<img src="${issue.assignee.avatar_url}" alt="${issue.assignee.login}" class="w-6 h-6 rounded-full">` : 
+                ${issue.user ? 
+                    `<img src="${issue.user.avatar_url}" alt="${issue.user.login}" class="w-6 h-6 rounded-full">` : 
                     `<div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
                         <i class="fas fa-user text-gray-400 text-xs"></i>
                     </div>`
