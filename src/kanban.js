@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (name.includes('low')) return 'Low';
         }
         
-        return 'Medium'; // default
+        return 'Low'; // default
     }
 
     function extractCategoryFromLabels(labels) {

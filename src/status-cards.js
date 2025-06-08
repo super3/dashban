@@ -17,7 +17,9 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Use shields.io badge for better reliability
             const badgeUrl = `https://img.shields.io/github/actions/workflow/status/${owner}/${repo}/${workflowFile}`;
-            const status = await GitHubUtils.parseBadgeSVG(badgeUrl)
+            console.log('🚀 Fetching Frontend status from:', badgeUrl);
+            const status = await GitHubUtils.parseBadgeSVG(badgeUrl);
+            console.log('🚀 Frontend status result for frontend.yml:', status);
             
             updateWorkflowStatusUI({
                 status: status,
@@ -113,8 +115,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const workflowFile = 'test.yml';
         
         try {
-            const badgeUrl = `https://img.shields.io/github/actions/workflow/status/${owner}/${repo}/${workflowFile}`;
+            // Add stronger cache busting for CI status checks
+            const timestamp = Date.now();
+            const badgeUrl = `https://img.shields.io/github/actions/workflow/status/${owner}/${repo}/${workflowFile}?t=${timestamp}&cacheSeconds=0`;
+            console.log('🔍 Fetching CI status from:', badgeUrl);
             const status = await GitHubUtils.parseBadgeSVG(badgeUrl);
+            console.log('🔍 CI status result for test.yml:', status);
             
             updateCIStatusUI({
                 status: status,
@@ -205,10 +211,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateCIStatusUI(ciData) {
+        console.log('🎯 Updating CI status UI with:', ciData);
         const statusElement = document.querySelector('[data-ci-status]');
-        const timeElement = document.querySelector('[data-ci-time]');
         
-        if (!statusElement || !timeElement) return;
+        if (!statusElement) {
+            console.log('❌ CI status element not found in DOM');
+            return;
+        }
         
         const statusConfig = {
             success: { icon: 'fas fa-check-circle', color: 'text-green-500', text: 'Passing', bgColor: 'text-green-600' },
@@ -219,19 +228,12 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         const config = statusConfig[ciData.status] || statusConfig.unknown;
+        console.log('🎯 Using config for CI status:', config);
         
         statusElement.innerHTML = `
             <div class="flex items-center space-x-1">
                 <i class="${config.icon} ${config.color} text-sm"></i>
                 <span class="text-sm ${config.bgColor} font-medium">${config.text}</span>
-            </div>
-        `;
-        
-        const timeAgo = GitHubUtils.getTimeAgo(ciData.updatedAt);
-        timeElement.innerHTML = `
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-sync text-gray-400 text-xs"></i>
-                <span class="text-xs text-gray-500">Updated ${timeAgo}</span>
             </div>
         `;
         
@@ -315,12 +317,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Refresh all statuses
+    // Refresh all statuses with slight delays to avoid conflicts
     function refreshAllStatuses() {
         fetchWorkflowStatus();
-        fetchCIStatus();
-        fetchCoverageStatus();
-        fetchTrafficData().then(updateTrafficUI);
+        setTimeout(() => fetchCIStatus(), 500);  // Small delay to avoid conflicts
+        setTimeout(() => fetchCoverageStatus(), 1000);
+        setTimeout(() => {
+            fetchTrafficData().then(updateTrafficUI);
+        }, 1500);
     }
 
     // Initial load - start with loading workflow status immediately but skip timestamp
@@ -337,9 +341,9 @@ document.addEventListener('DOMContentLoaded', function() {
             fetchTrafficData().then(updateTrafficUI);
         }, 3000);
         
-        // Then do a full refresh after all initial loads
+        // Then do a full refresh after all initial loads, but don't re-fetch CI status since it was just checked
         setTimeout(() => {
-            fetchWorkflowStatus(); // This time with timestamp
+            fetchWorkflowStatus(); // This time with timestamp - only refresh frontend status
         }, 5000);
     }
 
