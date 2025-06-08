@@ -290,24 +290,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Add task completion animation for done column
-    const doneColumn = document.getElementById('done');
-    new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.type === 'childList') {
-                mutation.addedNodes.forEach(function(node) {
-                    if (node.nodeType === 1 && node.classList.contains('bg-white')) {
-                        // Add completion animation
-                        node.style.transform = 'scale(0.8)';
-                        node.style.transition = 'transform 0.3s ease';
-                        setTimeout(() => {
-                            node.style.transform = 'scale(1)';
-                        }, 100);
-                    }
-                });
-            }
-        });
-    }).observe(doneColumn, { childList: true });
+    // Note: Completion animation removed for cleaner loading experience
 
     // GitHub Issues Integration
     async function loadGitHubIssues() {
@@ -324,12 +307,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(`GitHub API error: ${openResponse.status} or ${closedResponse.status}`);
             }
             
-            const [openIssues, closedIssues] = await Promise.all([
+            const [openIssuesRaw, closedIssuesRaw] = await Promise.all([
                 openResponse.json(),
                 closedResponse.json()
             ]);
             
-            console.log(`Found ${openIssues.length} open and ${closedIssues.length} closed GitHub issues`);
+            // Filter out issues with "archive" label
+            const openIssues = openIssuesRaw.filter(issue => 
+                !issue.labels.some(label => label.name.toLowerCase() === 'archive')
+            );
+            const closedIssues = closedIssuesRaw.filter(issue => 
+                !issue.labels.some(label => label.name.toLowerCase() === 'archive')
+            );
+            
+            console.log(`Found ${openIssues.length} open and ${closedIssues.length} closed GitHub issues (filtered out archived issues)`);
             
             const backlogColumn = document.getElementById('backlog');
             const doneColumn = document.getElementById('done');
