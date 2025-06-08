@@ -138,7 +138,7 @@
                     </button>
                     <a href="https://github.com/super3/dashban" target="_blank" class="flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
                         <i class="fab fa-github"></i>
-                        <span>Fork on Github</span>
+                        <span>Sign In with Github</span>
                     </a>
                 </div>
             </div>
@@ -411,6 +411,21 @@
                               <option value="review">Review</option>
                               <option value="done">Done</option>
                           </select>
+                      </div>
+                      
+                      <!-- GitHub Integration Option -->
+                      <div id="github-option" class="border-t border-gray-200 pt-4">
+                          <div class="flex items-start space-x-2">
+                              <input type="checkbox" id="create-github-issue" name="createGitHubIssue" class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                              <div class="flex-1">
+                                  <label for="create-github-issue" class="text-sm font-medium text-gray-700 cursor-pointer">
+                                      Create GitHub Issue
+                                  </label>
+                                  <p id="github-status-text" class="text-xs text-gray-500 mt-0.5">
+                                      Sign in with GitHub to create real issues in the repository
+                                  </p>
+                              </div>
+                          </div>
                       </div>
                       <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" id="cancel-task" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200">Cancel</button>

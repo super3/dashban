@@ -723,15 +723,24 @@ describe('Kanban Board Functions', () => {
     test('should handle form submission with missing form data', () => {
       const form = document.getElementById('add-task-form');
       const backlog = document.getElementById('backlog');
+      const initialTaskCount = backlog.querySelectorAll('.bg-white.border').length;
+      
+      // Mock alert to prevent popup during test
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
       
       // Submit form without filling fields
       const submitEvent = new Event('submit');
       submitEvent.preventDefault = jest.fn();
       form.dispatchEvent(submitEvent);
       
-      // Should still create a task even with empty fields
+      // Should not create a task with empty title (validation should prevent it)
       const tasks = backlog.querySelectorAll('.bg-white.border');
-      expect(tasks.length).toBeGreaterThanOrEqual(1);
+      expect(tasks.length).toBe(initialTaskCount);
+      
+      // Should show validation alert
+      expect(alertSpy).toHaveBeenCalledWith('Please enter an issue title');
+      
+      alertSpy.mockRestore();
     });
 
     test('should handle kanban functionality without animation mutations', () => {

@@ -7,6 +7,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     console.log('📋 Kanban Board initializing...');
+
+    // GitHub OAuth configuration
+    const GITHUB_CONFIG = {
+        clientId: 'YOUR_GITHUB_OAUTH_CLIENT_ID', // Replace with your GitHub OAuth App Client ID
+        redirectUri: window.location.origin + window.location.pathname,
+        scope: 'public_repo', // Scope for creating issues in public repos
+        apiBaseUrl: 'https://api.github.com',
+        owner: 'super3',
+        repo: 'dashban'
+    };
+
+    // GitHub authentication state
+    let githubAuth = {
+        isAuthenticated: false,
+        token: null,
+        user: null
+    };
     
     // Initialize sortable lists for each column
     const columns = ['info', 'backlog', 'inprogress', 'review', 'done'];
@@ -55,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle form submission
     if (addTaskForm) {
-        addTaskForm.addEventListener('submit', function(e) {
+        addTaskForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const formData = new FormData(addTaskForm);
@@ -64,21 +81,81 @@ document.addEventListener('DOMContentLoaded', function() {
             const priority = formData.get('priority');
             const category = formData.get('category');
             const column = formData.get('column');
+            const createGitHub = formData.get('createGitHubIssue') === 'on';
             
-            // Generate unique ID
-            const id = Date.now();
+            // Validate required fields
+            if (!title || !title.trim()) {
+                alert('Please enter an issue title');
+                return;
+            }
             
-            // Create task element
-            const taskElement = createTaskElement(id, title, description, priority, category);
+            if (createGitHub && !githubAuth.isAuthenticated) {
+                alert('Please sign in with GitHub first to create real issues');
+                return;
+            }
             
-            // Add to appropriate column
-            document.getElementById(column).appendChild(taskElement);
+            let taskElement;
+            const issueId = Date.now(); // Default ID for local tasks
             
-            // Update counts
-            updateColumnCounts();
-            
-            // Hide modal
-            hideModal();
+            try {
+                // Disable form during submission
+                const submitBtn = addTaskForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn ? submitBtn.textContent : 'Add Issue';
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = createGitHub ? 'Creating GitHub Issue...' : 'Adding Issue...';
+                }
+                
+                if (createGitHub && githubAuth.isAuthenticated) {
+                    // Convert priority and category to GitHub labels
+                    const labels = [];
+                    if (priority && priority !== 'Medium') labels.push(priority.toLowerCase());
+                    if (category) labels.push(category.toLowerCase());
+                    
+                    // Create GitHub issue
+                    const githubIssue = await createGitHubIssue(title, description, labels);
+                    
+                    if (githubIssue) {
+                        // Use GitHub issue data to create the task element
+                        taskElement = createGitHubIssueElement(githubIssue, false);
+                        console.log('✅ Created GitHub issue and local task');
+                    } else {
+                        // Fallback to local task creation
+                        taskElement = createTaskElement(issueId, title, description, priority, category);
+                        console.log('⚠️ Created local task only (GitHub creation failed)');
+                    }
+                } else {
+                    // Create local task only
+                    taskElement = createTaskElement(issueId, title, description, priority, category);
+                    console.log('📝 Created local task');
+                }
+                
+                // Add to appropriate column
+                document.getElementById(column).appendChild(taskElement);
+                
+                // Update counts
+                updateColumnCounts();
+                
+                // Hide modal and reset form
+                hideModal();
+                
+                // Restore submit button
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+                
+            } catch (error) {
+                console.error('Error during task creation:', error);
+                alert('An error occurred while creating the task. Please try again.');
+                
+                // Restore submit button
+                const submitBtn = addTaskForm.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Add Issue';
+                }
+            }
         });
     }
 
@@ -304,6 +381,226 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Edit task:', taskElement);
         }
     });
+
+    // GitHub Authentication Functions
+    function initializeGitHubAuth() {
+        // Check if we're returning from OAuth
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        
+        if (code && state) {
+            // Verify state to prevent CSRF attacks
+            const savedState = localStorage.getItem('github_oauth_state');
+            if (state === savedState) {
+                handleOAuthCallback(code);
+            } else {
+                console.error('OAuth state mismatch - possible CSRF attack');
+                alert('Authentication failed due to security concerns. Please try again.');
+            }
+            
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            localStorage.removeItem('github_oauth_state');
+        } else {
+            // Check for existing token
+            const savedToken = localStorage.getItem('github_access_token');
+            if (savedToken) {
+                validateAndSetToken(savedToken);
+            }
+        }
+        
+        updateGitHubSignInUI();
+    }
+
+    function signInWithGitHub() {
+        // Generate a random state for CSRF protection
+        const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('github_oauth_state', state);
+        
+        // Construct OAuth URL
+        const authUrl = new URL('https://github.com/login/oauth/authorize');
+        authUrl.searchParams.set('client_id', GITHUB_CONFIG.clientId);
+        authUrl.searchParams.set('redirect_uri', GITHUB_CONFIG.redirectUri);
+        authUrl.searchParams.set('scope', GITHUB_CONFIG.scope);
+        authUrl.searchParams.set('state', state);
+        
+        // Redirect to GitHub
+        window.location.href = authUrl.toString();
+    }
+
+    async function handleOAuthCallback(code) {
+        try {
+            console.log('🔄 Exchanging OAuth code for access token...');
+            
+            // For client-side apps, we need to use a proxy or backend service
+            // For demo purposes, we'll use GitHub's client-side token approach
+            // In production, you'd want to exchange this through your backend
+            
+            // For now, let's use the device flow or ask user to manually create token
+            const message = `OAuth code received: ${code}\n\n` +
+                'For security reasons, please create a Personal Access Token manually:\n\n' +
+                '1. Go to GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)\n' +
+                '2. Generate new token with "public_repo" scope\n' +
+                '3. Copy the token and paste it below:';
+            
+            const token = prompt(message);
+            if (token) {
+                await validateAndSetToken(token);
+            }
+        } catch (error) {
+            console.error('❌ OAuth callback error:', error);
+            alert('Authentication failed. Please try again.');
+        }
+    }
+
+    async function validateAndSetToken(token) {
+        try {
+            console.log('🔄 Validating GitHub token...');
+            
+            const response = await fetch(`${GITHUB_CONFIG.apiBaseUrl}/user`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Invalid token');
+            }
+            
+            const user = await response.json();
+            
+            // Store authentication
+            githubAuth.isAuthenticated = true;
+            githubAuth.token = token;
+            githubAuth.user = user;
+            
+            localStorage.setItem('github_access_token', token);
+            
+            console.log('✅ GitHub authentication successful:', user.login);
+            updateGitHubSignInUI();
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Token validation failed:', error);
+            signOutGitHub();
+            return false;
+        }
+    }
+
+    function signOutGitHub() {
+        githubAuth.isAuthenticated = false;
+        githubAuth.token = null;
+        githubAuth.user = null;
+        
+        localStorage.removeItem('github_access_token');
+        updateGitHubSignInUI();
+        
+        console.log('🔓 Signed out of GitHub');
+    }
+
+    function updateGitHubSignInUI() {
+        const signInButton = document.querySelector('a[href="https://github.com/super3/dashban"]');
+        if (!signInButton) return;
+        
+        if (githubAuth.isAuthenticated) {
+            signInButton.innerHTML = `
+                <i class="fab fa-github"></i>
+                <span>Signed in as ${githubAuth.user.login}</span>
+                <i class="fas fa-sign-out-alt text-xs"></i>
+            `;
+            signInButton.title = 'Click to sign out';
+            signInButton.href = '#';
+            signInButton.onclick = (e) => {
+                e.preventDefault();
+                if (confirm('Sign out of GitHub?')) {
+                    signOutGitHub();
+                }
+            };
+        } else {
+            signInButton.innerHTML = `
+                <i class="fab fa-github"></i>
+                <span>Sign In with GitHub</span>
+            `;
+            signInButton.title = 'Sign in to create GitHub issues';
+            signInButton.href = '#';
+            signInButton.onclick = (e) => {
+                e.preventDefault();
+                signInWithGitHub();
+            };
+        }
+        
+        // Update GitHub option in form
+        updateGitHubOptionUI();
+    }
+
+    function updateGitHubOptionUI() {
+        const gitHubOption = document.getElementById('github-option');
+        const gitHubCheckbox = document.getElementById('create-github-issue');
+        const gitHubStatusText = document.getElementById('github-status-text');
+        
+        if (!gitHubOption || !gitHubCheckbox || !gitHubStatusText) return;
+        
+        if (githubAuth.isAuthenticated) {
+            gitHubCheckbox.disabled = false;
+            gitHubStatusText.textContent = `Create real issues in the repository as ${githubAuth.user.login}`;
+            gitHubStatusText.className = 'text-xs text-green-600 mt-0.5';
+        } else {
+            gitHubCheckbox.disabled = true;
+            gitHubCheckbox.checked = false;
+            gitHubStatusText.textContent = 'Sign in with GitHub to create real issues in the repository';
+            gitHubStatusText.className = 'text-xs text-gray-500 mt-0.5';
+        }
+    }
+
+    // Create GitHub issue via API
+    async function createGitHubIssue(title, description, labels = []) {
+        if (!githubAuth.isAuthenticated) {
+            console.log('❌ Not authenticated with GitHub');
+            return null;
+        }
+
+        try {
+            console.log('🔄 Creating GitHub issue:', title);
+
+            const issueData = {
+                title: title,
+                body: description || 'No description provided',
+                labels: labels.filter(label => label) // Remove empty labels
+            };
+
+            const response = await fetch(`${GITHUB_CONFIG.apiBaseUrl}/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/issues`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Authorization': `token ${githubAuth.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(issueData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+            }
+
+            const createdIssue = await response.json();
+            console.log('✅ GitHub issue created successfully:', createdIssue.html_url);
+            
+            return createdIssue;
+        } catch (error) {
+            console.error('❌ Failed to create GitHub issue:', error);
+            
+            // Show user-friendly error message
+            const errorMessage = error.message.includes('GitHub API error') 
+                ? error.message 
+                : 'Failed to create GitHub issue. Check your network connection.';
+            
+            alert(`GitHub Issue Creation Failed:\n${errorMessage}\n\nThe task will be created locally instead.`);
+            return null;
+        }
+    }
 
     // Note: Completion animation removed for cleaner loading experience
 
@@ -575,6 +872,9 @@ document.addEventListener('DOMContentLoaded', function() {
         backlogColumn.setAttribute('data-github-loaded', 'true');
     }
     
+    // Initialize GitHub Authentication
+    initializeGitHubAuth();
+    
     // Initialize GitHub issues loading after UI is ready
     setTimeout(() => {
         initializeGitHubIssues();
@@ -595,6 +895,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadCollapseStates,
         saveCollapseStates,
         loadGitHubIssues,
+        createGitHubIssue,
         renderMarkdown,
         createGitHubIssueElement,
         extractPriorityFromLabels,
@@ -602,7 +903,14 @@ document.addEventListener('DOMContentLoaded', function() {
         getPriorityColor,
         getCategoryColor,
         createSkeletonCard,
-        initializeGitHubIssues
+        initializeGitHubIssues,
+        // GitHub authentication functions
+        initializeGitHubAuth,
+        signInWithGitHub,
+        signOutGitHub,
+        updateGitHubSignInUI,
+        updateGitHubOptionUI,
+        validateAndSetToken
     };
 
     // Attach to global for browser/Node access
