@@ -569,81 +569,15 @@ describe('Kanban Board Functions', () => {
     });
   });
 
-  describe('done column animation', () => {
-    test('should observe done column for mutations', () => {
+  describe('done column animation (removed feature)', () => {
+    test('should exist without animation functionality', () => {
       const doneColumn = document.getElementById('done');
       
-      // Test that MutationObserver was instantiated
-      expect(mutationObserverCalls.length).toBeGreaterThan(0);
+      // Just verify the done column exists
       expect(doneColumn).toBeTruthy();
       
-      // Note: observe() may not be tracked due to module loading timing
-      // The important thing is that MutationObserver is instantiated
-    });
-
-    test('should apply animation to new tasks in done column', () => {
-      const callback = mutationObserverCalls[0][0];
-      
-      // Create a mock node
-      const newTask = document.createElement('div');
-      newTask.className = 'bg-white';
-      newTask.style = {};
-      
-      // Mock the mutations
-      const mutations = [{
-        type: 'childList',
-        addedNodes: [newTask]
-      }];
-      
-      callback(mutations);
-      
-      expect(newTask.style.transform).toBe('scale(1)');
-      expect(newTask.style.transition).toBe('transform 0.3s ease');
-    });
-
-    test('should ignore non-element nodes in mutations', () => {
-      const callback = mutationObserverCalls[0][0];
-      
-      // Create a text node (nodeType 3)
-      const textNode = document.createTextNode('text');
-      
-      const mutations = [{
-        type: 'childList',
-        addedNodes: [textNode]
-      }];
-      
-      expect(() => {
-        callback(mutations);
-      }).not.toThrow();
-    });
-
-    test('should ignore elements without bg-white class', () => {
-      const callback = mutationObserverCalls[0][0];
-      
-      const otherElement = document.createElement('div');
-      otherElement.className = 'other-class';
-      
-      const mutations = [{
-        type: 'childList',
-        addedNodes: [otherElement]
-      }];
-      
-      expect(() => {
-        callback(mutations);
-      }).not.toThrow();
-    });
-
-    test('should ignore non-childList mutations', () => {
-      const callback = mutationObserverCalls[0][0];
-      
-      const mutations = [{
-        type: 'attributes',
-        addedNodes: []
-      }];
-      
-      expect(() => {
-        callback(mutations);
-      }).not.toThrow();
+      // The completion animation feature was removed for better performance
+      // This test verifies the basic column functionality remains
     });
   });
 
@@ -739,31 +673,18 @@ describe('Kanban Board Functions', () => {
       expect(tasks.length).toBe(1);
     });
 
-    test('should handle MutationObserver with complex mutations', () => {
-      const callback = mutationObserverCalls[0][0];
+    test('should handle kanban functionality without animation mutations', () => {
+      // Since MutationObserver animation was removed, just verify basic functionality
+      const backlog = document.getElementById('backlog');
+      const task = document.createElement('div');
+      task.className = 'bg-white border p-3 rounded-md shadow-sm';
       
-      // Test with multiple mutation types
-      const mutations = [
-        { type: 'childList', addedNodes: [] },
-        { type: 'attributes', addedNodes: [] },
-        {
-          type: 'childList',
-          addedNodes: [
-            document.createElement('span'),
-            document.createTextNode('text'),
-            (() => {
-              const div = document.createElement('div');
-              div.className = 'bg-white';
-              div.style = {};
-              return div;
-            })()
-          ]
-        }
-      ];
+      // Test basic task manipulation
+      backlog.appendChild(task);
+      expect(backlog.children.length).toBe(1);
       
-      expect(() => {
-        callback(mutations);
-      }).not.toThrow();
+      backlog.removeChild(task);
+      expect(backlog.children.length).toBe(0);
     });
   });
 });

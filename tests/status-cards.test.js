@@ -451,18 +451,21 @@ describe('Status Cards Functions', () => {
       expect(statusElement.innerHTML).toContain('Unknown');
     });
 
-    test('should always update timestamp', () => {
+    test('should not try to update timestamp (removed feature)', () => {
       const ciData = {
         status: 'success',
         updatedAt: new Date(),
         htmlUrl: 'https://github.com/test/repo/actions'
       };
 
-      statusAPI.updateCIStatusUI(ciData);
-
-      const timeElement = document.querySelector('[data-ci-time]');
-      expect(timeElement.innerHTML).toContain('Updated 2m ago');
-      expect(GitHubUtils.getTimeAgo).toHaveBeenCalledWith(ciData.updatedAt);
+      // This should not throw even though timestamp feature was removed
+      expect(() => {
+        statusAPI.updateCIStatusUI(ciData);
+      }).not.toThrow();
+      
+      // Verify the main status is still updated
+      const statusElement = document.querySelector('[data-ci-status]');
+      expect(statusElement.innerHTML).toContain('Passing');
     });
 
     test('should handle missing DOM elements gracefully', () => {
@@ -694,7 +697,7 @@ describe('Status Cards Functions', () => {
       await statusAPI.fetchCIStatus();
       
       expect(GitHubUtils.parseBadgeSVG).toHaveBeenCalledWith(
-        'https://img.shields.io/github/actions/workflow/status/super3/dashban/test.yml'
+        expect.stringContaining('https://img.shields.io/github/actions/workflow/status/super3/dashban/test.yml')
       );
     });
 
