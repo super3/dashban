@@ -313,30 +313,62 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadGitHubIssues() {
         try {
             console.log('Loading GitHub issues...');
-            const response = await fetch('https://api.github.com/repos/super3/dashban/issues?state=open');
             
-            if (!response.ok) {
-                throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+            // Fetch both open and closed issues
+            const [openResponse, closedResponse] = await Promise.all([
+                fetch('https://api.github.com/repos/super3/dashban/issues?state=open'),
+                fetch('https://api.github.com/repos/super3/dashban/issues?state=closed')
+            ]);
+            
+            if (!openResponse.ok || !closedResponse.ok) {
+                throw new Error(`GitHub API error: ${openResponse.status} or ${closedResponse.status}`);
             }
             
-            const issues = await response.json();
-            console.log(`Found ${issues.length} GitHub issues`);
+            const [openIssues, closedIssues] = await Promise.all([
+                openResponse.json(),
+                closedResponse.json()
+            ]);
+            
+            console.log(`Found ${openIssues.length} open and ${closedIssues.length} closed GitHub issues`);
             
             const backlogColumn = document.getElementById('backlog');
+            const doneColumn = document.getElementById('done');
             
-            issues.forEach(issue => {
-                const taskElement = createGitHubIssueElement(issue);
+            // Remove skeleton cards from both columns
+            const backlogSkeletons = backlogColumn.querySelectorAll('.skeleton-card');
+            const doneSkeletons = doneColumn.querySelectorAll('.skeleton-card');
+            backlogSkeletons.forEach(card => card.remove());
+            doneSkeletons.forEach(card => card.remove());
+            
+            // Add open issues to backlog
+            openIssues.forEach(issue => {
+                const taskElement = createGitHubIssueElement(issue, false);
                 backlogColumn.appendChild(taskElement);
+            });
+            
+            // Add closed issues to done column
+            closedIssues.slice(0, 5).forEach(issue => { // Limit to 5 most recent closed issues
+                const taskElement = createGitHubIssueElement(issue, true);
+                doneColumn.appendChild(taskElement);
             });
             
             updateColumnCounts();
             
         } catch (error) {
             console.error('Failed to load GitHub issues:', error);
+            
+            // Remove skeleton cards even if there's an error
+            const backlogColumn = document.getElementById('backlog');
+            const doneColumn = document.getElementById('done');
+            const backlogSkeletons = backlogColumn.querySelectorAll('.skeleton-card');
+            const doneSkeletons = doneColumn.querySelectorAll('.skeleton-card');
+            backlogSkeletons.forEach(card => card.remove());
+            doneSkeletons.forEach(card => card.remove());
+            updateColumnCounts();
         }
     }
 
-    function createGitHubIssueElement(issue) {
+    function createGitHubIssueElement(issue, isCompleted = false) {
         const taskDiv = document.createElement('div');
         taskDiv.className = 'bg-white border border-gray-200 rounded-md p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
         taskDiv.draggable = true;
@@ -357,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </a>
             </div>
             <p class="text-gray-600 text-sm mb-3 line-clamp-2">${description}</p>
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between ${isCompleted ? 'mb-3' : ''}">
                 <div class="flex items-center space-x-2">
                     <span class="${getPriorityColor(priority)} text-xs px-2 py-1 rounded-full font-medium">${priority}</span>
                     <span class="${getCategoryColor(category)} text-xs px-2 py-1 rounded-full font-medium">${category}</span>
@@ -369,6 +401,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>`
                 }
             </div>
+            ${isCompleted ? `
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-check-circle text-green-500 text-xs"></i>
+                <span class="text-xs text-green-600">Completed</span>
+            </div>` : ''}
         `;
 
         return taskDiv;
@@ -429,10 +466,67 @@ document.addEventListener('DOMContentLoaded', function() {
         return categoryColors[category] || categoryColors['Setup'];
     }
 
-    // Load GitHub issues after a short delay to let the UI initialize
+    // Create skeleton loading cards
+    function createSkeletonCard() {
+        const skeletonDiv = document.createElement('div');
+        skeletonDiv.className = 'bg-white border border-gray-200 rounded-md p-3 shadow-sm skeleton-card animate-pulse';
+        
+        skeletonDiv.innerHTML = `
+            <div class="flex items-start justify-between mb-2">
+                <div class="bg-gray-200 h-4 rounded w-3/4"></div>
+                <div class="bg-gray-200 h-3 rounded w-8"></div>
+            </div>
+            <div class="space-y-2 mb-3">
+                <div class="bg-gray-200 h-3 rounded w-full"></div>
+                <div class="bg-gray-200 h-3 rounded w-2/3"></div>
+            </div>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="bg-gray-200 h-5 rounded-full w-12"></div>
+                    <div class="bg-gray-200 h-5 rounded-full w-16"></div>
+                </div>
+                <div class="bg-gray-200 w-6 h-6 rounded-full"></div>
+            </div>
+        `;
+        
+        return skeletonDiv;
+    }
+
+    // Show skeleton cards immediately and load real GitHub issues
+    function initializeGitHubIssues() {
+        const backlogColumn = document.getElementById('backlog');
+        const doneColumn = document.getElementById('done');
+        
+        if (!backlogColumn || !doneColumn || backlogColumn.hasAttribute('data-github-loaded')) return;
+        
+        console.log('Showing skeleton cards...');
+        
+        // Add skeleton cards to backlog
+        for (let i = 0; i < 2; i++) {
+            const skeletonCard = createSkeletonCard();
+            backlogColumn.appendChild(skeletonCard);
+        }
+        
+        // Add skeleton cards to done column
+        for (let i = 0; i < 2; i++) {
+            const skeletonCard = createSkeletonCard();
+            doneColumn.appendChild(skeletonCard);
+        }
+        
+        updateColumnCounts();
+        
+        // Load real GitHub issues after a short delay
+        setTimeout(() => {
+            loadGitHubIssues();
+        }, 800);
+        
+        backlogColumn.setAttribute('data-github-loaded', 'true');
+    }
+    
+    // Initialize GitHub issues loading after UI is ready
     setTimeout(() => {
-        loadGitHubIssues();
-    }, 1000);
+        initializeGitHubIssues();
+    }, 100);
 
     console.log('Kanban Board initialized successfully!');
 
