@@ -281,6 +281,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Add archive functionality for GitHub issues
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.archive-btn')) {
+            const archiveBtn = e.target.closest('.archive-btn');
+            const issueNumber = archiveBtn.getAttribute('data-issue-number');
+            const taskElement = archiveBtn.closest('.bg-white.border');
+            
+            if (confirm(`Archive issue #${issueNumber}? This will hide it from the kanban board.`)) {
+                console.log(`Archiving issue #${issueNumber} - Note: This only removes from UI, GitHub API changes would require authentication`);
+                taskElement.remove();
+                updateColumnCounts();
+            }
+        }
+    });
+
     // Add double-click to edit functionality
     document.addEventListener('dblclick', function(e) {
         const taskElement = e.target.closest('.bg-white.border');
@@ -380,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </a>
             </div>
             <p class="text-gray-600 text-sm mb-3 line-clamp-2">${description}</p>
-            <div class="flex items-center justify-between ${isCompleted ? 'mb-3' : ''}">
+            <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <span class="${getPriorityColor(priority)} text-xs px-2 py-1 rounded-full font-medium">${priority}</span>
                     <span class="${getCategoryColor(category)} text-xs px-2 py-1 rounded-full font-medium">${category}</span>
@@ -393,9 +408,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             </div>
             ${isCompleted ? `
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-check-circle text-green-500 text-xs"></i>
-                <span class="text-xs text-green-600">Completed</span>
+            <div class="border-t border-gray-200 mt-3 pt-2">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-check-circle text-green-500 text-xs"></i>
+                        <span class="text-xs text-green-600">Completed</span>
+                    </div>
+                    <button class="archive-btn text-gray-400 hover:text-gray-600 p-1 transition-colors" 
+                            title="Archive issue" 
+                            data-issue-number="${issue.number}">
+                        <i class="fas fa-archive text-xs"></i>
+                    </button>
+                </div>
             </div>` : ''}
         `;
 
