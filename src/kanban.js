@@ -153,7 +153,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ctrl/Cmd + N to add new task
         if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
             e.preventDefault();
-            addTaskBtn.click();
+            if (addTaskBtn) {
+                addTaskBtn.click();
+            }
         }
     });
 
