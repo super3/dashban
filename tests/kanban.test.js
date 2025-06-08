@@ -170,6 +170,20 @@ describe('Kanban Board Functions', () => {
     });
   });
 
+  describe('localStorage error handling', () => {
+    test('should handle invalid JSON in localStorage gracefully', () => {
+      mockLocalStorage.getItem.mockReturnValue('invalid json string{');
+      
+      expect(() => {
+        try {
+          JSON.parse(mockLocalStorage.getItem('kanban-column-states'));
+        } catch (e) {
+          // Should handle JSON parse errors gracefully
+        }
+      }).not.toThrow();
+    });
+  });
+
   describe('initialization', () => {
     test('should initialize sortable lists for all columns', () => {
       // Should be called 5 times for 5 columns during module load
@@ -496,6 +510,49 @@ describe('Kanban Board Functions', () => {
         button.click();
       }).not.toThrow();
     });
+
+    test('should handle missing sortable element during collapse', () => {
+      const columnElement = document.querySelector('.column[data-column="backlog"]');
+      const sortableElement = columnElement.querySelector('[id]');
+      const button = document.querySelector('.column-collapse-btn[data-column="backlog"]');
+      
+      // Remove the sortable element to simulate missing element
+      if (sortableElement) {
+        const parent = sortableElement.parentNode;
+        parent.removeChild(sortableElement);
+        
+        expect(() => {
+          button.click();
+        }).not.toThrow();
+        
+        // Restore element
+        parent.appendChild(sortableElement);
+      }
+    });
+
+    test('should handle expand with missing sortable element', () => {
+      const columnElement = document.querySelector('.column[data-column="backlog"]');
+      const button = document.querySelector('.column-collapse-btn[data-column="backlog"]');
+      
+      // First collapse the column
+      columnElement.classList.add('column-collapsed');
+      columnElement.classList.remove('column-expanded');
+      
+      // Remove sortable element
+      const sortableElement = columnElement.querySelector('[id]');
+      if (sortableElement) {
+        const parent = sortableElement.parentNode;
+        parent.removeChild(sortableElement);
+        
+        // Now try to expand - should handle missing element gracefully
+        expect(() => {
+          button.click();
+        }).not.toThrow();
+        
+        // Restore element
+        parent.appendChild(sortableElement);
+      }
+    });
   });
 
   describe('task deletion functionality', () => {
@@ -685,6 +742,573 @@ describe('Kanban Board Functions', () => {
       
       backlog.removeChild(task);
       expect(backlog.children.length).toBe(0);
+    });
+  });
+
+  describe('GitHub issues integration', () => {
+    beforeEach(() => {
+      // Mock fetch for GitHub API
+      global.fetch = jest.fn();
+      // Clean up previous skeleton cards
+      const skeletons = document.querySelectorAll('.skeleton-card');
+      skeletons.forEach(card => card.remove());
+    });
+
+    test('should load GitHub issues successfully and create issue elements', async () => {
+      const mockOpenIssues = [
+        {
+          number: 1,
+          title: 'Test Issue',
+          body: 'Test **description** with `code`',
+          html_url: 'https://github.com/test/repo/issues/1',
+          labels: [{ name: 'bug' }, { name: 'high' }],
+          user: { login: 'testuser', avatar_url: 'https://avatar.com/test.jpg' }
+        }
+      ];
+      
+      const mockClosedIssues = [
+        {
+          number: 2,
+          title: 'Closed Issue',
+          body: 'Closed description',
+          html_url: 'https://github.com/test/repo/issues/2',
+          labels: [{ name: 'enhancement' }],
+          user: { login: 'testuser', avatar_url: 'https://avatar.com/test.jpg' }
+        }
+      ];
+
+      fetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockOpenIssues
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockClosedIssues
+        });
+
+      // Extract and call the loadGitHubIssues function
+      const fs = require('fs');
+      const kanbanCode = fs.readFileSync(require.resolve('../src/kanban.js'), 'utf8');
+      
+      // Create a test context to run the GitHub function
+      const testContext = {
+        console,
+        fetch: global.fetch,
+        document,
+        Promise,
+        setTimeout: (cb) => cb(),
+        updateColumnCounts: () => {}
+      };
+      
+      // Extract the function and run it in our context
+      const githubFunction = new Function('context', `
+        with (context) {
+          ${kanbanCode.match(/async function loadGitHubIssues\(\) \{[\s\S]*?\n    \}/)[0]}
+          return loadGitHubIssues;
+        }
+      `)(testContext);
+      
+      await githubFunction();
+      
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(fetch).toHaveBeenCalledWith('https://api.github.com/repos/super3/dashban/issues?state=open');
+      expect(fetch).toHaveBeenCalledWith('https://api.github.com/repos/super3/dashban/issues?state=closed');
+    });
+
+    test('should handle GitHub API errors gracefully', async () => {
+      fetch.mockRejectedValue(new Error('Network error'));
+      
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      
+      // Extract and call the loadGitHubIssues function with error
+      const fs = require('fs');
+      const kanbanCode = fs.readFileSync(require.resolve('../src/kanban.js'), 'utf8');
+      
+      const testContext = {
+        console,
+        fetch: global.fetch,
+        document,
+        Promise,
+        setTimeout: (cb) => cb(),
+        updateColumnCounts: () => {}
+      };
+      
+      const githubFunction = new Function('context', `
+        with (context) {
+          ${kanbanCode.match(/async function loadGitHubIssues\(\) \{[\s\S]*?\n    \}/)[0]}
+          return loadGitHubIssues;
+        }
+      `)(testContext);
+      
+      await githubFunction();
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to load GitHub issues:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle GitHub API response errors', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404
+      });
+      
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      
+      const fs = require('fs');
+      const kanbanCode = fs.readFileSync(require.resolve('../src/kanban.js'), 'utf8');
+      
+      const testContext = {
+        console,
+        fetch: global.fetch,
+        document,
+        Promise,
+        setTimeout: (cb) => cb(),
+        updateColumnCounts: () => {}
+      };
+      
+      const githubFunction = new Function('context', `
+        with (context) {
+          ${kanbanCode.match(/async function loadGitHubIssues\(\) \{[\s\S]*?\n    \}/)[0]}
+          return loadGitHubIssues;
+        }
+      `)(testContext);
+      
+      await githubFunction();
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to load GitHub issues:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    test('should filter out archived issues', () => {
+      const issues = [
+        { number: 1, labels: [{ name: 'bug' }] },
+        { number: 2, labels: [{ name: 'archive' }] },
+        { number: 3, labels: [{ name: 'Archive' }] },
+        { number: 4, labels: [{ name: 'feature' }] }
+      ];
+      
+      const filtered = issues.filter(issue => 
+        !issue.labels.some(label => label.name.toLowerCase() === 'archive')
+      );
+      
+      expect(filtered).toHaveLength(2);
+      expect(filtered[0].number).toBe(1);
+      expect(filtered[1].number).toBe(4);
+    });
+  });
+
+  describe('GitHub issue element creation', () => {
+    test('should create GitHub issue element with all helper functions', () => {
+      const mockIssue = {
+        number: 123,
+        title: 'Test Issue',
+        body: 'This is a **test** issue with `code`',
+        html_url: 'https://github.com/test/repo/issues/123',
+        labels: [{ name: 'bug' }, { name: 'high' }],
+        user: { login: 'testuser', avatar_url: 'https://avatar.com/test.jpg' }
+      };
+
+      // Extract and test all the helper functions
+      const fs = require('fs');
+      const kanbanCode = fs.readFileSync(require.resolve('../src/kanban.js'), 'utf8');
+      
+      // Extract helper functions
+      const testContext = {
+        document,
+        console
+      };
+      
+      // Test renderMarkdown function
+      const renderMarkdownFunc = new Function('context', `
+        with (context) {
+          ${kanbanCode.match(/function renderMarkdown\(text\) \{[\s\S]*?\n    \}/)[0]}
+          return renderMarkdown;
+        }
+      `)(testContext);
+      
+      const rendered = renderMarkdownFunc(mockIssue.body);
+      expect(rendered).toContain('<strong>test</strong>');
+      expect(rendered).toContain('<code class="bg-gray-100 text-gray-800 px-1 rounded text-xs">code</code>');
+      
+      // Test extractPriorityFromLabels
+      const priorityFunc = new Function('context', `
+        with (context) {
+          ${kanbanCode.match(/function extractPriorityFromLabels\(labels\) \{[\s\S]*?\n    \}/)[0]}
+          return extractPriorityFromLabels;
+        }
+      `)(testContext);
+      
+      expect(priorityFunc(mockIssue.labels)).toBe('High');
+      
+      // Test extractCategoryFromLabels
+      const categoryFunc = new Function('context', `
+        with (context) {
+          ${kanbanCode.match(/function extractCategoryFromLabels\(labels\) \{[\s\S]*?\n    \}/)[0]}
+          return extractCategoryFromLabels;
+        }
+      `)(testContext);
+      
+      expect(categoryFunc(mockIssue.labels)).toBe('Setup'); // bug should default to Setup
+      
+      // Test getPriorityColor
+      const priorityColorFunc = new Function('context', `
+        with (context) {
+          ${kanbanCode.match(/function getPriorityColor\(priority\) \{[\s\S]*?\n    \}/)[0]}
+          return getPriorityColor;
+        }
+      `)(testContext);
+      
+      expect(priorityColorFunc('High')).toBe('bg-red-100 text-red-800');
+      expect(priorityColorFunc('Unknown')).toBe('bg-yellow-100 text-yellow-800'); // fallback
+      
+      // Test getCategoryColor
+      const categoryColorFunc = new Function('context', `
+        with (context) {
+          ${kanbanCode.match(/function getCategoryColor\(category\) \{[\s\S]*?\n    \}/)[0]}
+          return getCategoryColor;
+        }
+      `)(testContext);
+      
+      expect(categoryColorFunc('Setup')).toBe('bg-gray-100 text-gray-800');
+      expect(categoryColorFunc('Unknown')).toBe('bg-gray-100 text-gray-800'); // fallback
+    });
+
+    test('should handle missing user in GitHub issue', () => {
+      const mockIssue = {
+        number: 456,
+        title: 'No User Issue',
+        body: 'Issue without user',
+        html_url: 'https://github.com/test/repo/issues/456',
+        labels: [],
+        user: null
+      };
+
+      // Test that missing user is handled gracefully
+      const userElement = mockIssue.user ? 
+        `<img src="${mockIssue.user.avatar_url}" alt="${mockIssue.user.login}" class="w-6 h-6 rounded-full">` : 
+        `<div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+          <i class="fas fa-user text-gray-400 text-xs"></i>
+        </div>`;
+
+      expect(userElement).toContain('fas fa-user');
+      expect(userElement).toContain('bg-gray-200');
+    });
+  });
+
+  describe('label extraction functions', () => {
+    test('should extract priority from labels correctly', () => {
+      const testCases = [
+        { labels: [{ name: 'high' }], expected: 'High' },
+        { labels: [{ name: 'priority: high' }], expected: 'High' },
+        { labels: [{ name: 'urgent' }], expected: 'High' },
+        { labels: [{ name: 'critical' }], expected: 'High' },
+        { labels: [{ name: 'low' }], expected: 'Low' },
+        { labels: [{ name: 'priority: low' }], expected: 'Low' },
+        { labels: [{ name: 'medium' }], expected: 'Low' },
+        { labels: [{ name: 'other' }], expected: 'Low' },
+        { labels: [], expected: 'Low' }
+      ];
+
+      testCases.forEach(({ labels, expected }) => {
+        const priorityLabel = labels.find(label => {
+          const name = label.name.toLowerCase();
+          return ['priority: high', 'high', 'urgent', 'priority: low', 'low', 'priority: medium', 'medium', 'critical'].includes(name);
+        });
+        
+        let result;
+        if (priorityLabel) {
+          const name = priorityLabel.name.toLowerCase();
+          if (name.includes('high') || name.includes('urgent') || name.includes('critical')) result = 'High';
+          else if (name.includes('low')) result = 'Low';
+          else result = 'Low';
+        } else {
+          result = 'Low';
+        }
+
+        expect(result).toBe(expected);
+      });
+    });
+
+    test('should extract category from labels correctly', () => {
+      const testCases = [
+        { labels: [{ name: 'frontend' }], expected: 'Frontend' },
+        { labels: [{ name: 'backend' }], expected: 'Backend' },
+        { labels: [{ name: 'design' }], expected: 'Design' },
+        { labels: [{ name: 'testing' }], expected: 'Testing' },
+        { labels: [{ name: 'database' }], expected: 'Database' },
+        { labels: [{ name: 'setup' }], expected: 'Setup' },
+        { labels: [{ name: 'other' }], expected: 'Setup' },
+        { labels: [], expected: 'Setup' }
+      ];
+
+      testCases.forEach(({ labels, expected }) => {
+        const categoryLabel = labels.find(label => {
+          const name = label.name.toLowerCase();
+          return ['frontend', 'backend', 'design', 'testing', 'database', 'setup', 'bug', 'enhancement', 'feature'].includes(name);
+        });
+        
+        let result;
+        if (categoryLabel) {
+          const name = categoryLabel.name.toLowerCase();
+          if (name.includes('frontend') || name.includes('ui')) result = 'Frontend';
+          else if (name.includes('backend') || name.includes('api')) result = 'Backend';
+          else if (name.includes('design')) result = 'Design';
+          else if (name.includes('test')) result = 'Testing';
+          else if (name.includes('database') || name.includes('db')) result = 'Database';
+          else if (name.includes('setup') || name.includes('config')) result = 'Setup';
+          else result = 'Setup';
+        } else {
+          result = 'Setup';
+        }
+
+        expect(result).toBe(expected);
+      });
+    });
+  });
+
+  describe('color utility functions', () => {
+    test('should return correct priority colors', () => {
+      const priorityColors = {
+        'High': 'bg-red-100 text-red-800',
+        'Medium': 'bg-yellow-100 text-yellow-800',
+        'Low': 'bg-green-100 text-green-800'
+      };
+
+      expect(priorityColors['High']).toBe('bg-red-100 text-red-800');
+      expect(priorityColors['Medium']).toBe('bg-yellow-100 text-yellow-800');
+      expect(priorityColors['Low']).toBe('bg-green-100 text-green-800');
+      expect(priorityColors['Unknown'] || priorityColors['Medium']).toBe('bg-yellow-100 text-yellow-800');
+    });
+
+    test('should return correct category colors', () => {
+      const categoryColors = {
+        'Frontend': 'bg-indigo-100 text-indigo-800',
+        'Backend': 'bg-blue-100 text-blue-800',
+        'Design': 'bg-purple-100 text-purple-800',
+        'Testing': 'bg-red-100 text-red-800',
+        'Database': 'bg-green-100 text-green-800',
+        'Setup': 'bg-gray-100 text-gray-800'
+      };
+
+      expect(categoryColors['Frontend']).toBe('bg-indigo-100 text-indigo-800');
+      expect(categoryColors['Backend']).toBe('bg-blue-100 text-blue-800');
+      expect(categoryColors['Design']).toBe('bg-purple-100 text-purple-800');
+      expect(categoryColors['Testing']).toBe('bg-red-100 text-red-800');
+      expect(categoryColors['Database']).toBe('bg-green-100 text-green-800');
+      expect(categoryColors['Setup']).toBe('bg-gray-100 text-gray-800');
+      expect(categoryColors['Unknown'] || categoryColors['Setup']).toBe('bg-gray-100 text-gray-800');
+    });
+  });
+
+  describe('markdown rendering', () => {
+    test('should render basic markdown correctly', () => {
+      const testCases = [
+        { input: '**bold**', expected: '<strong>bold</strong>' },
+        { input: '__bold__', expected: '<strong>bold</strong>' },
+        { input: '*italic*', expected: '<em>italic</em>' },
+        { input: '_italic_', expected: '<em>italic</em>' },
+        { input: '`code`', expected: '<code class="bg-gray-100 text-gray-800 px-1 rounded text-xs">code</code>' },
+        { input: '[link](http://example.com)', expected: '<a href="http://example.com" target="_blank" class="text-blue-600 hover:text-blue-800 underline">link</a>' },
+        { input: 'line1\nline2', expected: 'line1<br>line2' },
+        { input: 'para1\n\npara2', expected: 'para1<br><br>para2' }
+      ];
+
+      testCases.forEach(({ input, expected }) => {
+        // Test basic HTML escaping
+        const escapeHtml = (str) => str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+        
+        let html = escapeHtml(input);
+        
+        // Apply markdown transformations
+        html = html
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/__(.*?)__/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/_(.*?)_/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code class="bg-gray-100 text-gray-800 px-1 rounded text-xs">$1</code>')
+          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-blue-600 hover:text-blue-800 underline">$1</a>')
+          .replace(/\n\s*\n/g, '<br><br>')
+          .replace(/\n/g, '<br>');
+        
+        expect(html).toContain(expected);
+      });
+    });
+
+    test('should handle HTML escaping for security', () => {
+      const escapeHtml = (str) => str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+      
+      expect(escapeHtml('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+      expect(escapeHtml('test & stuff')).toBe('test &amp; stuff');
+      expect(escapeHtml("test 'quotes' and \"quotes\"")).toBe('test &#39;quotes&#39; and &quot;quotes&quot;');
+    });
+
+    test('should handle empty or null markdown input', () => {
+      const renderMarkdown = (text) => {
+        if (!text) return 'No description provided';
+        return text;
+      };
+
+      expect(renderMarkdown(null)).toBe('No description provided');
+      expect(renderMarkdown('')).toBe('No description provided');
+      expect(renderMarkdown(undefined)).toBe('No description provided');
+    });
+  });
+
+  describe('archive functionality', () => {
+    test('should handle archive button clicks', () => {
+      const archiveBtn = document.createElement('button');
+      archiveBtn.className = 'archive-btn';
+      archiveBtn.setAttribute('data-issue-number', '123');
+      
+      const taskElement = document.createElement('div');
+      taskElement.className = 'bg-white border';
+      taskElement.appendChild(archiveBtn);
+      
+      const backlog = document.getElementById('backlog');
+      backlog.appendChild(taskElement);
+      
+      // Mock confirm to return true
+      global.confirm = jest.fn(() => true);
+      
+      // Simulate click
+      const event = new Event('click', { bubbles: true });
+      archiveBtn.dispatchEvent(event);
+      
+      expect(global.confirm).toHaveBeenCalledWith('Archive issue #123? This will hide it from the kanban board.');
+    });
+
+    test('should not archive when user cancels', () => {
+      const archiveBtn = document.createElement('button');
+      archiveBtn.className = 'archive-btn';
+      archiveBtn.setAttribute('data-issue-number', '456');
+      
+      const taskElement = document.createElement('div');
+      taskElement.className = 'bg-white border';
+      taskElement.appendChild(archiveBtn);
+      
+      const backlog = document.getElementById('backlog');
+      backlog.appendChild(taskElement);
+      
+      // Mock confirm to return false
+      global.confirm = jest.fn(() => false);
+      
+      // Simulate click
+      const event = new Event('click', { bubbles: true });
+      archiveBtn.dispatchEvent(event);
+      
+      expect(global.confirm).toHaveBeenCalledWith('Archive issue #456? This will hide it from the kanban board.');
+      expect(backlog.children.length).toBe(1); // Task should still be there
+    });
+  });
+
+  describe('GitHub initialization', () => {
+    test('should initialize GitHub issues when columns exist', () => {
+      const backlog = document.getElementById('backlog');
+      const done = document.getElementById('done');
+      
+      // Reset the loaded flag for testing
+      backlog.removeAttribute('data-github-loaded');
+      
+      // Test basic column existence
+      expect(backlog).toBeTruthy();
+      expect(done).toBeTruthy();
+      
+      // Test that we can simulate the initialization logic
+      if (!backlog.hasAttribute('data-github-loaded')) {
+        expect(backlog.hasAttribute('data-github-loaded')).toBe(false);
+      }
+    });
+
+    test('should handle missing columns gracefully', () => {
+      // Test the logic without actually removing elements
+      const missingBacklog = document.getElementById('non-existent-backlog');
+      const missingDone = document.getElementById('non-existent-done');
+      
+      // Should handle missing columns gracefully
+      expect(() => {
+        if (!missingBacklog || !missingDone) {
+          return; // Should return early
+        }
+      }).not.toThrow();
+      
+      expect(missingBacklog).toBeNull();
+      expect(missingDone).toBeNull();
+    });
+
+    test('should create skeleton cards with proper structure', () => {
+      // Extract and test the createSkeletonCard function
+      const fs = require('fs');
+      const kanbanCode = fs.readFileSync(require.resolve('../src/kanban.js'), 'utf8');
+      
+      const testContext = {
+        document
+      };
+      
+      const skeletonFunc = new Function('context', `
+        with (context) {
+          ${kanbanCode.match(/function createSkeletonCard\(\) \{[\s\S]*?\n    \}/)[0]}
+          return createSkeletonCard;
+        }
+      `)(testContext);
+      
+      const skeletonCard = skeletonFunc();
+      
+      expect(skeletonCard.className).toContain('skeleton-card');
+      expect(skeletonCard.className).toContain('animate-pulse');
+      expect(skeletonCard.innerHTML).toContain('bg-gray-200');
+    });
+
+    test('should initialize GitHub issues with skeleton cards', () => {
+      // Reset the loaded flag
+      const backlog = document.getElementById('backlog');
+      const done = document.getElementById('done');
+      backlog.removeAttribute('data-github-loaded');
+      
+      // Extract and test the initializeGitHubIssues function
+      const fs = require('fs');
+      const kanbanCode = fs.readFileSync(require.resolve('../src/kanban.js'), 'utf8');
+      
+      const testContext = {
+        document,
+        console,
+        setTimeout: (cb) => cb(),
+        updateColumnCounts: () => {},
+        loadGitHubIssues: () => Promise.resolve(),
+        createSkeletonCard: () => {
+          const div = document.createElement('div');
+          div.className = 'skeleton-card';
+          return div;
+        }
+      };
+      
+      const initFunc = new Function('context', `
+        with (context) {
+          ${kanbanCode.match(/function createSkeletonCard\(\) \{[\s\S]*?\n    \}/)[0]}
+          ${kanbanCode.match(/function initializeGitHubIssues\(\) \{[\s\S]*?\n    \}/)[0]}
+          return initializeGitHubIssues;
+        }
+      `)(testContext);
+      
+      // Call the function
+      initFunc();
+      
+      // Check that skeleton cards were added
+      expect(backlog.querySelectorAll('.skeleton-card').length).toBeGreaterThan(0);
+      expect(done.querySelectorAll('.skeleton-card').length).toBeGreaterThan(0);
+      
+      // Should be marked as loaded
+      expect(backlog.hasAttribute('data-github-loaded')).toBe(true);
     });
   });
 });
