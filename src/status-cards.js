@@ -363,7 +363,9 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCoverageStatusUI,
         updateTrafficUI,
         refreshAllStatuses,
-        parseCoverageFromSVG
+        parseCoverageFromSVG,
+        updateTimestamp,
+        setupBadgeDebugging
     };
 
     // Attach to global for browser/Node access

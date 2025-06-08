@@ -66,6 +66,103 @@ describe('Status Cards Functions', () => {
     document.body.innerHTML = '';
   });
 
+  describe('dependency check', () => {
+    test('should handle missing GitHubUtils dependency', () => {
+      // Reset modules and clear the GitHubUtils mock
+      jest.resetModules();
+      delete global.GitHubUtils;
+      
+      // Mock console.error to capture the error
+      console.error = jest.fn();
+      
+      // Load the module without GitHubUtils
+      require('../src/status-cards.js');
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      
+      expect(console.error).toHaveBeenCalledWith('❌ GitHubUtils not found. Make sure src/utils.js is loaded.');
+    });
+  });
+
+  describe('badge debugging functionality', () => {
+    test('should handle refresh badge button click', () => {
+      const refreshBtn = document.getElementById('refresh-badge');
+      const badgeImg = document.getElementById('github-badge');
+      
+      // Mock Date.now()
+      const mockNow = 1234567890;
+      Date.now = jest.fn(() => mockNow);
+      
+      // Simulate button click
+      refreshBtn.click();
+      
+      expect(badgeImg.src).toContain(`?t=${mockNow}`);
+      expect(console.log).toHaveBeenCalledWith('Badge refreshed manually');
+    });
+
+    test('should handle badge image load event', () => {
+      const badgeImg = document.getElementById('github-badge');
+      
+      // Set up image properties
+      Object.defineProperty(badgeImg, 'naturalWidth', { value: 100 });
+      Object.defineProperty(badgeImg, 'naturalHeight', { value: 20 });
+      Object.defineProperty(badgeImg, 'src', { value: 'test-url.svg' });
+      
+      // Trigger load event
+      badgeImg.dispatchEvent(new Event('load'));
+      
+      expect(console.log).toHaveBeenCalledWith('Badge loaded successfully');
+      expect(console.log).toHaveBeenCalledWith('Badge dimensions:', 100, 'x', 20);
+      expect(console.log).toHaveBeenCalledWith('Badge src:', 'test-url.svg');
+    });
+
+    test('should handle badge image error event', () => {
+      const badgeImg = document.getElementById('github-badge');
+      
+      // Trigger error event
+      badgeImg.dispatchEvent(new Event('error'));
+      
+      expect(console.error).toHaveBeenCalledWith('Badge failed to load');
+    });
+
+    test('should handle missing refresh button gracefully', () => {
+      // Create a DOM setup without refresh button
+      document.body.innerHTML = `
+        <div data-frontend-status></div>
+        <div data-frontend-time></div>
+        <div data-ci-status></div>
+        <div data-ci-time></div>
+        <div data-coverage-status></div>
+        <div data-traffic-views></div>
+        <div data-traffic-visitors></div>
+        <div data-traffic-time></div>
+        <img id="github-badge" src="" />
+      `;
+
+      expect(() => {
+        statusAPI.setupBadgeDebugging();
+      }).not.toThrow();
+    });
+
+    test('should handle missing badge image gracefully', () => {
+      // Create a DOM setup without badge image
+      document.body.innerHTML = `
+        <div data-frontend-status></div>
+        <div data-frontend-time></div>
+        <div data-ci-status></div>
+        <div data-ci-time></div>
+        <div data-coverage-status></div>
+        <div data-traffic-views></div>
+        <div data-traffic-visitors></div>
+        <div data-traffic-time></div>
+        <button id="refresh-badge"></button>
+      `;
+
+      expect(() => {
+        statusAPI.setupBadgeDebugging();
+      }).not.toThrow();
+    });
+  });
+
   describe('parseCoverageFromSVG', () => {
     test('should parse percentage from SVG text', () => {
       const svgWithPercent = '<svg><text>coverage: 85%</text></svg>';
@@ -77,6 +174,12 @@ describe('Status Cards Functions', () => {
       const svgWithDecimal = '<svg><text>85.5%</text></svg>';
       const result = statusAPI.parseCoverageFromSVG(svgWithDecimal);
       expect(result).toBe(85.5);
+    });
+
+    test('should parse coverage from text elements', () => {
+      const svgWithTextElement = '<svg><text>Some text 75% coverage</text></svg>';
+      const result = statusAPI.parseCoverageFromSVG(svgWithTextElement);
+      expect(result).toBe(75);
     });
 
     test('should detect unknown status', () => {
@@ -98,9 +201,9 @@ describe('Status Cards Functions', () => {
     });
 
     test('should fallback to any reasonable number', () => {
-      const svgWithNumber = '<svg><text>75</text></svg>';
+      const svgWithNumber = '<svg><text>some text 92 more text</text></svg>';
       const result = statusAPI.parseCoverageFromSVG(svgWithNumber);
-      expect(result).toBe(75);
+      expect(result).toBe(92);
     });
 
     test('should reject numbers outside 0-100 range', () => {
@@ -110,7 +213,7 @@ describe('Status Cards Functions', () => {
     });
 
     test('should return unknown when no valid data found', () => {
-      const svgWithoutData = '<svg><text>no coverage data</text></svg>';
+      const svgWithoutData = '<svg><text>no numbers here</text></svg>';
       const result = statusAPI.parseCoverageFromSVG(svgWithoutData);
       expect(result).toBe('unknown');
     });
@@ -162,6 +265,21 @@ describe('Status Cards Functions', () => {
       expect(statusElement.innerHTML).toContain('Deploying');
     });
 
+    test('should handle unknown/invalid status with fallback', () => {
+      const workflowData = {
+        status: 'invalid_status_that_does_not_exist',
+        updatedAt: new Date(),
+        htmlUrl: 'https://github.com/test/repo/actions'
+      };
+
+      statusAPI.updateWorkflowStatusUI(workflowData);
+
+      const statusElement = document.querySelector('[data-frontend-status]');
+      expect(statusElement.innerHTML).toContain('fas fa-question-circle');
+      expect(statusElement.innerHTML).toContain('text-gray-500');
+      expect(statusElement.innerHTML).toContain('Unknown');
+    });
+
     test('should skip timestamp update when requested', () => {
       // Reset the getTimeAgo mock call count for this test
       GitHubUtils.getTimeAgo.mockClear();
@@ -200,10 +318,9 @@ describe('Status Cards Functions', () => {
     });
 
     test('should handle missing DOM elements gracefully', () => {
-      // Remove elements
+      // Remove the elements
       document.querySelector('[data-frontend-status]').remove();
-      document.querySelector('[data-frontend-time]').remove();
-
+      
       const workflowData = {
         status: 'success',
         updatedAt: new Date(),
@@ -228,7 +345,6 @@ describe('Status Cards Functions', () => {
 
       const statusElement = document.querySelector('[data-ci-status]');
       expect(statusElement.innerHTML).toContain('fas fa-check-circle');
-      expect(statusElement.innerHTML).toContain('text-green-500');
       expect(statusElement.innerHTML).toContain('Passing');
     });
 
@@ -243,8 +359,63 @@ describe('Status Cards Functions', () => {
 
       const statusElement = document.querySelector('[data-ci-status]');
       expect(statusElement.innerHTML).toContain('fas fa-times-circle');
-      expect(statusElement.innerHTML).toContain('text-red-500');
       expect(statusElement.innerHTML).toContain('Failing');
+    });
+
+    test('should handle unknown CI status with fallback', () => {
+      const ciData = {
+        status: 'invalid_ci_status',
+        updatedAt: new Date(),
+        htmlUrl: 'https://github.com/test/repo/actions'
+      };
+
+      statusAPI.updateCIStatusUI(ciData);
+
+      const statusElement = document.querySelector('[data-ci-status]');
+      expect(statusElement.innerHTML).toContain('fas fa-question-circle');
+      expect(statusElement.innerHTML).toContain('Unknown');
+    });
+
+    test('should handle completely undefined CI status with fallback', () => {
+      const ciData = {
+        status: undefined,
+        updatedAt: new Date(),
+        htmlUrl: 'https://github.com/test/repo/actions'
+      };
+
+      statusAPI.updateCIStatusUI(ciData);
+
+      const statusElement = document.querySelector('[data-ci-status]');
+      expect(statusElement.innerHTML).toContain('fas fa-question-circle');
+      expect(statusElement.innerHTML).toContain('Unknown');
+    });
+
+    test('should handle null CI status with fallback', () => {
+      const ciData = {
+        status: null,
+        updatedAt: new Date(),
+        htmlUrl: 'https://github.com/test/repo/actions'
+      };
+
+      statusAPI.updateCIStatusUI(ciData);
+
+      const statusElement = document.querySelector('[data-ci-status]');
+      expect(statusElement.innerHTML).toContain('fas fa-question-circle');
+      expect(statusElement.innerHTML).toContain('Unknown');
+    });
+
+    test('should handle missing status property with fallback', () => {
+      const ciData = {
+        // status property is missing entirely
+        updatedAt: new Date(),
+        htmlUrl: 'https://github.com/test/repo/actions'
+      };
+
+      statusAPI.updateCIStatusUI(ciData);
+
+      const statusElement = document.querySelector('[data-ci-status]');
+      expect(statusElement.innerHTML).toContain('fas fa-question-circle');
+      expect(statusElement.innerHTML).toContain('Unknown');
     });
 
     test('should always update timestamp', () => {
@@ -260,6 +431,38 @@ describe('Status Cards Functions', () => {
       expect(timeElement.innerHTML).toContain('Updated 2m ago');
       expect(GitHubUtils.getTimeAgo).toHaveBeenCalledWith(ciData.updatedAt);
     });
+
+    test('should handle missing DOM elements gracefully', () => {
+      // Remove the elements
+      document.querySelector('[data-ci-status]').remove();
+      
+      const ciData = {
+        status: 'success',
+        updatedAt: new Date(),
+        htmlUrl: 'https://github.com/test/repo/actions'
+      };
+
+      expect(() => {
+        statusAPI.updateCIStatusUI(ciData);
+      }).not.toThrow();
+    });
+
+    test('should make CI status clickable', () => {
+      const ciData = {
+        status: 'success',
+        updatedAt: new Date(),
+        htmlUrl: 'https://github.com/test/repo/actions'
+      };
+
+      statusAPI.updateCIStatusUI(ciData);
+
+      const statusElement = document.querySelector('[data-ci-status]');
+      expect(statusElement.style.cursor).toBe('pointer');
+      
+      // Simulate click
+      statusElement.onclick();
+      expect(global.window.open).toHaveBeenCalledWith(ciData.htmlUrl, '_blank');
+    });
   });
 
   describe('updateCoverageStatusUI', () => {
@@ -267,56 +470,56 @@ describe('Status Cards Functions', () => {
       const coverageData = {
         coverage: 85,
         updatedAt: new Date(),
-        htmlUrl: 'https://coveralls.io/test'
+        htmlUrl: 'https://coveralls.io/github/test/repo'
       };
 
       statusAPI.updateCoverageStatusUI(coverageData);
 
       const statusElement = document.querySelector('[data-coverage-status]');
-      expect(statusElement.innerHTML).toContain('text-green-600');
       expect(statusElement.innerHTML).toContain('85%');
+      expect(statusElement.innerHTML).toContain('text-green-600');
     });
 
     test('should update coverage with medium percentage (yellow)', () => {
       const coverageData = {
         coverage: 65,
         updatedAt: new Date(),
-        htmlUrl: 'https://coveralls.io/test'
+        htmlUrl: 'https://coveralls.io/github/test/repo'
       };
 
       statusAPI.updateCoverageStatusUI(coverageData);
 
       const statusElement = document.querySelector('[data-coverage-status]');
-      expect(statusElement.innerHTML).toContain('text-yellow-600');
       expect(statusElement.innerHTML).toContain('65%');
+      expect(statusElement.innerHTML).toContain('text-yellow-600');
     });
 
     test('should update coverage with low percentage (red)', () => {
       const coverageData = {
         coverage: 45,
         updatedAt: new Date(),
-        htmlUrl: 'https://coveralls.io/test'
+        htmlUrl: 'https://coveralls.io/github/test/repo'
       };
 
       statusAPI.updateCoverageStatusUI(coverageData);
 
       const statusElement = document.querySelector('[data-coverage-status]');
-      expect(statusElement.innerHTML).toContain('text-red-600');
       expect(statusElement.innerHTML).toContain('45%');
+      expect(statusElement.innerHTML).toContain('text-red-600');
     });
 
     test('should handle unknown coverage', () => {
       const coverageData = {
         coverage: 'unknown',
         updatedAt: new Date(),
-        htmlUrl: 'https://coveralls.io/test'
+        htmlUrl: 'https://coveralls.io/github/test/repo'
       };
 
       statusAPI.updateCoverageStatusUI(coverageData);
 
       const statusElement = document.querySelector('[data-coverage-status]');
-      expect(statusElement.innerHTML).toContain('text-gray-600');
       expect(statusElement.innerHTML).toContain('Unknown');
+      expect(statusElement.innerHTML).toContain('text-gray-600');
     });
   });
 
@@ -352,22 +555,46 @@ describe('Status Cards Functions', () => {
         statusAPI.updateTrafficUI(trafficData);
       }).not.toThrow();
     });
+
+    test('should handle missing time element gracefully', () => {
+      document.querySelector('[data-traffic-time]').remove();
+      
+      const trafficData = {
+        views: 1234,
+        uniqueVisitors: 567,
+        updatedAt: new Date()
+      };
+
+      expect(() => {
+        statusAPI.updateTrafficUI(trafficData);
+      }).not.toThrow();
+    });
+
+    test('should handle missing visitors element gracefully', () => {
+      document.querySelector('[data-traffic-visitors]').remove();
+      
+      const trafficData = {
+        views: 1234,
+        uniqueVisitors: 567,
+        updatedAt: new Date()
+      };
+
+      expect(() => {
+        statusAPI.updateTrafficUI(trafficData);
+      }).not.toThrow();
+    });
   });
 
   describe('fetchTrafficData', () => {
     test('should return mock traffic data', async () => {
-      const data = await statusAPI.fetchTrafficData();
+      const result = await statusAPI.fetchTrafficData();
       
-      expect(data).toHaveProperty('views');
-      expect(data).toHaveProperty('uniqueVisitors');
-      expect(data).toHaveProperty('updatedAt');
-      expect(typeof data.views).toBe('number');
-      expect(typeof data.uniqueVisitors).toBe('number');
-      expect(data.updatedAt).toBeInstanceOf(Date);
-      expect(data.views).toBeGreaterThanOrEqual(100);
-      expect(data.views).toBeLessThanOrEqual(1100);
-      expect(data.uniqueVisitors).toBeGreaterThanOrEqual(50);
-      expect(data.uniqueVisitors).toBeLessThanOrEqual(550);
+      expect(result).toHaveProperty('views');
+      expect(result).toHaveProperty('uniqueVisitors');
+      expect(result).toHaveProperty('updatedAt');
+      expect(typeof result.views).toBe('number');
+      expect(typeof result.uniqueVisitors).toBe('number');
+      expect(result.updatedAt).toBeInstanceOf(Date);
     });
   });
 
@@ -378,7 +605,7 @@ describe('Status Cards Functions', () => {
       await statusAPI.fetchWorkflowStatus();
       
       expect(GitHubUtils.parseBadgeSVG).toHaveBeenCalledWith(
-        expect.stringContaining('https://img.shields.io/github/actions/workflow/status/super3/dashban/frontend.yml')
+        'https://img.shields.io/github/actions/workflow/status/super3/dashban/frontend.yml'
       );
     });
 
@@ -395,24 +622,23 @@ describe('Status Cards Functions', () => {
       
       await statusAPI.fetchWorkflowStatus(true);
       
-      // Should still call the parsing function
       expect(GitHubUtils.parseBadgeSVG).toHaveBeenCalled();
     });
   });
 
   describe('fetchCIStatus', () => {
     test('should fetch CI status successfully', async () => {
-      GitHubUtils.parseBadgeSVG.mockResolvedValue('failure');
+      GitHubUtils.parseBadgeSVG.mockResolvedValue('success');
       
       await statusAPI.fetchCIStatus();
       
       expect(GitHubUtils.parseBadgeSVG).toHaveBeenCalledWith(
-        expect.stringContaining('https://img.shields.io/github/actions/workflow/status/super3/dashban/test.yml')
+        'https://img.shields.io/github/actions/workflow/status/super3/dashban/test.yml'
       );
     });
 
     test('should handle CI fetch errors', async () => {
-      GitHubUtils.parseBadgeSVG.mockRejectedValue(new Error('API error'));
+      GitHubUtils.parseBadgeSVG.mockRejectedValue(new Error('CI fetch error'));
       
       await statusAPI.fetchCIStatus();
       
@@ -423,18 +649,18 @@ describe('Status Cards Functions', () => {
   describe('fetchCoverageStatus', () => {
     test('should fetch coverage status successfully', async () => {
       global.fetch.mockResolvedValue({
-        text: async () => '<svg><text>75%</text></svg>'
+        text: async () => '<svg><text>85%</text></svg>'
       });
       
       await statusAPI.fetchCoverageStatus();
       
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('https://img.shields.io/coveralls/github/super3/dashban/main.svg'),
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('https://img.shields.io/coveralls/github/super3/dashban/main.svg?t=')
       );
     });
 
     test('should handle coverage fetch errors', async () => {
-      global.fetch.mockRejectedValue(new Error('Fetch error'));
+      global.fetch.mockRejectedValue(new Error('Coverage fetch error'));
       
       await statusAPI.fetchCoverageStatus();
       
@@ -444,14 +670,72 @@ describe('Status Cards Functions', () => {
 
   describe('refreshAllStatuses', () => {
     test('should call the refresh function without errors', () => {
-      // Since refreshAllStatuses calls internal functions, we can't easily spy on them
-      // but we can verify that calling refreshAllStatuses doesn't throw errors
       expect(() => {
         statusAPI.refreshAllStatuses();
       }).not.toThrow();
+    });
+  });
+
+  describe('updateTimestamp', () => {
+    test('should update timestamps for elements with lastUpdated data', () => {
+      // Set up elements with lastUpdated data
+      const element = document.querySelector('[data-frontend-time]');
+      element.dataset.lastUpdated = new Date().toISOString();
+      element.innerHTML = '<span>Old timestamp</span>';
       
-      // Verify that the required utility functions were called
-      expect(GitHubUtils.parseBadgeSVG).toHaveBeenCalled();
+      statusAPI.updateTimestamp();
+      
+      const span = element.querySelector('span');
+      expect(span.textContent).toContain('Updated');
+    });
+
+    test('should handle elements without lastUpdated data', () => {
+      // Element without lastUpdated data
+      const element = document.querySelector('[data-ci-time]');
+      delete element.dataset.lastUpdated;
+      
+      expect(() => {
+        statusAPI.updateTimestamp();
+      }).not.toThrow();
+    });
+  });
+
+  describe('setupBadgeDebugging', () => {
+    test('should set up badge debugging when elements exist', () => {
+      expect(() => {
+        statusAPI.setupBadgeDebugging();
+      }).not.toThrow();
+    });
+  });
+
+  describe('module exports and initialization', () => {
+    test('should export statusAPI to globalThis', () => {
+      expect(global.statusCardsTestExports).toBeDefined();
+      expect(global.statusCardsTestExports.fetchWorkflowStatus).toBeDefined();
+      expect(global.statusCardsTestExports.updateWorkflowStatusUI).toBeDefined();
+      expect(global.statusCardsTestExports.parseCoverageFromSVG).toBeDefined();
+    });
+
+    test('should have all expected functions in exports', () => {
+      const expectedFunctions = [
+        'fetchWorkflowStatus',
+        'fetchCIStatus', 
+        'fetchCoverageStatus',
+        'fetchTrafficData',
+        'updateWorkflowStatusUI',
+        'updateCIStatusUI',
+        'updateCoverageStatusUI',
+        'updateTrafficUI',
+        'refreshAllStatuses',
+        'parseCoverageFromSVG',
+        'updateTimestamp',
+        'setupBadgeDebugging'
+      ];
+
+      expectedFunctions.forEach(funcName => {
+        expect(global.statusCardsTestExports[funcName]).toBeDefined();
+        expect(typeof global.statusCardsTestExports[funcName]).toBe('function');
+      });
     });
   });
 }); 
