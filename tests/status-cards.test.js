@@ -182,6 +182,39 @@ describe('Status Cards Functions', () => {
       expect(result).toBe(75);
     });
 
+    test('should parse coverage using text element when first regex fails', () => {
+      const trickySvg = {
+        str: '<svg><text>Another text 66% here</text></svg>',
+        match(regex) {
+          if (regex.source === '(\\d+(?:\\.\\d+)?)%') {
+            return null; // force first regex miss
+          }
+          return this.str.match(regex);
+        },
+        toLowerCase() {
+          return this.str.toLowerCase();
+        }
+      };
+      const result = statusAPI.parseCoverageFromSVG(trickySvg);
+      expect(result).toBe(66);
+    });
+
+    test('should fall back when percent extraction fails', () => {
+      const trickySvg = {
+        str: '<svg><text>Yet another 44% text</text></svg>',
+        match(regex) {
+          if (regex.source === '(\\d+(?:\\.\\d+)?)%') {
+            return null; // skip both first and second percentage matches
+          }
+          return this.str.match(regex);
+        },
+        toLowerCase() { return this.str.toLowerCase(); }
+      };
+
+      const result = statusAPI.parseCoverageFromSVG(trickySvg);
+      expect(result).toBe(44);
+    });
+
     test('should detect unknown status', () => {
       const svgWithUnknown = '<svg><text>coverage unknown</text></svg>';
       const result = statusAPI.parseCoverageFromSVG(svgWithUnknown);
@@ -521,6 +554,34 @@ describe('Status Cards Functions', () => {
       expect(statusElement.innerHTML).toContain('Unknown');
       expect(statusElement.innerHTML).toContain('text-gray-600');
     });
+
+    test('should make coverage status clickable', () => {
+      const coverageData = {
+        coverage: 88,
+        updatedAt: new Date(),
+        htmlUrl: 'https://coveralls.io/github/test/repo'
+      };
+
+      statusAPI.updateCoverageStatusUI(coverageData);
+
+      const statusElement = document.querySelector('[data-coverage-status]');
+      statusElement.onclick();
+      expect(global.window.open).toHaveBeenCalledWith(coverageData.htmlUrl, '_blank');
+    });
+
+    test('should handle missing coverage element gracefully', () => {
+      document.querySelector('[data-coverage-status]').remove();
+
+      const coverageData = {
+        coverage: 90,
+        updatedAt: new Date(),
+        htmlUrl: 'https://coveralls.io/github/test/repo'
+      };
+
+      expect(() => {
+        statusAPI.updateCoverageStatusUI(coverageData);
+      }).not.toThrow();
+    });
   });
 
   describe('updateTrafficUI', () => {
@@ -693,7 +754,17 @@ describe('Status Cards Functions', () => {
       // Element without lastUpdated data
       const element = document.querySelector('[data-ci-time]');
       delete element.dataset.lastUpdated;
-      
+
+      expect(() => {
+        statusAPI.updateTimestamp();
+      }).not.toThrow();
+    });
+
+    test('should handle elements missing span child', () => {
+      const element = document.querySelector('[data-ci-time]');
+      element.dataset.lastUpdated = new Date().toISOString();
+      element.innerHTML = '';
+
       expect(() => {
         statusAPI.updateTimestamp();
       }).not.toThrow();
@@ -719,7 +790,7 @@ describe('Status Cards Functions', () => {
     test('should have all expected functions in exports', () => {
       const expectedFunctions = [
         'fetchWorkflowStatus',
-        'fetchCIStatus', 
+        'fetchCIStatus',
         'fetchCoverageStatus',
         'fetchTrafficData',
         'updateWorkflowStatusUI',
@@ -736,6 +807,24 @@ describe('Status Cards Functions', () => {
         expect(global.statusCardsTestExports[funcName]).toBeDefined();
         expect(typeof global.statusCardsTestExports[funcName]).toBe('function');
       });
+    });
+
+    test('should skip exports when globals are undefined', () => {
+      const fs = require('fs');
+      const vm = require('vm');
+      const code = fs.readFileSync(require.resolve('../src/status-cards.js'), 'utf8');
+      const sandbox = {
+        console: { log: jest.fn(), error: jest.fn() },
+        GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
+        document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
+        fetch: async () => ({ text: async ()=>'' }),
+        setTimeout: jest.fn(),
+        setInterval: jest.fn(),
+        window: {}
+      };
+      vm.createContext(sandbox);
+      vm.runInContext('var globalThis = undefined; var module = undefined;\n' + code, sandbox);
+      expect(sandbox.statusCardsTestExports).toBeUndefined();
     });
   });
 }); 
