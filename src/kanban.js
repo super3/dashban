@@ -173,11 +173,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (savedStates) {
             states = JSON.parse(savedStates);
         } else {
-            // Default state: collapse backlog column by default
+            // Default state: collapse in progress column by default
             states = {
                 'info': 'expanded',
-                'backlog': 'collapsed',
-                'inprogress': 'expanded', 
+                'backlog': 'expanded',
+                'inprogress': 'collapsed', 
                 'review': 'expanded',
                 'done': 'expanded'
             };
@@ -308,6 +308,131 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }).observe(doneColumn, { childList: true });
+
+    // GitHub Issues Integration
+    async function loadGitHubIssues() {
+        try {
+            console.log('Loading GitHub issues...');
+            const response = await fetch('https://api.github.com/repos/super3/dashban/issues?state=open');
+            
+            if (!response.ok) {
+                throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+            }
+            
+            const issues = await response.json();
+            console.log(`Found ${issues.length} GitHub issues`);
+            
+            const backlogColumn = document.getElementById('backlog');
+            
+            issues.forEach(issue => {
+                const taskElement = createGitHubIssueElement(issue);
+                backlogColumn.appendChild(taskElement);
+            });
+            
+            updateColumnCounts();
+            
+        } catch (error) {
+            console.error('Failed to load GitHub issues:', error);
+        }
+    }
+
+    function createGitHubIssueElement(issue) {
+        const taskDiv = document.createElement('div');
+        taskDiv.className = 'bg-white border border-gray-200 rounded-md p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
+        taskDiv.draggable = true;
+        taskDiv.setAttribute('data-github-issue', issue.number);
+
+        // Extract priority from labels (default to Medium if not found)
+        const priority = extractPriorityFromLabels(issue.labels);
+        const category = extractCategoryFromLabels(issue.labels);
+
+        // Use the full description - CSS will handle truncation
+        const description = issue.body || 'No description provided';
+
+        taskDiv.innerHTML = `
+            <div class="flex items-start justify-between mb-2">
+                <h4 class="font-medium text-gray-900 text-sm">${issue.title}</h4>
+                <a href="${issue.html_url}" target="_blank" class="text-gray-500 hover:text-gray-700 text-xs font-medium px-2">
+                    #${issue.number}
+                </a>
+            </div>
+            <p class="text-gray-600 text-sm mb-3 line-clamp-2">${description}</p>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="${getPriorityColor(priority)} text-xs px-2 py-1 rounded-full font-medium">${priority}</span>
+                    <span class="${getCategoryColor(category)} text-xs px-2 py-1 rounded-full font-medium">${category}</span>
+                </div>
+                ${issue.assignee ? 
+                    `<img src="${issue.assignee.avatar_url}" alt="${issue.assignee.login}" class="w-6 h-6 rounded-full">` : 
+                    `<div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-gray-400 text-xs"></i>
+                    </div>`
+                }
+            </div>
+        `;
+
+        return taskDiv;
+    }
+
+    function extractPriorityFromLabels(labels) {
+        const priorityLabel = labels.find(label => {
+            const name = label.name.toLowerCase();
+            return ['priority: high', 'high', 'urgent', 'priority: low', 'low', 'priority: medium', 'medium', 'critical'].includes(name);
+        });
+        
+        if (priorityLabel) {
+            const name = priorityLabel.name.toLowerCase();
+            if (name.includes('high') || name.includes('urgent') || name.includes('critical')) return 'High';
+            if (name.includes('low')) return 'Low';
+        }
+        
+        return 'Medium'; // default
+    }
+
+    function extractCategoryFromLabels(labels) {
+        const categoryLabel = labels.find(label => {
+            const name = label.name.toLowerCase();
+            return ['frontend', 'backend', 'design', 'testing', 'database', 'setup', 'bug', 'enhancement', 'feature'].includes(name);
+        });
+        
+        if (categoryLabel) {
+            const name = categoryLabel.name.toLowerCase();
+            if (name.includes('frontend') || name.includes('ui')) return 'Frontend';
+            if (name.includes('backend') || name.includes('api')) return 'Backend';
+            if (name.includes('design')) return 'Design';
+            if (name.includes('test')) return 'Testing';
+            if (name.includes('database') || name.includes('db')) return 'Database';
+            if (name.includes('setup') || name.includes('config')) return 'Setup';
+        }
+        
+        return 'Setup'; // default for GitHub issues
+    }
+
+    function getPriorityColor(priority) {
+        const priorityColors = {
+            'High': 'bg-red-100 text-red-800',
+            'Medium': 'bg-yellow-100 text-yellow-800',
+            'Low': 'bg-green-100 text-green-800'
+        };
+        return priorityColors[priority] || priorityColors['Medium'];
+    }
+
+    function getCategoryColor(category) {
+        const categoryColors = {
+            'Frontend': 'bg-indigo-100 text-indigo-800',
+            'Backend': 'bg-blue-100 text-blue-800',
+            'Design': 'bg-purple-100 text-purple-800',
+            'Testing': 'bg-red-100 text-red-800',
+            'Database': 'bg-green-100 text-green-800',
+            'Setup': 'bg-gray-100 text-gray-800'
+        };
+        return categoryColors[category] || categoryColors['Setup'];
+    }
+
+    // Load GitHub issues after a short delay to let the UI initialize
+    setTimeout(() => {
+        loadGitHubIssues();
+    }, 1000);
 
     console.log('Kanban Board initialized successfully!');
 
