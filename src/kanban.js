@@ -12,8 +12,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const columns = ['info', 'backlog', 'inprogress', 'review', 'done'];
     
     columns.forEach(columnId => {
+        // Info column has its own group to prevent dragging to other columns
+        const group = columnId === 'info' ? 'info-cards' : 'kanban-tasks';
+        
         new Sortable(document.getElementById(columnId), {
-            group: 'kanban',
+            group: group,
             animation: 150,
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',

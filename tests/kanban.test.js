@@ -182,7 +182,7 @@ describe('Kanban Board Functions', () => {
     test('should configure sortable with correct options', () => {
       const options = sortableCalls[0][1];
       
-      expect(options.group).toBe('kanban');
+      expect(options.group).toBe('info-cards'); // First column (info) has its own group
       expect(options.animation).toBe(150);
       expect(options.ghostClass).toBe('sortable-ghost');
       expect(options.chosenClass).toBe('sortable-chosen');
