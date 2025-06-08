@@ -242,14 +242,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateCoverageStatusUI(coverageData) {
         const statusElement = document.querySelector('[data-coverage-status]');
-        const timeElement = document.querySelector('[data-coverage-time]');
         
-        if (!statusElement || !timeElement) return;
+        if (!statusElement) return;
         
-        let color, bgColor, text;
+        let bgColor, text;
         
         if (coverageData.coverage === 'unknown') {
-            color = 'text-gray-500';
             bgColor = 'text-gray-600';
             text = 'Unknown';
         } else {
@@ -257,30 +255,16 @@ document.addEventListener('DOMContentLoaded', function() {
             text = `${coverage}%`;
             
             if (coverage >= 80) {
-                color = 'text-green-500';
                 bgColor = 'text-green-600';
             } else if (coverage >= 60) {
-                color = 'text-yellow-500';
                 bgColor = 'text-yellow-600';
             } else {
-                color = 'text-red-500';
                 bgColor = 'text-red-600';
             }
         }
         
         statusElement.innerHTML = `
-            <div class="flex items-center space-x-1">
-                <i class="fas fa-chart-line ${color} text-sm"></i>
-                <span class="text-sm ${bgColor} font-medium">${text}</span>
-            </div>
-        `;
-        
-        const timeAgo = GitHubUtils.getTimeAgo(coverageData.updatedAt);
-        timeElement.innerHTML = `
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-sync text-gray-400 text-xs"></i>
-                <span class="text-xs text-gray-500">Updated ${timeAgo}</span>
-            </div>
+            <span class="text-sm ${bgColor} font-medium">${text}</span>
         `;
         
         // Make the status clickable to view on Coveralls
@@ -320,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update timestamps every minute
     function updateTimestamp() {
-        const elements = document.querySelectorAll('[data-frontend-time], [data-ci-time], [data-coverage-time], [data-traffic-time]');
+        const elements = document.querySelectorAll('[data-frontend-time], [data-ci-time], [data-traffic-time]');
         elements.forEach(element => {
             if (element.dataset.lastUpdated) {
                 const lastUpdated = new Date(element.dataset.lastUpdated);
