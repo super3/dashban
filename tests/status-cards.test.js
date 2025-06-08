@@ -199,6 +199,26 @@ describe('Status Cards Functions', () => {
       expect(result).toBe(66);
     });
 
+    test('should parse coverage from text element but fail percent extraction', () => {
+      const trickySvg = {
+        str: '<svg><text>Some text with no percent</text></svg>',
+        match(regex) {
+          if (regex.source === '(\\d+(?:\\.\\d+)?)%') {
+            return null; // miss percentage match
+          }
+          if (regex.source === '>([^<]*\\d+(?:\\.\\d+)?%[^<]*)<') {
+            return ['match', 'Some text with no percent']; // return text but without percent
+          }
+          return this.str.match(regex);
+        },
+        toLowerCase() {
+          return this.str.toLowerCase();
+        }
+      };
+      const result = statusAPI.parseCoverageFromSVG(trickySvg);
+      expect(result).toBe('unknown');
+    });
+
     test('should fall back when percent extraction fails', () => {
       const trickySvg = {
         str: '<svg><text>Yet another 44% text</text></svg>',
@@ -828,6 +848,71 @@ describe('Status Cards Functions', () => {
       vm.createContext(sandbox);
       vm.runInContext('var globalThis = undefined; var module = undefined;\n' + code, sandbox);
       expect(sandbox.statusCardsTestExports).toBeUndefined();
+    });
+
+    test('should export via module.exports when module is available', () => {
+      const fs = require('fs');
+      const vm = require('vm');
+      const code = fs.readFileSync(require.resolve('../src/status-cards.js'), 'utf8');
+      const mockModule = { exports: {} };
+      const sandbox = {
+        console: { log: jest.fn(), error: jest.fn() },
+        GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
+        document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
+        fetch: async () => ({ text: async ()=>'' }),
+        setTimeout: jest.fn(),
+        setInterval: jest.fn(),
+        window: {},
+        globalThis: undefined, // force module.exports path
+        module: mockModule
+      };
+      vm.createContext(sandbox);
+      vm.runInContext(code, sandbox);
+      expect(mockModule.exports).toBeDefined();
+      expect(mockModule.exports.fetchWorkflowStatus).toBeDefined();
+      expect(mockModule.exports.updateWorkflowStatusUI).toBeDefined();
+    });
+
+    test('should not export when module.exports is falsy', () => {
+      const fs = require('fs');
+      const vm = require('vm');
+      const code = fs.readFileSync(require.resolve('../src/status-cards.js'), 'utf8');
+      const mockModule = { exports: null }; // falsy exports
+      const sandbox = {
+        console: { log: jest.fn(), error: jest.fn() },
+        GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
+        document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
+        fetch: async () => ({ text: async ()=>'' }),
+        setTimeout: jest.fn(),
+        setInterval: jest.fn(),
+        window: {},
+        globalThis: undefined, // force module.exports path
+        module: mockModule
+      };
+      vm.createContext(sandbox);
+      vm.runInContext(code, sandbox);
+      expect(mockModule.exports).toBeNull(); // should remain null/falsy
+    });
+
+    test('should not export when module exists without exports property', () => {
+      const fs = require('fs');
+      const vm = require('vm');
+      const code = fs.readFileSync(require.resolve('../src/status-cards.js'), 'utf8');
+      const mockModule = {}; // module without exports property
+      const sandbox = {
+        console: { log: jest.fn(), error: jest.fn() },
+        GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
+        document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
+        fetch: async () => ({ text: async ()=>'' }),
+        setTimeout: jest.fn(),
+        setInterval: jest.fn(),
+        window: {},
+        globalThis: undefined, // force module.exports path
+        module: mockModule
+      };
+      vm.createContext(sandbox);
+      vm.runInContext(code, sandbox);
+      expect(mockModule.exports).toBeUndefined(); // should not have exports
     });
   });
 }); 
