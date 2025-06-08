@@ -590,7 +590,19 @@ document.addEventListener('DOMContentLoaded', function() {
         addTaskBtn,
         addTaskModal,
         cancelTaskBtn,
-        addTaskForm
+        addTaskForm,
+        // expose internals for testing
+        loadCollapseStates,
+        saveCollapseStates,
+        loadGitHubIssues,
+        renderMarkdown,
+        createGitHubIssueElement,
+        extractPriorityFromLabels,
+        extractCategoryFromLabels,
+        getPriorityColor,
+        getCategoryColor,
+        createSkeletonCard,
+        initializeGitHubIssues
     };
 
     // Attach to global for browser/Node access
