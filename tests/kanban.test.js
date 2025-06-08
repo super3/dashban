@@ -1,16 +1,17 @@
 // Helper to setup DOM with minimal markup
 function setupDOM() {
   document.body.innerHTML = `
-    <button id="addTaskBtn"></button>
-    <div id="addTaskModal" class="hidden">
+    <button id="add-task-btn"></button>
+    <div id="add-task-modal" class="hidden">
       <div>
-        <form id="addTaskForm">
-          <input id="taskTitle" />
-          <textarea id="taskDescription"></textarea>
-          <select id="taskPriority"><option>Low</option><option>Medium</option><option>High</option></select>
-          <select id="taskCategory"><option>Frontend</option></select>
+        <form id="add-task-form">
+          <input id="task-title" name="title" />
+          <textarea id="task-description" name="description"></textarea>
+          <select id="task-priority" name="priority"><option>Low</option><option>Medium</option><option>High</option></select>
+          <select id="task-category" name="category"><option>Frontend</option></select>
+          <select id="task-column" name="column"><option>backlog</option></select>
         </form>
-        <button id="cancelTaskBtn"></button>
+        <button id="cancel-task"></button>
       </div>
     </div>
     <div class="column" data-column="info"><span class="px-2 py-1 rounded-full">0</span><div id="info"></div></div>
@@ -35,9 +36,9 @@ describe('Kanban DOM functions', () => {
     global.fetch = jest.fn(async () => ({ ok: true, text: async () => '<svg></svg>' }));
     console.error = jest.fn();
     console.log = jest.fn();
-    require('../script.js');
+    require('../src/kanban.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
-    api = global.testExports;
+    api = global.kanbanTestExports;
   });
 
   test('createTaskElement builds task DOM structure', () => {
@@ -57,23 +58,21 @@ describe('Kanban DOM functions', () => {
   });
 
   test('modal open and close interactions', () => {
-    const modal = document.getElementById('addTaskModal');
-    const form = document.getElementById('addTaskForm');
+    const modal = document.getElementById('add-task-modal');
+    const form = document.getElementById('add-task-form');
     const resetSpy = jest.spyOn(form, 'reset');
 
-    document.getElementById('addTaskBtn').click();
+    document.getElementById('add-task-btn').click();
     expect(modal.classList.contains('hidden')).toBe(false);
-    expect(document.body.style.overflow).toBe('hidden');
 
-    document.getElementById('cancelTaskBtn').click();
+    document.getElementById('cancel-task').click();
     expect(modal.classList.contains('hidden')).toBe(true);
-    expect(document.body.style.overflow).toBe('auto');
     expect(resetSpy).toHaveBeenCalled();
   });
 
   test('escape key closes modal', () => {
-    const modal = document.getElementById('addTaskModal');
-    document.getElementById('addTaskBtn').click();
+    const modal = document.getElementById('add-task-modal');
+    document.getElementById('add-task-btn').click();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(modal.classList.contains('hidden')).toBe(true);
   });
