@@ -374,6 +374,43 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Simple markdown renderer for issue descriptions
+    function renderMarkdown(text) {
+        if (!text) return 'No description provided';
+        
+        // Escape HTML first to prevent XSS
+        const escapeHtml = (str) => str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        
+        let html = escapeHtml(text);
+        
+        // Convert markdown patterns to HTML
+        html = html
+            // Bold text **text** or __text__
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/__(.*?)__/g, '<strong>$1</strong>')
+            
+            // Italic text *text* or _text_
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/_(.*?)_/g, '<em>$1</em>')
+            
+            // Inline code `code`
+            .replace(/`(.*?)`/g, '<code class="bg-gray-100 text-gray-800 px-1 rounded text-xs">$1</code>')
+            
+            // Links [text](url)
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-blue-600 hover:text-blue-800 underline">$1</a>')
+            
+            // Line breaks (convert double newlines to paragraph breaks)
+            .replace(/\n\s*\n/g, '<br><br>')
+            .replace(/\n/g, '<br>');
+        
+        return html;
+    }
+
     function createGitHubIssueElement(issue, isCompleted = false) {
         const taskDiv = document.createElement('div');
         taskDiv.className = 'bg-white border border-gray-200 rounded-md p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
@@ -384,8 +421,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const priority = extractPriorityFromLabels(issue.labels);
         const category = extractCategoryFromLabels(issue.labels);
 
-        // Use the full description - CSS will handle truncation
-        const description = issue.body || 'No description provided';
+        // Render markdown description
+        const description = renderMarkdown(issue.body);
 
         taskDiv.innerHTML = `
             <div class="flex items-start justify-between mb-2">
@@ -394,7 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     #${issue.number}
                 </a>
             </div>
-            <p class="text-gray-600 text-sm mb-3 line-clamp-2">${description}</p>
+            <div class="text-gray-600 text-sm mb-3 line-clamp-2">${description}</div>
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <span class="${getPriorityColor(priority)} text-xs px-2 py-1 rounded-full font-medium">${priority}</span>
