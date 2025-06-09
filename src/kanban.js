@@ -385,13 +385,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // GitHub App Authentication Functions
     function initializeGitHubAuth() {
-        // Check if we're returning from GitHub App installation
+        // Check if we're returning from GitHub App installation/authorization
         const urlParams = new URLSearchParams(window.location.search);
         const installationId = urlParams.get('installation_id');
         const setupAction = urlParams.get('setup_action');
+        const code = urlParams.get('code');
         
         if (installationId && setupAction === 'install') {
-            handleInstallationCallback(installationId);
+            // Handle GitHub App installation with OAuth authorization
+            handleInstallationCallback(installationId, code);
             
             // Clean up URL
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -416,29 +418,41 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = installUrl.toString();
     }
 
-    async function handleInstallationCallback(installationId) {
+    async function handleInstallationCallback(installationId, authCode = null) {
         try {
             console.log('🔄 Processing GitHub App installation...');
             
             // Store installation ID
             githubAuth.installationId = installationId;
+            githubAuth.isAuthenticated = true;
             localStorage.setItem('github_installation_id', installationId);
             
-            // For GitHub Apps, we need to create installation access tokens
-            // Since this is client-side, we'll guide users to create a token manually
-            const message = `GitHub App installed successfully!\n\n` +
-                'To create issues, please create a Personal Access Token:\n\n' +
-                '1. Go to GitHub Settings > Developer settings > Personal access tokens > Fine-grained tokens\n' +
-                '2. Generate new token for this repository\n' +
-                '3. Select "Issues" permission with Read and Write access\n' +
-                '4. Copy the token and paste it below:';
+            console.log('✅ GitHub App installed successfully!');
             
-            const token = prompt(message);
-            if (token) {
-                await validateAndSetToken(token);
+            if (authCode) {
+                // We have an OAuth authorization code
+                console.log('🔄 OAuth authorization code received');
+                
+                // For client-side apps, we can't securely exchange the code for a token
+                // So we'll guide the user to create a Personal Access Token
+                const message = `GitHub App installed and authorized!\n\n` +
+                    `Authorization code received: ${authCode}\n\n` +
+                    'To create issues, please create a Personal Access Token:\n\n' +
+                    '1. Go to GitHub Settings > Developer settings > Personal access tokens > Fine-grained tokens\n' +
+                    '2. Generate new token for this repository\n' +
+                    '3. Select "Issues" permission with Read and Write access\n' +
+                    '4. Copy the token and paste it below:\n\n' +
+                    '(Or click Cancel to skip for now)';
+                
+                const token = prompt(message);
+                if (token) {
+                    await validateAndSetToken(token);
+                } else {
+                    // Update UI even without token
+                    updateGitHubSignInUI();
+                }
             } else {
-                // Still mark as authenticated even without token
-                githubAuth.isAuthenticated = true;
+                // No OAuth code, just installation
                 updateGitHubSignInUI();
             }
         } catch (error) {
@@ -523,11 +537,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const signInButton = document.querySelector('a[href="https://github.com/super3/dashban"]');
         if (!signInButton) return;
         
-        if (githubAuth.isAuthenticated) {
-            const userDisplay = githubAuth.user ? githubAuth.user.login : 'App Installed';
+        if (githubAuth.isAuthenticated && githubAuth.accessToken && githubAuth.user) {
+            // Fully authenticated with token
             signInButton.innerHTML = `
                 <i class="fab fa-github"></i>
-                <span>${userDisplay}</span>
+                <span>Signed in as ${githubAuth.user.login}</span>
                 <i class="fas fa-sign-out-alt text-xs"></i>
             `;
             signInButton.title = 'Click to sign out of GitHub App';
@@ -538,7 +552,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     signOutGitHub();
                 }
             };
+        } else if (githubAuth.isAuthenticated) {
+            // App installed but no token
+            signInButton.innerHTML = `
+                <i class="fab fa-github"></i>
+                <span>Add Access Token</span>
+                <i class="fas fa-key text-xs"></i>
+            `;
+            signInButton.title = 'Add Personal Access Token to create issues';
+            signInButton.href = '#';
+            signInButton.onclick = (e) => {
+                e.preventDefault();
+                promptForAccessToken();
+            };
         } else {
+            // Not installed
             signInButton.innerHTML = `
                 <i class="fab fa-github"></i>
                 <span>Install GitHub App</span>
@@ -553,6 +581,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update GitHub option in form
         updateGitHubOptionUI();
+    }
+
+    function promptForAccessToken() {
+        const message = `Add Personal Access Token\n\n` +
+            'To create GitHub issues, you need a Personal Access Token:\n\n' +
+            '1. Go to GitHub Settings > Developer settings > Personal access tokens > Fine-grained tokens\n' +
+            '2. Generate new token for this repository\n' +
+            '3. Select "Issues" permission with Read and Write access\n' +
+            '4. Copy the token and paste it below:';
+        
+        const token = prompt(message);
+        if (token) {
+            validateAndSetToken(token);
+        }
     }
 
     function updateGitHubOptionUI() {
