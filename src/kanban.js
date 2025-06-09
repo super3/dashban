@@ -658,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             signInButton.title = 'Click to sign out and clear access token';
             signInButton.href = '#';
-            signInButton.className = 'flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+            signInButton.className = 'flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
             signInButton.onclick = (e) => {
                 e.preventDefault();
                 if (confirm('Sign out of GitHub App and clear your access token?')) {
@@ -674,7 +674,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             signInButton.title = 'Add Personal Access Token to create issues';
             signInButton.href = '#';
-            signInButton.className = 'flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+            signInButton.className = 'flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
             signInButton.onclick = (e) => {
                 e.preventDefault();
                 promptForAccessToken();
