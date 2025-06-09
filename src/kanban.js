@@ -1100,7 +1100,9 @@ document.addEventListener('DOMContentLoaded', function() {
         handleInstallationCallback,
         promptForAccessToken,
         showGitHubTokenModal,
-        hideGitHubTokenModal
+        hideGitHubTokenModal,
+        // expose githubAuth for debugging
+        get githubAuth() { return githubAuth; }
     };
 
     // Attach to global for browser/Node access
