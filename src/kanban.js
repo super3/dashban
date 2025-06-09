@@ -643,7 +643,9 @@ document.addEventListener('DOMContentLoaded', function() {
             isAuthenticated: githubAuth.isAuthenticated,
             hasAccessToken: !!githubAuth.accessToken,
             hasUser: !!githubAuth.user,
-            userLogin: githubAuth.user?.login
+            userLogin: githubAuth.user?.login,
+            installationId: githubAuth.installationId,
+            accessTokenLength: githubAuth.accessToken ? githubAuth.accessToken.length : 0
         });
         
         if (githubAuth.isAuthenticated && githubAuth.accessToken && githubAuth.user) {
