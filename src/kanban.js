@@ -146,6 +146,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const success = await validateAndSetToken(token.trim());
                 if (success) {
                     hideGitHubTokenModal();
+                    // Force UI update after modal closes
+                    updateGitHubSignInUI();
                 }
             } finally {
                 if (saveButton) {
