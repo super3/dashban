@@ -612,14 +612,24 @@ document.addEventListener('DOMContentLoaded', function() {
     function signOutGitHub() {
         console.log('🔓 Signing out of GitHub App...');
         
-        // Clear authentication state
-        githubAuth.isAuthenticated = false;
-        githubAuth.installationId = null;
+        // Check if app was installed before clearing state
+        const hadInstallation = !!(githubAuth.installationId || localStorage.getItem('github_installation_id'));
+        
+        // Clear authentication state but preserve installation if it existed
         githubAuth.accessToken = null;
         githubAuth.user = null;
         
-        // Clear stored tokens
-        localStorage.removeItem('github_installation_id');
+        if (hadInstallation) {
+            // Keep installation state, just remove token
+            githubAuth.isAuthenticated = true; // App still installed
+            console.log('🔄 Cleared access token but keeping app installation');
+        } else {
+            // No installation, clear everything
+            githubAuth.isAuthenticated = false;
+            githubAuth.installationId = null;
+        }
+        
+        // Clear stored access token only
         localStorage.removeItem('github_access_token');
         
         // Update UI
@@ -627,10 +637,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('✅ Successfully signed out and cleared access token');
         
-        // Show a brief success message
+        // Show appropriate reconnection message
         setTimeout(() => {
             if (window.location.href.includes('localhost') || window.location.href.includes('127.0.0.1')) {
-                console.log('💡 To reconnect, click "Install GitHub App" and add your access token again');
+                if (hadInstallation) {
+                    console.log('💡 To reconnect, click "Add Access Token" to add your personal access token');
+                } else {
+                    console.log('💡 To reconnect, click "Install GitHub App" and add your access token');
+                }
             }
         }, 100);
     }
@@ -661,9 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
             signInButton.className = 'flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
             signInButton.onclick = (e) => {
                 e.preventDefault();
-                if (confirm('Sign out of GitHub App and clear your access token?')) {
-                    signOutGitHub();
-                }
+                signOutGitHub();
             };
         } else if (githubAuth.isAuthenticated) {
             // App installed but no token
