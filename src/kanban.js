@@ -1103,7 +1103,19 @@ document.addEventListener('DOMContentLoaded', function() {
         showGitHubTokenModal,
         hideGitHubTokenModal,
         // expose githubAuth for debugging
-        githubAuth: githubAuth
+        githubAuth: githubAuth,
+        // test function to check auth state
+        debugAuthState: function() {
+            console.log('=== DEBUG AUTH STATE ===');
+            console.log('isAuthenticated:', githubAuth.isAuthenticated);
+            console.log('hasAccessToken:', !!githubAuth.accessToken);
+            console.log('hasUser:', !!githubAuth.user);
+            console.log('userLogin:', githubAuth.user?.login);
+            console.log('installationId:', githubAuth.installationId);
+            console.log('Full auth object:', githubAuth);
+            console.log('========================');
+            return githubAuth;
+        }
     };
 
     // Attach to global for browser/Node access
