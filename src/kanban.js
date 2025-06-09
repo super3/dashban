@@ -651,7 +651,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             document.querySelector('header a[href="#"]') ||
                             document.querySelector('header .flex.items-center.space-x-2:last-child a');
         if (!signInButton) {
-            console.warn('⚠️ GitHub sign-in button not found in header');
+            // Only warn in non-test environments (when we're not in JSDOM)
+            if (typeof navigator !== 'undefined' && !navigator.userAgent.includes('jsdom')) {
+                console.warn('⚠️ GitHub sign-in button not found in header');
+            }
             return;
         }
         
