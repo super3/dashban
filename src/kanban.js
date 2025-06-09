@@ -660,7 +660,8 @@ document.addEventListener('DOMContentLoaded', function() {
             hasUser: !!githubAuth.user,
             userLogin: githubAuth.user?.login,
             installationId: githubAuth.installationId,
-            accessTokenLength: githubAuth.accessToken ? githubAuth.accessToken.length : 0
+            accessTokenLength: githubAuth.accessToken ? githubAuth.accessToken.length : 0,
+            fullAuthObject: githubAuth
         });
         
         if (githubAuth.isAuthenticated && githubAuth.accessToken && githubAuth.user) {
@@ -1102,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showGitHubTokenModal,
         hideGitHubTokenModal,
         // expose githubAuth for debugging
-        get githubAuth() { return githubAuth; }
+        githubAuth: githubAuth
     };
 
     // Attach to global for browser/Node access
