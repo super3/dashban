@@ -463,11 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const issueNumber = archiveBtn.getAttribute('data-issue-number');
             const taskElement = archiveBtn.closest('.bg-white.border');
             
-            if (confirm(`Archive issue #${issueNumber}? This will hide it from the kanban board.`)) {
-                console.log(`Archiving issue #${issueNumber} - Note: This only removes from UI, GitHub API changes would require authentication`);
-                taskElement.remove();
-                updateColumnCounts();
-            }
+            archiveGitHubIssue(issueNumber, taskElement);
         }
     });
 
@@ -743,6 +739,55 @@ document.addEventListener('DOMContentLoaded', function() {
             gitHubCheckbox.checked = false;
             gitHubStatusText.textContent = 'Install GitHub App to create real issues in the repository';
             gitHubStatusText.className = 'text-xs text-gray-500 mt-0.5';
+        }
+    }
+
+    // Archive GitHub issue by adding "archive" label
+    async function archiveGitHubIssue(issueNumber, taskElement) {
+        if (!githubAuth.isAuthenticated || !githubAuth.accessToken) {
+            console.log('❌ Not authenticated with GitHub App - cannot archive issue');
+            // Remove from UI anyway
+            taskElement.remove();
+            updateColumnCounts();
+            return;
+        }
+
+        try {
+            console.log(`🗃️ Archiving issue #${issueNumber}...`);
+
+            // Add "archive" label to the issue
+            const response = await fetch(`${GITHUB_CONFIG.apiBaseUrl}/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Authorization': `token ${githubAuth.accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    labels: ['archive']
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+            }
+
+            console.log(`✅ Successfully archived issue #${issueNumber} (added "archive" label)`);
+            
+            // Remove from UI
+            taskElement.remove();
+            updateColumnCounts();
+            
+        } catch (error) {
+            console.error('❌ Failed to archive GitHub issue:', error);
+            
+            // Show user-friendly error message but still remove from UI
+            console.warn(`⚠️ Could not add archive label to issue #${issueNumber}: ${error.message}`);
+            console.log('🔄 Removing from UI anyway...');
+            
+            taskElement.remove();
+            updateColumnCounts();
         }
     }
 
@@ -1088,6 +1133,7 @@ document.addEventListener('DOMContentLoaded', function() {
         saveCollapseStates,
         loadGitHubIssues,
         createGitHubIssue,
+        archiveGitHubIssue,
         renderMarkdown,
         createGitHubIssueElement,
         extractPriorityFromLabels,

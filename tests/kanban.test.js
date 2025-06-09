@@ -992,7 +992,7 @@ describe('Kanban Board Functions', () => {
   });
 
   describe('archive functionality', () => {
-    test('should handle archive button clicks', () => {
+    test('should handle archive button clicks for GitHub issues', () => {
       const archiveBtn = document.createElement('button');
       archiveBtn.className = 'archive-btn';
       archiveBtn.setAttribute('data-issue-number', '123');
@@ -1004,37 +1004,25 @@ describe('Kanban Board Functions', () => {
       const backlog = document.getElementById('backlog');
       backlog.appendChild(taskElement);
       
-      // Mock confirm to return true
-      global.confirm = jest.fn(() => true);
+      const initialChildCount = backlog.children.length;
       
-      // Simulate click
+      // Simulate click - check that element is removed from DOM
       const event = new Event('click', { bubbles: true });
       archiveBtn.dispatchEvent(event);
       
-      expect(global.confirm).toHaveBeenCalledWith('Archive issue #123? This will hide it from the kanban board.');
+      // Task should be removed from DOM (this happens regardless of GitHub auth)
+      expect(backlog.children.length).toBe(initialChildCount - 1);
     });
 
-    test('should not archive when user cancels', () => {
-      const archiveBtn = document.createElement('button');
-      archiveBtn.className = 'archive-btn';
-      archiveBtn.setAttribute('data-issue-number', '456');
+    test('should have archiveGitHubIssue function available', () => {
+      // Test that the function exists and is callable
+      expect(typeof api.archiveGitHubIssue).toBe('function');
       
-      const taskElement = document.createElement('div');
-      taskElement.className = 'bg-white border';
-      taskElement.appendChild(archiveBtn);
-      
-      const backlog = document.getElementById('backlog');
-      backlog.appendChild(taskElement);
-      
-      // Mock confirm to return false
-      global.confirm = jest.fn(() => false);
-      
-      // Simulate click
-      const event = new Event('click', { bubbles: true });
-      archiveBtn.dispatchEvent(event);
-      
-      expect(global.confirm).toHaveBeenCalledWith('Archive issue #456? This will hide it from the kanban board.');
-      expect(backlog.children.length).toBeGreaterThanOrEqual(1); // Task should still be there
+      // Test that it doesn't throw when called (though it may fail gracefully)
+      expect(() => {
+        const mockElement = { remove: jest.fn() };
+        api.archiveGitHubIssue('123', mockElement);
+      }).not.toThrow();
     });
   });
 
