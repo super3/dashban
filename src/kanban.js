@@ -8,20 +8,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('📋 Kanban Board initializing...');
 
-    // GitHub OAuth configuration
+    // GitHub App configuration
     const GITHUB_CONFIG = {
-        clientId: 'Ov23liQd6MyFq1ehLUeP', // Replace with your GitHub OAuth App Client ID
-        redirectUri: 'https://dashban.com', // Fixed for development
-        scope: 'public_repo', // Scope for creating issues in public repos
+        appId: '1385203', // Replace with your GitHub App ID
+        redirectUri: window.location.origin + window.location.pathname,
         apiBaseUrl: 'https://api.github.com',
         owner: 'super3',
-        repo: 'dashban'
+        repo: 'dashban',
+        installationUrl: 'https://github.com/apps/dashban' // Replace with your app name
     };
 
-    // GitHub authentication state
+    // GitHub App authentication state
     let githubAuth = {
         isAuthenticated: false,
-        token: null,
+        installationId: null,
+        accessToken: null,
         user: null
     };
     
@@ -89,8 +90,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            if (createGitHub && !githubAuth.isAuthenticated) {
-                alert('Please sign in with GitHub first to create real issues');
+            if (createGitHub && (!githubAuth.isAuthenticated || !githubAuth.accessToken)) {
+                alert('Please install the GitHub App and add a Personal Access Token first to create real issues');
                 return;
             }
             
@@ -106,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     submitBtn.textContent = createGitHub ? 'Creating GitHub Issue...' : 'Adding Issue...';
                 }
                 
-                if (createGitHub && githubAuth.isAuthenticated) {
+                if (createGitHub && githubAuth.isAuthenticated && githubAuth.accessToken) {
                     // Convert priority and category to GitHub labels
                     const labels = [];
                     if (priority && priority !== 'Medium') labels.push(priority.toLowerCase());
@@ -382,31 +383,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // GitHub Authentication Functions
+    // GitHub App Authentication Functions
     function initializeGitHubAuth() {
-        // Check if we're returning from OAuth
+        // Check if we're returning from GitHub App installation
         const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        const state = urlParams.get('state');
+        const installationId = urlParams.get('installation_id');
+        const setupAction = urlParams.get('setup_action');
         
-        if (code && state) {
-            // Verify state to prevent CSRF attacks
-            const savedState = localStorage.getItem('github_oauth_state');
-            if (state === savedState) {
-                handleOAuthCallback(code);
-            } else {
-                console.error('OAuth state mismatch - possible CSRF attack');
-                alert('Authentication failed due to security concerns. Please try again.');
-            }
+        if (installationId && setupAction === 'install') {
+            handleInstallationCallback(installationId);
             
             // Clean up URL
             window.history.replaceState({}, document.title, window.location.pathname);
-            localStorage.removeItem('github_oauth_state');
         } else {
-            // Check for existing token
-            const savedToken = localStorage.getItem('github_access_token');
-            if (savedToken) {
-                validateAndSetToken(savedToken);
+            // Check for existing installation
+            const savedInstallationId = localStorage.getItem('github_installation_id');
+            if (savedInstallationId) {
+                validateAndSetInstallation(savedInstallationId);
             }
         }
         
@@ -414,43 +407,43 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function signInWithGitHub() {
-        // Generate a random state for CSRF protection
-        const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem('github_oauth_state', state);
+        // For GitHub Apps, we redirect to the installation URL
+        // This will install the app on the user's account/organization
+        const installUrl = new URL(GITHUB_CONFIG.installationUrl);
+        installUrl.searchParams.set('state', window.location.href); // Return to current page
         
-        // Construct OAuth URL
-        const authUrl = new URL('https://github.com/login/oauth/authorize');
-        authUrl.searchParams.set('client_id', GITHUB_CONFIG.clientId);
-        authUrl.searchParams.set('redirect_uri', GITHUB_CONFIG.redirectUri);
-        authUrl.searchParams.set('scope', GITHUB_CONFIG.scope);
-        authUrl.searchParams.set('state', state);
-        
-        // Redirect to GitHub
-        window.location.href = authUrl.toString();
+        // Redirect to GitHub App installation
+        window.location.href = installUrl.toString();
     }
 
-    async function handleOAuthCallback(code) {
+    async function handleInstallationCallback(installationId) {
         try {
-            console.log('🔄 Exchanging OAuth code for access token...');
+            console.log('🔄 Processing GitHub App installation...');
             
-            // For client-side apps, we need to use a proxy or backend service
-            // For demo purposes, we'll use GitHub's client-side token approach
-            // In production, you'd want to exchange this through your backend
+            // Store installation ID
+            githubAuth.installationId = installationId;
+            localStorage.setItem('github_installation_id', installationId);
             
-            // For now, let's use the device flow or ask user to manually create token
-            const message = `OAuth code received: ${code}\n\n` +
-                'For security reasons, please create a Personal Access Token manually:\n\n' +
-                '1. Go to GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)\n' +
-                '2. Generate new token with "public_repo" scope\n' +
-                '3. Copy the token and paste it below:';
+            // For GitHub Apps, we need to create installation access tokens
+            // Since this is client-side, we'll guide users to create a token manually
+            const message = `GitHub App installed successfully!\n\n` +
+                'To create issues, please create a Personal Access Token:\n\n' +
+                '1. Go to GitHub Settings > Developer settings > Personal access tokens > Fine-grained tokens\n' +
+                '2. Generate new token for this repository\n' +
+                '3. Select "Issues" permission with Read and Write access\n' +
+                '4. Copy the token and paste it below:';
             
             const token = prompt(message);
             if (token) {
                 await validateAndSetToken(token);
+            } else {
+                // Still mark as authenticated even without token
+                githubAuth.isAuthenticated = true;
+                updateGitHubSignInUI();
             }
         } catch (error) {
-            console.error('❌ OAuth callback error:', error);
-            alert('Authentication failed. Please try again.');
+            console.error('❌ Installation callback error:', error);
+            alert('Installation failed. Please try again.');
         }
     }
 
@@ -473,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Store authentication
             githubAuth.isAuthenticated = true;
-            githubAuth.token = token;
+            githubAuth.accessToken = token;
             githubAuth.user = user;
             
             localStorage.setItem('github_access_token', token);
@@ -489,15 +482,41 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    async function validateAndSetInstallation(installationId) {
+        try {
+            console.log('🔄 Validating GitHub App installation...');
+            
+            // Store installation
+            githubAuth.installationId = installationId;
+            githubAuth.isAuthenticated = true;
+            
+            // Check for existing token
+            const savedToken = localStorage.getItem('github_access_token');
+            if (savedToken) {
+                await validateAndSetToken(savedToken);
+            } else {
+                updateGitHubSignInUI();
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Installation validation failed:', error);
+            signOutGitHub();
+            return false;
+        }
+    }
+
     function signOutGitHub() {
         githubAuth.isAuthenticated = false;
-        githubAuth.token = null;
+        githubAuth.installationId = null;
+        githubAuth.accessToken = null;
         githubAuth.user = null;
         
+        localStorage.removeItem('github_installation_id');
         localStorage.removeItem('github_access_token');
         updateGitHubSignInUI();
         
-        console.log('🔓 Signed out of GitHub');
+        console.log('🔓 Signed out of GitHub App');
     }
 
     function updateGitHubSignInUI() {
@@ -505,25 +524,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!signInButton) return;
         
         if (githubAuth.isAuthenticated) {
+            const userDisplay = githubAuth.user ? githubAuth.user.login : 'App Installed';
             signInButton.innerHTML = `
                 <i class="fab fa-github"></i>
-                <span>Signed in as ${githubAuth.user.login}</span>
+                <span>${userDisplay}</span>
                 <i class="fas fa-sign-out-alt text-xs"></i>
             `;
-            signInButton.title = 'Click to sign out';
+            signInButton.title = 'Click to sign out of GitHub App';
             signInButton.href = '#';
             signInButton.onclick = (e) => {
                 e.preventDefault();
-                if (confirm('Sign out of GitHub?')) {
+                if (confirm('Sign out of GitHub App?')) {
                     signOutGitHub();
                 }
             };
         } else {
             signInButton.innerHTML = `
                 <i class="fab fa-github"></i>
-                <span>Sign In with GitHub</span>
+                <span>Install GitHub App</span>
             `;
-            signInButton.title = 'Sign in to create GitHub issues';
+            signInButton.title = 'Install GitHub App to create issues';
             signInButton.href = '#';
             signInButton.onclick = (e) => {
                 e.preventDefault();
@@ -542,22 +562,28 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!gitHubOption || !gitHubCheckbox || !gitHubStatusText) return;
         
-        if (githubAuth.isAuthenticated) {
+        if (githubAuth.isAuthenticated && githubAuth.accessToken) {
             gitHubCheckbox.disabled = false;
-            gitHubStatusText.textContent = `Create real issues in the repository as ${githubAuth.user.login}`;
+            const userDisplay = githubAuth.user ? ` as ${githubAuth.user.login}` : '';
+            gitHubStatusText.textContent = `Create real issues in the repository${userDisplay}`;
             gitHubStatusText.className = 'text-xs text-green-600 mt-0.5';
+        } else if (githubAuth.isAuthenticated) {
+            gitHubCheckbox.disabled = true;
+            gitHubCheckbox.checked = false;
+            gitHubStatusText.textContent = 'GitHub App installed. Add a Personal Access Token to create issues.';
+            gitHubStatusText.className = 'text-xs text-orange-600 mt-0.5';
         } else {
             gitHubCheckbox.disabled = true;
             gitHubCheckbox.checked = false;
-            gitHubStatusText.textContent = 'Sign in with GitHub to create real issues in the repository';
+            gitHubStatusText.textContent = 'Install GitHub App to create real issues in the repository';
             gitHubStatusText.className = 'text-xs text-gray-500 mt-0.5';
         }
     }
 
     // Create GitHub issue via API
     async function createGitHubIssue(title, description, labels = []) {
-        if (!githubAuth.isAuthenticated) {
-            console.log('❌ Not authenticated with GitHub');
+        if (!githubAuth.isAuthenticated || !githubAuth.accessToken) {
+            console.log('❌ Not authenticated with GitHub App or missing access token');
             return null;
         }
 
@@ -574,7 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/vnd.github.v3+json',
-                    'Authorization': `token ${githubAuth.token}`,
+                    'Authorization': `token ${githubAuth.accessToken}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(issueData)
@@ -595,7 +621,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show user-friendly error message
             const errorMessage = error.message.includes('GitHub API error') 
                 ? error.message 
-                : 'Failed to create GitHub issue. Check your network connection.';
+                : 'Failed to create GitHub issue. Check your token permissions and network connection.';
             
             alert(`GitHub Issue Creation Failed:\n${errorMessage}\n\nThe task will be created locally instead.`);
             return null;
@@ -904,13 +930,15 @@ document.addEventListener('DOMContentLoaded', function() {
         getCategoryColor,
         createSkeletonCard,
         initializeGitHubIssues,
-        // GitHub authentication functions
+        // GitHub App authentication functions
         initializeGitHubAuth,
         signInWithGitHub,
         signOutGitHub,
         updateGitHubSignInUI,
         updateGitHubOptionUI,
-        validateAndSetToken
+        validateAndSetToken,
+        validateAndSetInstallation,
+        handleInstallationCallback
     };
 
     // Attach to global for browser/Node access
