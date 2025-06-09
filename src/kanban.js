@@ -600,34 +600,56 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function signOutGitHub() {
+        console.log('🔓 Signing out of GitHub App...');
+        
+        // Clear authentication state
         githubAuth.isAuthenticated = false;
         githubAuth.installationId = null;
         githubAuth.accessToken = null;
         githubAuth.user = null;
         
+        // Clear stored tokens
         localStorage.removeItem('github_installation_id');
         localStorage.removeItem('github_access_token');
+        
+        // Update UI
         updateGitHubSignInUI();
         
-        console.log('🔓 Signed out of GitHub App');
+        console.log('✅ Successfully signed out and cleared access token');
+        
+        // Show a brief success message
+        setTimeout(() => {
+            if (window.location.href.includes('localhost') || window.location.href.includes('127.0.0.1')) {
+                console.log('💡 To reconnect, click "Install GitHub App" and add your access token again');
+            }
+        }, 100);
     }
 
     function updateGitHubSignInUI() {
-        const signInButton = document.querySelector('a[href="https://github.com/super3/dashban"]');
+        const signInButton = document.querySelector('header a[href="https://github.com/super3/dashban"]');
         if (!signInButton) return;
+        
+        // Debug logging to see authentication state
+        console.log('🔄 Updating GitHub Sign-In UI - Auth state:', {
+            isAuthenticated: githubAuth.isAuthenticated,
+            hasAccessToken: !!githubAuth.accessToken,
+            hasUser: !!githubAuth.user,
+            userLogin: githubAuth.user?.login
+        });
         
         if (githubAuth.isAuthenticated && githubAuth.accessToken && githubAuth.user) {
             // Fully authenticated with token
             signInButton.innerHTML = `
                 <i class="fab fa-github"></i>
                 <span>Signed in as ${githubAuth.user.login}</span>
-                <i class="fas fa-sign-out-alt text-xs"></i>
+                <i class="fas fa-sign-out-alt text-xs ml-1"></i>
             `;
-            signInButton.title = 'Click to sign out of GitHub App';
+            signInButton.title = 'Click to sign out and clear access token';
             signInButton.href = '#';
+            signInButton.className = 'flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
             signInButton.onclick = (e) => {
                 e.preventDefault();
-                if (confirm('Sign out of GitHub App?')) {
+                if (confirm('Sign out of GitHub App and clear your access token?')) {
                     signOutGitHub();
                 }
             };
@@ -640,6 +662,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             signInButton.title = 'Add Personal Access Token to create issues';
             signInButton.href = '#';
+            signInButton.className = 'flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
             signInButton.onclick = (e) => {
                 e.preventDefault();
                 promptForAccessToken();
@@ -652,6 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             signInButton.title = 'Install GitHub App to create issues';
             signInButton.href = '#';
+            signInButton.className = 'flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
             signInButton.onclick = (e) => {
                 e.preventDefault();
                 signInWithGitHub();
