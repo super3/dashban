@@ -10,8 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // GitHub OAuth configuration
     const GITHUB_CONFIG = {
-        clientId: 'YOUR_GITHUB_OAUTH_CLIENT_ID', // Replace with your GitHub OAuth App Client ID
-        redirectUri: window.location.origin + window.location.pathname,
+        clientId: 'Ov23liQd6MyFq1ehLUeP', // Replace with your GitHub OAuth App Client ID
+        redirectUri: 'https://dashban.com', // Fixed for development
         scope: 'public_repo', // Scope for creating issues in public repos
         apiBaseUrl: 'https://api.github.com',
         owner: 'super3',
