@@ -1099,4 +1099,25 @@ describe('Kanban Board Functions', () => {
       expect(backlog.hasAttribute('data-github-loaded')).toBe(true);
     });
   });
+
+  describe('GitHub Token Modal', () => {
+    test('should export modal functions', () => {
+      // Test that the modal functions are exported from the module
+      expect(typeof api.showGitHubTokenModal).toBe('function');
+      expect(typeof api.hideGitHubTokenModal).toBe('function');
+      expect(typeof api.promptForAccessToken).toBe('function');
+    });
+
+    test('should handle modal functions gracefully when DOM elements do not exist', () => {
+      // These functions should not throw errors when DOM elements don't exist (like in test environment)
+      expect(() => api.showGitHubTokenModal()).not.toThrow();
+      expect(() => api.hideGitHubTokenModal()).not.toThrow();
+      expect(() => api.promptForAccessToken()).not.toThrow();
+    });
+
+    test('should have promptForAccessToken function that does not throw', () => {
+      // Basic test to ensure the function exists and can be called
+      expect(() => api.promptForAccessToken()).not.toThrow();
+    });
+  });
 });

@@ -71,6 +71,101 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelTaskBtn.addEventListener('click', hideModal);
     }
 
+    // GitHub Token Modal Functions
+    const gitHubTokenModal = document.getElementById('github-token-modal');
+    const gitHubTokenForm = document.getElementById('github-token-form');
+    const gitHubTokenInput = document.getElementById('github-token-input');
+    const cancelGitHubTokenBtn = document.getElementById('cancel-github-token');
+    const toggleTokenVisibilityBtn = document.getElementById('toggle-token-visibility');
+    const tokenEyeIcon = document.getElementById('token-eye-icon');
+
+    function showGitHubTokenModal() {
+        if (gitHubTokenModal) {
+            gitHubTokenModal.classList.remove('hidden');
+            if (gitHubTokenInput) {
+                setTimeout(() => gitHubTokenInput.focus(), 100);
+            }
+        }
+    }
+
+    function hideGitHubTokenModal() {
+        if (gitHubTokenModal) {
+            gitHubTokenModal.classList.add('hidden');
+            if (gitHubTokenForm) {
+                gitHubTokenForm.reset();
+            }
+            // Reset password visibility
+            if (gitHubTokenInput && tokenEyeIcon) {
+                gitHubTokenInput.type = 'password';
+                tokenEyeIcon.className = 'fas fa-eye';
+            }
+        }
+    }
+
+    // Toggle token visibility
+    if (toggleTokenVisibilityBtn && gitHubTokenInput && tokenEyeIcon) {
+        toggleTokenVisibilityBtn.addEventListener('click', () => {
+            if (gitHubTokenInput.type === 'password') {
+                gitHubTokenInput.type = 'text';
+                tokenEyeIcon.className = 'fas fa-eye-slash';
+            } else {
+                gitHubTokenInput.type = 'password';
+                tokenEyeIcon.className = 'fas fa-eye';
+            }
+        });
+    }
+
+    // Handle cancel button
+    if (cancelGitHubTokenBtn) {
+        cancelGitHubTokenBtn.addEventListener('click', () => {
+            hideGitHubTokenModal();
+            updateGitHubSignInUI();
+        });
+    }
+
+    // Handle form submission
+    if (gitHubTokenForm) {
+        gitHubTokenForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(gitHubTokenForm);
+            const token = formData.get('token');
+            
+            if (!token || !token.trim()) {
+                alert('Please enter a valid Personal Access Token');
+                return;
+            }
+
+            const saveButton = gitHubTokenForm.querySelector('button[type="submit"]');
+            if (saveButton) {
+                saveButton.disabled = true;
+                saveButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Validating...';
+            }
+
+            try {
+                const success = await validateAndSetToken(token.trim());
+                if (success) {
+                    hideGitHubTokenModal();
+                }
+            } finally {
+                if (saveButton) {
+                    saveButton.disabled = false;
+                    saveButton.innerHTML = '<i class="fas fa-key mr-2"></i>Save Token';
+                }
+            }
+        });
+    }
+
+    // Close modal when clicking outside
+    if (gitHubTokenModal) {
+        gitHubTokenModal.addEventListener('click', (e) => {
+            if (e.target === gitHubTokenModal) {
+                hideGitHubTokenModal();
+                updateGitHubSignInUI();
+            }
+        });
+    }
+
     // Handle form submission
     if (addTaskForm) {
         addTaskForm.addEventListener('submit', async function(e) {
@@ -433,24 +528,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // We have an OAuth authorization code
                 console.log('🔄 OAuth authorization code received');
                 
-                // For client-side apps, we can't securely exchange the code for a token
-                // So we'll guide the user to create a Personal Access Token
-                const message = `GitHub App installed and authorized!\n\n` +
-                    `Authorization code received: ${authCode}\n\n` +
-                    'To create issues, please create a Personal Access Token:\n\n' +
-                    '1. Go to GitHub Settings > Developer settings > Personal access tokens > Fine-grained tokens\n' +
-                    '2. Generate new token for this repository\n' +
-                    '3. Select "Issues" permission with Read and Write access\n' +
-                    '4. Copy the token and paste it below:\n\n' +
-                    '(Or click Cancel to skip for now)';
-                
-                const token = prompt(message);
-                if (token) {
-                    await validateAndSetToken(token);
-                } else {
-                    // Update UI even without token
-                    updateGitHubSignInUI();
-                }
+                // Show the GitHub token modal instead of browser prompt
+                showGitHubTokenModal();
             } else {
                 // No OAuth code, just installation
                 updateGitHubSignInUI();
@@ -584,17 +663,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function promptForAccessToken() {
-        const message = `Add Personal Access Token\n\n` +
-            'To create GitHub issues, you need a Personal Access Token:\n\n' +
-            '1. Go to GitHub Settings > Developer settings > Personal access tokens > Fine-grained tokens\n' +
-            '2. Generate new token for this repository\n' +
-            '3. Select "Issues" permission with Read and Write access\n' +
-            '4. Copy the token and paste it below:';
-        
-        const token = prompt(message);
-        if (token) {
-            validateAndSetToken(token);
-        }
+        showGitHubTokenModal();
     }
 
     function updateGitHubOptionUI() {
@@ -980,7 +1049,10 @@ document.addEventListener('DOMContentLoaded', function() {
         updateGitHubOptionUI,
         validateAndSetToken,
         validateAndSetInstallation,
-        handleInstallationCallback
+        handleInstallationCallback,
+        promptForAccessToken,
+        showGitHubTokenModal,
+        hideGitHubTokenModal
     };
 
     // Attach to global for browser/Node access

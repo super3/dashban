@@ -436,6 +436,102 @@
         </div>
     </div>
 
+    <!-- GitHub Personal Access Token Modal -->
+    <div id="github-token-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center space-x-3">
+                        <i class="fab fa-github text-gray-700"></i>
+                        <h3 class="text-lg font-semibold text-gray-900">Add Personal Access Token</h3>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="mb-4">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                            <div class="flex items-start space-x-2">
+                                <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-green-800">GitHub App Installed Successfully!</p>
+                                    <p class="text-xs text-green-600 mt-1">Authorization code received and processed.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p class="text-sm text-gray-600 mb-4">
+                            To create and manage GitHub issues, you'll need a Personal Access Token with Issues permissions.
+                        </p>
+                        
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                            <h4 class="text-sm font-medium text-blue-800 mb-2">Quick Setup Instructions:</h4>
+                            <ol class="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+                                <li>Go to <strong>GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens</strong></li>
+                                <li>Click <strong>"Generate new token"</strong></li>
+                                <li>Select <strong>this repository</strong> as the resource owner</li>
+                                <li>Under permissions, grant <strong>"Issues"</strong> with <strong>Read and Write</strong> access</li>
+                                <li>Generate the token and copy it below</li>
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <form id="github-token-form" class="space-y-4">
+                        <div>
+                            <label for="github-token-input" class="block text-sm font-medium text-gray-700 mb-1">
+                                Personal Access Token
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="password" 
+                                    id="github-token-input" 
+                                    name="token" 
+                                    class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm" 
+                                    placeholder="github_pat_11ABCDEFGH0123456789_..."
+                                    required
+                                >
+                                <button 
+                                    type="button" 
+                                    id="toggle-token-visibility"
+                                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <i class="fas fa-eye" id="token-eye-icon"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">
+                                Token will be stored securely in your browser's local storage
+                            </p>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3 pt-4">
+                            <button 
+                                type="button" 
+                                id="cancel-github-token" 
+                                class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                            >
+                                Skip for now
+                            </button>
+                            <button 
+                                type="submit" 
+                                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+                            >
+                                <i class="fas fa-key mr-2"></i>
+                                Save Token
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="flex items-start space-x-2">
+                            <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+                            <div class="text-xs text-gray-600">
+                                <p><strong>Need help?</strong> Visit the <a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-fine-grained-personal-access-token" target="_blank" class="text-blue-600 hover:text-blue-800 underline">GitHub documentation</a> for detailed setup instructions.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="src/kanban.js"></script>
     <script src="src/status-cards.js"></script>
 </body>
