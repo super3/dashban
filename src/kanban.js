@@ -506,6 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('🔄 Found saved token without installation ID, validating...');
                 githubAuth.isAuthenticated = true; // Assume app is installed
                 validateAndSetToken(savedToken);
+                return; // Don't call updateGitHubSignInUI() yet, let validateAndSetToken() do it
             }
         }
         
