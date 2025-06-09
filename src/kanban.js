@@ -497,8 +497,15 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             // Check for existing installation
             const savedInstallationId = localStorage.getItem('github_installation_id');
+            const savedToken = localStorage.getItem('github_access_token');
+            
             if (savedInstallationId) {
                 validateAndSetInstallation(savedInstallationId);
+            } else if (savedToken) {
+                // We have a token but no installation ID - try to validate token
+                console.log('🔄 Found saved token without installation ID, validating...');
+                githubAuth.isAuthenticated = true; // Assume app is installed
+                validateAndSetToken(savedToken);
             }
         }
         
