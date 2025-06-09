@@ -914,5 +914,31 @@ describe('Status Cards Functions', () => {
       vm.runInContext(code, sandbox);
       expect(mockModule.exports).toBeUndefined(); // should not have exports
     });
+
+    test('attachExports handles undefined globals', () => {
+      expect(() => {
+        statusAPI.attachExports(undefined, undefined);
+      }).not.toThrow();
+    });
+
+    test('attachExports attaches to provided objects', () => {
+      const customGlobal = {};
+      const customModule = { exports: {} };
+      statusAPI.attachExports(customGlobal, customModule);
+      expect(customGlobal.statusCardsTestExports).toBeDefined();
+      expect(customModule.exports.fetchWorkflowStatus).toBeDefined();
+    });
+
+    test('attachExports falls back to current module when moduleObj missing', () => {
+      const customGlobal = {};
+      statusAPI.attachExports(customGlobal, undefined);
+      expect(customGlobal.statusCardsTestExports).toBeDefined();
+    });
+
+    test('attachExports falls back to globalThis when globalObj missing', () => {
+      const customModule = { exports: {} };
+      statusAPI.attachExports(undefined, customModule);
+      expect(customModule.exports.fetchWorkflowStatus).toBeDefined();
+    });
   });
-}); 
+});

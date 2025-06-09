@@ -369,15 +369,26 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshAllStatuses,
         parseCoverageFromSVG,
         updateTimestamp,
-        setupBadgeDebugging
+        setupBadgeDebugging,
+        attachExports
     };
 
-    // Attach to global for browser/Node access
-    if (typeof globalThis !== 'undefined') {
-        globalThis.statusCardsTestExports = statusAPI;
+    function attachExports(globalObj, moduleObj) {
+        const g = globalObj;
+        const m = moduleObj;
+
+        if (typeof g !== 'undefined') {
+            g.statusCardsTestExports = statusAPI;
+        }
+
+        if (m && m.exports) {
+            m.exports = statusAPI;
+        }
     }
 
-    if (typeof module !== 'undefined' && module.exports) {
-        module.exports = statusAPI;
-    }
+    // Attach to global for browser/Node access using actual environment
+    attachExports(
+        globalThis,
+        typeof module !== 'undefined' ? module : undefined
+    );
 }); 
