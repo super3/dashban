@@ -650,8 +650,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateGitHubSignInUI() {
-        const signInButton = document.querySelector('header a[href="https://github.com/super3/dashban"]');
-        if (!signInButton) return;
+        // Find the GitHub button in header - it might have href="#" or the original URL
+        const signInButton = document.querySelector('header a[href="https://github.com/super3/dashban"]') || 
+                            document.querySelector('header a[href="#"]') ||
+                            document.querySelector('header .flex.items-center.space-x-2:last-child a');
+        if (!signInButton) {
+            console.warn('⚠️ GitHub sign-in button not found in header');
+            return;
+        }
         
         // Debug logging to see authentication state
         console.log('🔄 Updating GitHub Sign-In UI - Auth state:', {
