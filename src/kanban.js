@@ -165,7 +165,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Close modal when clicking outside
     if (addTaskModal) {
         addTaskModal.addEventListener('click', (e) => {
-            if (e.target === addTaskModal) {
+            // Check if the click was outside the modal content
+            const modalContent = addTaskModal.querySelector('.bg-white.rounded-lg.shadow-xl');
+            if (modalContent && !modalContent.contains(e.target)) {
                 hideModal();
             }
         });
