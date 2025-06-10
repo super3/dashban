@@ -374,10 +374,13 @@ document.addEventListener('DOMContentLoaded', function() {
     updateColumnCounts();
     loadCollapseStates();
     
-    // Apply review indicators to existing cards in review column (after GitHub integration loads)
+    // Apply indicators to existing cards in columns (after GitHub integration loads)
     setTimeout(() => {
         if (window.GitHub && window.GitHub.applyReviewIndicatorsToColumn) {
             window.GitHub.applyReviewIndicatorsToColumn();
+        }
+        if (window.GitHub && window.GitHub.applyCompletedSectionsToColumn) {
+            window.GitHub.applyCompletedSectionsToColumn();
         }
     }, 100);
     

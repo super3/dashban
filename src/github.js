@@ -598,7 +598,7 @@ async function loadGitHubIssues() {
         
         // Add closed issues to done column
         closedIssues.forEach(issue => {
-            const taskElement = createGitHubIssueElement(issue, true);
+            const taskElement = createGitHubIssueElement(issue, false); // Don't add completed section here
             const doneColumn = document.getElementById('done');
             if (doneColumn) {
                 doneColumn.appendChild(taskElement);
@@ -610,6 +610,9 @@ async function loadGitHubIssues() {
         
         // Apply review indicators to all cards in the review column
         applyReviewIndicatorsToColumn();
+        
+        // Apply completed sections to all cards in the done column
+        applyCompletedSectionsToColumn();
         
         console.log('✅ GitHub issues loaded successfully');
         
@@ -925,7 +928,8 @@ window.GitHub = {
     initializeGitHubIssues,
     closeGitHubIssue,
     updateCardIndicators,
-    applyReviewIndicatorsToColumn
+    applyReviewIndicatorsToColumn,
+    applyCompletedSectionsToColumn
 };
 
 // Add "Ready for review" indicator to a card
@@ -957,12 +961,71 @@ function removeReviewIndicator(taskElement) {
     }
 }
 
+// Add completed section with archive button to a card
+function addCompletedSection(taskElement) {
+    // Check if completed section already exists (check for both class name and content)
+    if (taskElement.querySelector('.completed-section') || 
+        taskElement.innerHTML.includes('fas fa-check-circle text-green-500')) {
+        return;
+    }
+    
+    // Get the issue number from the task element
+    const issueNumber = taskElement.getAttribute('data-issue-number');
+    
+    if (!issueNumber) {
+        return; // Only add to GitHub issues
+    }
+    
+    // Create the completed section HTML
+    const completedSection = document.createElement('div');
+    completedSection.className = 'completed-section border-t border-gray-200 mt-3 pt-1 -mb-2';
+    completedSection.innerHTML = `
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-check-circle text-green-500 text-xs"></i>
+                <span class="text-xs text-green-600">Completed</span>
+            </div>
+            <button class="archive-btn text-gray-400 hover:text-gray-600 p-1 transition-colors" 
+                    title="Archive issue" 
+                    data-issue-number="${issueNumber}">
+                <i class="fas fa-archive text-xs"></i>
+            </button>
+        </div>
+    `;
+    
+    // Add to the end of the card
+    taskElement.appendChild(completedSection);
+}
+
+// Remove completed section from a card
+function removeCompletedSection(taskElement) {
+    // Remove the new class-based completed section
+    const completedSection = taskElement.querySelector('.completed-section');
+    if (completedSection) {
+        completedSection.remove();
+    }
+    
+    // Also remove any inline completed section that might be in the original HTML
+    // Look for the pattern from createGitHubIssueElement when isCompleted = true
+    const inlineCompletedSections = taskElement.querySelectorAll('.border-t.border-gray-200.mt-3.pt-1.-mb-2');
+    inlineCompletedSections.forEach(section => {
+        if (section.innerHTML.includes('fas fa-check-circle text-green-500')) {
+            section.remove();
+        }
+    });
+}
+
 // Update card indicators based on column
 function updateCardIndicators(taskElement, columnId) {
     if (columnId === 'review') {
         addReviewIndicator(taskElement);
+        removeCompletedSection(taskElement);
+    } else if (columnId === 'done') {
+        addCompletedSection(taskElement);
+        removeReviewIndicator(taskElement);
     } else {
         removeReviewIndicator(taskElement);
+        removeCompletedSection(taskElement);
     }
 }
 
@@ -973,6 +1036,17 @@ function applyReviewIndicatorsToColumn() {
         const cards = reviewColumn.querySelectorAll('.bg-white.border');
         cards.forEach(card => {
             addReviewIndicator(card);
+        });
+    }
+}
+
+// Apply completed sections to all cards currently in the done column
+function applyCompletedSectionsToColumn() {
+    const doneColumn = document.getElementById('done');
+    if (doneColumn) {
+        const cards = doneColumn.querySelectorAll('.bg-white.border');
+        cards.forEach(card => {
+            addCompletedSection(card);
         });
     }
 } 
