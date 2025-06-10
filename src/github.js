@@ -445,6 +445,44 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
     }
 }
 
+// Close GitHub issue when moved to Done column
+async function closeGitHubIssue(issueNumber) {
+    if (!githubAuth.isAuthenticated || !githubAuth.accessToken) {
+        console.log('❌ Not authenticated with GitHub App - cannot close issue');
+        return;
+    }
+
+    try {
+        console.log(`🔒 Closing GitHub issue #${issueNumber}...`);
+
+        // Close the issue via API
+        const response = await fetch(`${GITHUB_CONFIG.apiBaseUrl}/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
+            method: 'PATCH',
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${githubAuth.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                state: 'closed'
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+        }
+
+        console.log(`✅ Successfully closed GitHub issue #${issueNumber}`);
+        
+    } catch (error) {
+        console.error('❌ Failed to close GitHub issue:', error);
+        
+        // Show user-friendly error message but don't revert the UI change
+        alert(`Failed to close GitHub issue: ${error.message}\n\nThe issue was moved to Done on the board but wasn't closed on GitHub.`);
+    }
+}
+
 // Create GitHub issue via API
 async function createGitHubIssue(title, description, labels = []) {
     if (!githubAuth.isAuthenticated || !githubAuth.accessToken) {
@@ -881,5 +919,6 @@ window.GitHub = {
     extractCategoryFromLabels,
     renderMarkdown,
     createSkeletonCard,
-    initializeGitHubIssues
+    initializeGitHubIssues,
+    closeGitHubIssue
 }; 

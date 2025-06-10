@@ -37,6 +37,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (window.GitHub && window.GitHub.updateGitHubIssueLabels) {
                         window.GitHub.updateGitHubIssueLabels(issueNumber, newColumnId);
                     }
+                    
+                    // Close GitHub issue if moved to Done column
+                    if (newColumnId === 'done' && window.GitHub && window.GitHub.closeGitHubIssue) {
+                        window.GitHub.closeGitHubIssue(issueNumber);
+                    }
                 }
                 
                 console.log('Task moved from', evt.from.id, 'to', evt.to.id);
