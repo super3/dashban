@@ -1,170 +1,324 @@
-// Status Cards JavaScript
+// Status Cards JavaScript - Clean and Testable Implementation
 document.addEventListener('DOMContentLoaded', function() {
-    // Check essential dependencies
-    if (typeof GitHubUtils === 'undefined') {
-        console.error('❌ GitHubUtils not found. Make sure src/utils.js is loaded.');
-        return;
-    }
+    // ============================================================================
+    // CONSTANTS AND CONFIGURATION
+    // ============================================================================
     
-    console.log('📊 Status Cards initializing...');
-    
-    // GitHub workflow status fetcher using SVG text parsing
-    async function fetchWorkflowStatus(skipTimeUpdate = false) {
-        const owner = 'super3';
-        const repo = 'dashban';
-        const workflowFile = 'frontend.yml';
-        
-        try {
-            // Use shields.io badge for better reliability
-            const badgeUrl = `https://img.shields.io/github/actions/workflow/status/${owner}/${repo}/${workflowFile}`;
-            console.log('🚀 Fetching Frontend status from:', badgeUrl);
-            const status = await GitHubUtils.parseBadgeSVG(badgeUrl);
-            console.log('🚀 Frontend status result for frontend.yml:', status);
-            
-            updateWorkflowStatusUI({
-                status: status,
-                updatedAt: new Date(),
-                htmlUrl: `https://github.com/${owner}/${repo}/actions/workflows/${workflowFile}`,
-                runNumber: '?'
-            }, skipTimeUpdate);
-        } catch (error) {
-            console.error('Error fetching workflow status:', error);
-            updateWorkflowStatusUI({
-                status: 'unknown',
-                updatedAt: new Date(),
-                htmlUrl: `https://github.com/${owner}/${repo}/actions/workflows/${workflowFile}`,
-                runNumber: '?'
-            }, skipTimeUpdate);
+    const CONFIG = {
+        OWNER: 'super3',
+        REPO: 'dashban',
+        WORKFLOWS: {
+            FRONTEND: 'frontend.yml',
+            TEST: 'test.yml'
+        },
+        INTERVALS: {
+            REFRESH_ALL: 5 * 60 * 1000, // 5 minutes
+            UPDATE_TIMESTAMP: 60 * 1000, // 1 minute
+            INITIAL_DELAYS: {
+                CI_STATUS: 1000,
+                COVERAGE: 2000,
+                TRAFFIC: 3000,
+                FINAL_REFRESH: 5000
+            },
+            REFRESH_DELAYS: {
+                CI_STATUS: 500,
+                COVERAGE: 1000,
+                TRAFFIC: 1500
+            }
+        },
+        SELECTORS: {
+            FRONTEND_STATUS: '[data-frontend-status]',
+            FRONTEND_TIME: '[data-frontend-time]',
+            CI_STATUS: '[data-ci-status]',
+            CI_TIME: '[data-ci-time]',
+            COVERAGE_STATUS: '[data-coverage-status]',
+            TRAFFIC_VIEWS: '[data-traffic-views]',
+            TRAFFIC_VISITORS: '[data-traffic-visitors]',
+            TRAFFIC_TIME: '[data-traffic-time]',
+            TIMESTAMP_ELEMENTS: '[data-frontend-time], [data-ci-time], [data-traffic-time]',
+            BADGE_IMG: '#github-badge',
+            REFRESH_BTN: '#refresh-badge'
         }
-    }
+    };
 
-    function updateWorkflowStatusUI(workflowData, skipTimeUpdate = false) {
-        const statusElement = document.querySelector('[data-frontend-status]');
-        const timeElement = document.querySelector('[data-frontend-time]');
-        
-        if (!statusElement || !timeElement) return;
-        
-        const statusConfig = {
+    const STATUS_CONFIGS = {
+        WORKFLOW: {
             success: { icon: 'fas fa-check-circle', color: 'text-green-500', text: 'Deployed', bgColor: 'text-green-600' },
             failure: { icon: 'fas fa-times-circle', color: 'text-red-500', text: 'Failed', bgColor: 'text-red-600' },
             in_progress: { icon: 'fas fa-spinner fa-spin', color: 'text-blue-500', text: 'Deploying', bgColor: 'text-blue-600' },
             queued: { icon: 'fas fa-clock', color: 'text-yellow-500', text: 'Queued', bgColor: 'text-yellow-600' },
             unknown: { icon: 'fas fa-question-circle', color: 'text-gray-500', text: 'Unknown', bgColor: 'text-gray-600' }
-        };
-        
-        const config = statusConfig[workflowData.status] || statusConfig.unknown;
-        
-        statusElement.innerHTML = `
+        },
+        CI: {
+            success: { icon: 'fas fa-check-circle', color: 'text-green-500', text: 'Passing', bgColor: 'text-green-600' },
+            failure: { icon: 'fas fa-times-circle', color: 'text-red-500', text: 'Failing', bgColor: 'text-red-600' },
+            in_progress: { icon: 'fas fa-spinner fa-spin', color: 'text-blue-500', text: 'Running', bgColor: 'text-blue-600' },
+            queued: { icon: 'fas fa-clock', color: 'text-yellow-500', text: 'Queued', bgColor: 'text-yellow-600' },
+            unknown: { icon: 'fas fa-question-circle', color: 'text-gray-500', text: 'Unknown', bgColor: 'text-gray-600' }
+        }
+    };
+
+    // ============================================================================
+    // DEPENDENCY VALIDATION
+    // ============================================================================
+    
+    function validateDependencies() {
+        if (typeof GitHubUtils === 'undefined') {
+            console.error('❌ GitHubUtils not found. Make sure src/utils.js is loaded.');
+            return false;
+        }
+        return true;
+    }
+
+    if (!validateDependencies()) {
+        return;
+    }
+
+    console.log('📊 Status Cards initializing...');
+
+    // ============================================================================
+    // UTILITY FUNCTIONS
+    // ============================================================================
+    
+    function createStatusHTML(config, status) {
+        return `
             <div class="flex items-center space-x-1">
                 <i class="${config.icon} ${config.color} text-sm"></i>
                 <span class="text-sm ${config.bgColor} font-medium">${config.text}</span>
             </div>
         `;
-        
-        // Only update timestamp if not skipping
-        if (!skipTimeUpdate) {
-            const timeAgo = GitHubUtils.getTimeAgo(workflowData.updatedAt);
-            timeElement.innerHTML = `
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-sync text-gray-400 text-xs"></i>
-                    <span class="text-xs text-gray-500">Updated ${timeAgo}</span>
-                </div>
-            `;
-        }
-        
-        // Make the status clickable to view on GitHub
-        statusElement.style.cursor = 'pointer';
-        statusElement.onclick = () => window.open(workflowData.htmlUrl, '_blank');
     }
 
-    // Badge debugging functionality
-    function setupBadgeDebugging() {
-        const badgeImg = document.getElementById('github-badge');
-        const refreshBtn = document.getElementById('refresh-badge');
-        
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', function() {
-                // Refresh the badge with a cache buster
-                const baseUrl = 'https://img.shields.io/github/actions/workflow/status/super3/dashban/frontend.yml';
-                badgeImg.src = baseUrl + '?t=' + Date.now();
-                
-                // Also refresh our status detection and timestamp
-                refreshAllStatuses();
-                
-                console.log('Badge refreshed manually');
-            });
+    function createTimestampHTML(updatedAt) {
+        const timeAgo = GitHubUtils.getTimeAgo(updatedAt);
+        return `
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-sync text-gray-400 text-xs"></i>
+                <span class="text-xs text-gray-500">Updated ${timeAgo}</span>
+            </div>
+        `;
+    }
+
+    function buildBadgeUrl(type, workflowFile = null) {
+        const { OWNER, REPO } = CONFIG;
+        if (type === 'workflow') {
+            return `https://img.shields.io/github/actions/workflow/status/${OWNER}/${REPO}/${workflowFile}`;
+        } else if (type === 'coverage') {
+            return `https://img.shields.io/coveralls/github/${OWNER}/${REPO}/main.svg`;
         }
+        throw new Error(`Unknown badge type: ${type}`);
+    }
+
+    function buildGitHubUrl(type, workflowFile = null) {
+        const { OWNER, REPO } = CONFIG;
+        if (type === 'workflow') {
+            return `https://github.com/${OWNER}/${REPO}/actions/workflows/${workflowFile}`;
+        } else if (type === 'coverage') {
+            return `https://coveralls.io/github/${OWNER}/${REPO}?branch=main`;
+        }
+        throw new Error(`Unknown URL type: ${type}`);
+    }
+
+    function makeElementClickable(element, url) {
+        if (element && url) {
+            element.style.cursor = 'pointer';
+            element.onclick = () => window.open(url, '_blank');
+        }
+    }
+
+    function safeQuerySelector(selector) {
+        const element = document.querySelector(selector);
+        if (!element) {
+            console.log(`❌ Element not found: ${selector}`);
+        }
+        return element;
+    }
+
+    // ============================================================================
+    // API FUNCTIONS
+    // ============================================================================
+    
+    async function fetchWorkflowStatus(skipTimeUpdate = false) {
+        const workflowFile = CONFIG.WORKFLOWS.FRONTEND;
         
-        if (badgeImg) {
-            badgeImg.addEventListener('load', function() {
-                console.log('Badge loaded successfully');
-                console.log('Badge dimensions:', this.naturalWidth, 'x', this.naturalHeight);
-                console.log('Badge src:', this.src);
-            });
+        try {
+            const badgeUrl = buildBadgeUrl('workflow', workflowFile);
+            console.log('🚀 Fetching Frontend status from:', badgeUrl);
             
-            badgeImg.addEventListener('error', function() {
-                console.error('Badge failed to load');
-            });
+            const status = await GitHubUtils.parseBadgeSVG(badgeUrl);
+            console.log('🚀 Frontend status result for frontend.yml:', status);
+            
+            const workflowData = {
+                status: status,
+                updatedAt: new Date(),
+                htmlUrl: buildGitHubUrl('workflow', workflowFile),
+                runNumber: '?'
+            };
+            
+            updateWorkflowStatusUI(workflowData, skipTimeUpdate);
+        } catch (error) {
+            console.error('Error fetching workflow status:', error);
+            
+            const fallbackData = {
+                status: 'unknown',
+                updatedAt: new Date(),
+                htmlUrl: buildGitHubUrl('workflow', workflowFile),
+                runNumber: '?'
+            };
+            
+            updateWorkflowStatusUI(fallbackData, skipTimeUpdate);
         }
     }
 
-    // GitHub CI Tests status fetcher
     async function fetchCIStatus() {
-        const owner = 'super3';
-        const repo = 'dashban';
-        const workflowFile = 'test.yml';
+        const workflowFile = CONFIG.WORKFLOWS.TEST;
         
         try {
             // Add stronger cache busting for CI status checks
             const timestamp = Date.now();
-            const badgeUrl = `https://img.shields.io/github/actions/workflow/status/${owner}/${repo}/${workflowFile}?t=${timestamp}&cacheSeconds=0`;
+            const badgeUrl = `${buildBadgeUrl('workflow', workflowFile)}?t=${timestamp}&cacheSeconds=0`;
             console.log('🔍 Fetching CI status from:', badgeUrl);
+            
             const status = await GitHubUtils.parseBadgeSVG(badgeUrl);
             console.log('🔍 CI status result for test.yml:', status);
             
-            updateCIStatusUI({
+            const ciData = {
                 status: status,
                 updatedAt: new Date(),
-                htmlUrl: `https://github.com/${owner}/${repo}/actions/workflows/${workflowFile}`
-            });
+                htmlUrl: buildGitHubUrl('workflow', workflowFile)
+            };
+            
+            updateCIStatusUI(ciData);
         } catch (error) {
             console.error('Error fetching CI status:', error);
-            updateCIStatusUI({
+            
+            const fallbackData = {
                 status: 'unknown',
                 updatedAt: new Date(),
-                htmlUrl: '#'
-            });
+                htmlUrl: buildGitHubUrl('workflow', workflowFile)
+            };
+            
+            updateCIStatusUI(fallbackData);
         }
     }
 
-    // Coverage status fetcher
     async function fetchCoverageStatus() {
-        const owner = 'super3';
-        const repo = 'dashban';
-        
         try {
-            // Use shields.io as a proxy to avoid CORS issues
-            const badgeUrl = `https://img.shields.io/coveralls/github/${owner}/${repo}/main.svg`;
-            const svgText = await fetch(badgeUrl + `?t=${Date.now()}`).then(r => r.text());
+            const badgeUrl = `${buildBadgeUrl('coverage')}?t=${Date.now()}`;
+            console.log('📊 Fetching coverage from:', badgeUrl);
             
-            // Parse coverage percentage from shields.io SVG
+            const svgText = await fetch(badgeUrl).then(r => r.text());
             const coverage = parseCoverageFromSVG(svgText);
             
-            updateCoverageStatusUI({
+            const coverageData = {
                 coverage: coverage,
                 updatedAt: new Date(),
-                htmlUrl: `https://coveralls.io/github/${owner}/${repo}?branch=main`
-            });
+                htmlUrl: buildGitHubUrl('coverage')
+            };
+            
+            updateCoverageStatusUI(coverageData);
         } catch (error) {
             console.error('Error fetching coverage status:', error);
-            updateCoverageStatusUI({
+            
+            const fallbackData = {
                 coverage: 'unknown',
                 updatedAt: new Date(),
-                htmlUrl: `https://coveralls.io/github/${owner}/${repo}?branch=main`
-            });
+                htmlUrl: buildGitHubUrl('coverage')
+            };
+            
+            updateCoverageStatusUI(fallbackData);
         }
     }
 
+    async function fetchTrafficData() {
+        // This would require a backend API to fetch GitHub traffic data
+        // For now, return mock data with realistic constraints
+        const views = Math.floor(Math.random() * 1000) + 100;
+        const uniqueVisitors = Math.floor(Math.random() * 500) + 50;
+        
+        return {
+            views: views,
+            uniqueVisitors: uniqueVisitors,
+            updatedAt: new Date()
+        };
+    }
+
+    // ============================================================================
+    // UI UPDATE FUNCTIONS
+    // ============================================================================
+    
+    function updateWorkflowStatusUI(workflowData, skipTimeUpdate = false) {
+        const statusElement = safeQuerySelector(CONFIG.SELECTORS.FRONTEND_STATUS);
+        const timeElement = safeQuerySelector(CONFIG.SELECTORS.FRONTEND_TIME);
+        
+        if (!statusElement || !timeElement) return;
+        
+        const config = STATUS_CONFIGS.WORKFLOW[workflowData.status] || STATUS_CONFIGS.WORKFLOW.unknown;
+        
+        statusElement.innerHTML = createStatusHTML(config, workflowData.status);
+        
+        // Only update timestamp if not skipping
+        if (!skipTimeUpdate) {
+            timeElement.innerHTML = createTimestampHTML(workflowData.updatedAt);
+        }
+        
+        makeElementClickable(statusElement, workflowData.htmlUrl);
+    }
+
+    function updateCIStatusUI(ciData) {
+        console.log('🎯 Updating CI status UI with:', ciData);
+        const statusElement = safeQuerySelector(CONFIG.SELECTORS.CI_STATUS);
+        
+        if (!statusElement) return;
+        
+        const config = STATUS_CONFIGS.CI[ciData.status] || STATUS_CONFIGS.CI.unknown;
+        console.log('🎯 Using config for CI status:', config);
+        
+        statusElement.innerHTML = createStatusHTML(config, ciData.status);
+        makeElementClickable(statusElement, ciData.htmlUrl);
+    }
+
+    function updateCoverageStatusUI(coverageData) {
+        const statusElement = safeQuerySelector(CONFIG.SELECTORS.COVERAGE_STATUS);
+        
+        if (!statusElement) return;
+        
+        let bgColor, text;
+        
+        if (coverageData.coverage === 'unknown') {
+            bgColor = 'text-gray-600';
+            text = 'Unknown';
+        } else {
+            const coverage = parseFloat(coverageData.coverage);
+            text = `${coverage}%`;
+            
+            if (coverage >= 80) {
+                bgColor = 'text-green-600';
+            } else if (coverage >= 60) {
+                bgColor = 'text-yellow-600';
+            } else {
+                bgColor = 'text-red-600';
+            }
+        }
+        
+        statusElement.innerHTML = `<span class="text-sm ${bgColor} font-medium">${text}</span>`;
+        makeElementClickable(statusElement, coverageData.htmlUrl);
+    }
+
+    function updateTrafficUI(data) {
+        const viewsElement = safeQuerySelector(CONFIG.SELECTORS.TRAFFIC_VIEWS);
+        const visitorsElement = safeQuerySelector(CONFIG.SELECTORS.TRAFFIC_VISITORS);
+        const timeElement = safeQuerySelector(CONFIG.SELECTORS.TRAFFIC_TIME);
+        
+        if (viewsElement) viewsElement.textContent = data.views.toLocaleString();
+        if (visitorsElement) visitorsElement.textContent = data.uniqueVisitors.toLocaleString();
+        if (timeElement) timeElement.innerHTML = createTimestampHTML(data.updatedAt);
+    }
+
+    // ============================================================================
+    // SVG PARSING FUNCTIONS
+    // ============================================================================
+    
     function parseCoverageFromSVG(svgText) {
         console.log('📊 Parsing coverage SVG...');
         
@@ -210,103 +364,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'unknown';
     }
 
-    function updateCIStatusUI(ciData) {
-        console.log('🎯 Updating CI status UI with:', ciData);
-        const statusElement = document.querySelector('[data-ci-status]');
-        
-        if (!statusElement) {
-            console.log('❌ CI status element not found in DOM');
-            return;
-        }
-        
-        const statusConfig = {
-            success: { icon: 'fas fa-check-circle', color: 'text-green-500', text: 'Passing', bgColor: 'text-green-600' },
-            failure: { icon: 'fas fa-times-circle', color: 'text-red-500', text: 'Failing', bgColor: 'text-red-600' },
-            in_progress: { icon: 'fas fa-spinner fa-spin', color: 'text-blue-500', text: 'Running', bgColor: 'text-blue-600' },
-            queued: { icon: 'fas fa-clock', color: 'text-yellow-500', text: 'Queued', bgColor: 'text-yellow-600' },
-            unknown: { icon: 'fas fa-question-circle', color: 'text-gray-500', text: 'Unknown', bgColor: 'text-gray-600' }
-        };
-        
-        const config = statusConfig[ciData.status] || statusConfig.unknown;
-        console.log('🎯 Using config for CI status:', config);
-        
-        statusElement.innerHTML = `
-            <div class="flex items-center space-x-1">
-                <i class="${config.icon} ${config.color} text-sm"></i>
-                <span class="text-sm ${config.bgColor} font-medium">${config.text}</span>
-            </div>
-        `;
-        
-        // Make the status clickable to view on GitHub
-        statusElement.style.cursor = 'pointer';
-        statusElement.onclick = () => window.open(ciData.htmlUrl, '_blank');
-    }
-
-    function updateCoverageStatusUI(coverageData) {
-        const statusElement = document.querySelector('[data-coverage-status]');
-        
-        if (!statusElement) return;
-        
-        let bgColor, text;
-        
-        if (coverageData.coverage === 'unknown') {
-            bgColor = 'text-gray-600';
-            text = 'Unknown';
-        } else {
-            const coverage = parseFloat(coverageData.coverage);
-            text = `${coverage}%`;
-            
-            if (coverage >= 80) {
-                bgColor = 'text-green-600';
-            } else if (coverage >= 60) {
-                bgColor = 'text-yellow-600';
-            } else {
-                bgColor = 'text-red-600';
-            }
-        }
-        
-        statusElement.innerHTML = `
-            <span class="text-sm ${bgColor} font-medium">${text}</span>
-        `;
-        
-        // Make the status clickable to view on Coveralls
-        statusElement.style.cursor = 'pointer';
-        statusElement.onclick = () => window.open(coverageData.htmlUrl, '_blank');
-    }
-
-    // Traffic data fetcher (placeholder - requires backend implementation)
-    async function fetchTrafficData() {
-        // This would require a backend API to fetch GitHub traffic data
-        // For now, return mock data
-        return {
-            views: Math.floor(Math.random() * 1000) + 100,
-            uniqueVisitors: Math.floor(Math.random() * 500) + 50,
-            updatedAt: new Date()
-        };
-    }
-
-    function updateTrafficUI(data) {
-        const viewsElement = document.querySelector('[data-traffic-views]');
-        const visitorsElement = document.querySelector('[data-traffic-visitors]');
-        const timeElement = document.querySelector('[data-traffic-time]');
-        
-        if (viewsElement) viewsElement.textContent = data.views.toLocaleString();
-        if (visitorsElement) visitorsElement.textContent = data.uniqueVisitors.toLocaleString();
-        
-        if (timeElement) {
-            const timeAgo = GitHubUtils.getTimeAgo(data.updatedAt);
-            timeElement.innerHTML = `
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-sync text-gray-400 text-xs"></i>
-                    <span class="text-xs text-gray-500">Updated ${timeAgo}</span>
-                </div>
-            `;
-        }
-    }
-
-    // Update timestamps every minute
+    // ============================================================================
+    // UTILITY AND MAINTENANCE FUNCTIONS
+    // ============================================================================
+    
     function updateTimestamp() {
-        const elements = document.querySelectorAll('[data-frontend-time], [data-ci-time], [data-traffic-time]');
+        const elements = document.querySelectorAll(CONFIG.SELECTORS.TIMESTAMP_ELEMENTS);
         elements.forEach(element => {
             if (element.dataset.lastUpdated) {
                 const lastUpdated = new Date(element.dataset.lastUpdated);
@@ -317,17 +380,55 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Refresh all statuses with slight delays to avoid conflicts
     function refreshAllStatuses() {
         fetchWorkflowStatus();
-        setTimeout(() => fetchCIStatus(), 500);  // Small delay to avoid conflicts
-        setTimeout(() => fetchCoverageStatus(), 1000);
+        setTimeout(() => fetchCIStatus(), CONFIG.INTERVALS.REFRESH_DELAYS.CI_STATUS);
+        setTimeout(() => fetchCoverageStatus(), CONFIG.INTERVALS.REFRESH_DELAYS.COVERAGE);
         setTimeout(() => {
             fetchTrafficData().then(updateTrafficUI);
-        }, 1500);
+        }, CONFIG.INTERVALS.REFRESH_DELAYS.TRAFFIC);
     }
 
-    // Initial load - start with loading workflow status immediately but skip timestamp
+    // ============================================================================
+    // BADGE DEBUGGING FUNCTIONALITY
+    // ============================================================================
+    
+    function setupBadgeDebugging() {
+        const badgeImg = document.querySelector(CONFIG.SELECTORS.BADGE_IMG);
+        const refreshBtn = document.querySelector(CONFIG.SELECTORS.REFRESH_BTN);
+        
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                if (badgeImg) {
+                    // Refresh the badge with a cache buster
+                    const baseUrl = buildBadgeUrl('workflow', CONFIG.WORKFLOWS.FRONTEND);
+                    badgeImg.src = baseUrl + '?t=' + Date.now();
+                }
+                
+                // Also refresh our status detection and timestamp
+                refreshAllStatuses();
+                
+                console.log('Badge refreshed manually');
+            });
+        }
+        
+        if (badgeImg) {
+            badgeImg.addEventListener('load', function() {
+                console.log('Badge loaded successfully');
+                console.log('Badge dimensions:', this.naturalWidth, 'x', this.naturalHeight);
+                console.log('Badge src:', this.src);
+            });
+            
+            badgeImg.addEventListener('error', function() {
+                console.error('Badge failed to load');
+            });
+        }
+    }
+
+    // ============================================================================
+    // INITIALIZATION AND LIFECYCLE
+    // ============================================================================
+    
     function initialStatusLoad() {
         fetchWorkflowStatus(true);
         
@@ -335,49 +436,75 @@ document.addEventListener('DOMContentLoaded', function() {
         setupBadgeDebugging();
         
         // Load other statuses with delays to avoid hitting rate limits
-        setTimeout(() => fetchCIStatus(), 1000);
-        setTimeout(() => fetchCoverageStatus(), 2000);
+        setTimeout(() => fetchCIStatus(), CONFIG.INTERVALS.INITIAL_DELAYS.CI_STATUS);
+        setTimeout(() => fetchCoverageStatus(), CONFIG.INTERVALS.INITIAL_DELAYS.COVERAGE);
         setTimeout(() => {
             fetchTrafficData().then(updateTrafficUI);
-        }, 3000);
+        }, CONFIG.INTERVALS.INITIAL_DELAYS.TRAFFIC);
         
-        // Then do a full refresh after all initial loads, but don't re-fetch CI status since it was just checked
+        // Then do a full refresh after all initial loads
         setTimeout(() => {
-            fetchWorkflowStatus(); // This time with timestamp - only refresh frontend status
-        }, 5000);
+            fetchWorkflowStatus(); // This time with timestamp
+        }, CONFIG.INTERVALS.INITIAL_DELAYS.FINAL_REFRESH);
     }
 
-    // Start the initial load
-    initialStatusLoad();
+    function initializeStatusCards() {
+        // Start the initial load
+        initialStatusLoad();
 
-    // Set up periodic updates
-    setInterval(refreshAllStatuses, 5 * 60 * 1000); // Every 5 minutes
-    setInterval(updateTimestamp, 60 * 1000); // Every minute
+        // Set up periodic updates
+        setInterval(refreshAllStatuses, CONFIG.INTERVALS.REFRESH_ALL);
+        setInterval(updateTimestamp, CONFIG.INTERVALS.UPDATE_TIMESTAMP);
 
-    console.log('Status Cards initialized successfully!');
+        console.log('Status Cards initialized successfully!');
+    }
 
-    // Export functions for testing
+    // ============================================================================
+    // API EXPORTS FOR TESTING
+    // ============================================================================
+    
     const statusAPI = {
+        // Core API functions
         fetchWorkflowStatus,
         fetchCIStatus,
         fetchCoverageStatus,
         fetchTrafficData,
+        
+        // UI update functions
         updateWorkflowStatusUI,
         updateCIStatusUI,
         updateCoverageStatusUI,
         updateTrafficUI,
+        
+        // Utility functions
         refreshAllStatuses,
         parseCoverageFromSVG,
         updateTimestamp,
-        setupBadgeDebugging
+        setupBadgeDebugging,
+        
+        // New utility functions for better testability
+        validateDependencies,
+        createStatusHTML,
+        createTimestampHTML,
+        buildBadgeUrl,
+        buildGitHubUrl,
+        makeElementClickable,
+        safeQuerySelector,
+        
+        // Configuration access for testing
+        CONFIG,
+        STATUS_CONFIGS
     };
 
-    // Attach to global for browser/Node access
-    if (typeof globalThis !== 'undefined') {
+    // Export for testing environments
+    if (typeof globalThis !== 'undefined' && globalThis !== null) {
         globalThis.statusCardsTestExports = statusAPI;
     }
 
-    if (typeof module !== 'undefined' && module.exports) {
+    if (typeof module !== 'undefined' && module !== null && module.exports) {
         module.exports = statusAPI;
     }
+
+    // Initialize the application
+    initializeStatusCards();
 }); 
