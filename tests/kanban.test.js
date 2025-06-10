@@ -336,14 +336,19 @@ describe('Kanban Board Core Functionality', () => {
       expect(global.alert).toHaveBeenCalledWith('Please enter an issue title');
     });
 
-    test('should create local task when not using GitHub', () => {
+    test('should require GitHub authentication for task creation', () => {
       const form = api.addTaskForm;
       const titleInput = document.getElementById('task-title');
       const descriptionInput = document.getElementById('task-description');
       const prioritySelect = document.getElementById('task-priority');
       const categorySelect = document.getElementById('task-category');
       const columnSelect = document.getElementById('task-column');
-      const backlog = document.getElementById('backlog');
+      
+      global.alert = jest.fn();
+      
+      // Ensure GitHub auth is false
+      global.window.GitHub.githubAuth.isAuthenticated = false;
+      global.window.GitHub.githubAuth.accessToken = null;
 
       // Fill form
       titleInput.value = 'Test Task';
@@ -352,19 +357,14 @@ describe('Kanban Board Core Functionality', () => {
       categorySelect.value = 'Bug';
       columnSelect.value = 'backlog';
 
-      const initialCount = backlog.children.length;
-
       // Submit form
       const submitEvent = new Event('submit');
       form.dispatchEvent(submitEvent);
 
-      // Check that task was added
-      expect(backlog.children.length).toBe(initialCount + 1);
-      
-      // Check task content
-      const newTask = backlog.lastElementChild;
-      expect(newTask.innerHTML).toContain('Test Task');
-      expect(newTask.innerHTML).toContain('Test Description');
+      // Should show auth warning
+      expect(global.alert).toHaveBeenCalledWith(
+        'Please install the GitHub App and add a Personal Access Token first to create GitHub issues'
+      );
     });
   });
 
@@ -639,13 +639,11 @@ describe('Kanban Board Core Functionality', () => {
     test('should check GitHub authentication state before creating GitHub issues', () => {
       const form = api.addTaskForm;
       const titleInput = document.getElementById('task-title');
-      const githubCheckbox = document.getElementById('create-github-issue');
       
       global.alert = jest.fn();
       
-      // Fill form with GitHub option enabled
+      // Fill form
       titleInput.value = 'Test GitHub Issue';
-      githubCheckbox.checked = true;
       
       // Ensure GitHub auth is false
       global.window.GitHub.githubAuth.isAuthenticated = false;
@@ -656,7 +654,7 @@ describe('Kanban Board Core Functionality', () => {
       
       // Should show auth warning
       expect(global.alert).toHaveBeenCalledWith(
-        'Please install the GitHub App and add a Personal Access Token first to create real issues'
+        'Please install the GitHub App and add a Personal Access Token first to create GitHub issues'
       );
     });
 
@@ -666,7 +664,6 @@ describe('Kanban Board Core Functionality', () => {
       const descriptionInput = document.getElementById('task-description');
       const prioritySelect = document.getElementById('task-priority');
       const categorySelect = document.getElementById('task-category');
-      const githubCheckbox = document.getElementById('create-github-issue');
       const columnSelect = document.getElementById('task-column');
       
       // Mock successful GitHub issue creation
@@ -684,7 +681,6 @@ describe('Kanban Board Core Functionality', () => {
       prioritySelect.value = 'High';
       categorySelect.value = 'Bug';
       columnSelect.value = 'backlog';
-      githubCheckbox.checked = true;
       
       // Submit form
       const submitEvent = new Event('submit');
@@ -703,7 +699,7 @@ describe('Kanban Board Core Functionality', () => {
   });
 
   describe('error handling', () => {
-    test('should handle form submission errors gracefully', () => {
+    test('should handle form submission errors gracefully', async () => {
       const form = api.addTaskForm;
       const titleInput = document.getElementById('task-title');
       const columnSelect = document.getElementById('task-column');
@@ -711,30 +707,26 @@ describe('Kanban Board Core Functionality', () => {
       global.alert = jest.fn();
       console.error = jest.fn();
       
-      // Create a scenario that will cause an error: invalid column selection
-      titleInput.value = 'Test Task';
-      columnSelect.value = 'nonexistent-column';
+      // Set up authenticated state but make createGitHubIssue throw an error
+      global.window.GitHub.githubAuth.isAuthenticated = true;
+      global.window.GitHub.githubAuth.accessToken = 'token';
+      global.window.GitHub.createGitHubIssue = jest.fn().mockRejectedValue(new Error('API error'));
       
-      // Mock document.getElementById to return null for the column, which will cause an error
-      const originalGetElementById = document.getElementById;
-      document.getElementById = jest.fn().mockImplementation((id) => {
-        if (id === 'nonexistent-column') {
-          return null; // This will cause appendChild to fail
-        }
-        return originalGetElementById.call(document, id);
-      });
+      // Fill form
+      titleInput.value = 'Test Task';
+      columnSelect.value = 'backlog';
       
       // Submit form
       const submitEvent = new Event('submit');
       form.dispatchEvent(submitEvent);
       
+      // Wait for async error handling
+      await new Promise(resolve => setTimeout(resolve, 0));
+      
       expect(console.error).toHaveBeenCalled();
       expect(global.alert).toHaveBeenCalledWith(
-        'An error occurred while creating the task. Please try again.'
+        'An error occurred while creating the GitHub issue. Please try again.'
       );
-      
-      // Restore original function
-      document.getElementById = originalGetElementById;
     });
   });
 

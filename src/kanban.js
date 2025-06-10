@@ -89,7 +89,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const priority = formData.get('priority');
             const category = formData.get('category');
             const column = formData.get('column');
-            const createGitHub = formData.get('createGitHubIssue') === 'on';
             
             // Validate required fields
             if (!title || !title.trim()) {
@@ -97,13 +96,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            if (createGitHub && (!window.GitHub.githubAuth.isAuthenticated || !window.GitHub.githubAuth.accessToken)) {
-                alert('Please install the GitHub App and add a Personal Access Token first to create real issues');
+            if (!window.GitHub.githubAuth.isAuthenticated || !window.GitHub.githubAuth.accessToken) {
+                alert('Please install the GitHub App and add a Personal Access Token first to create GitHub issues');
                 return;
             }
             
             let taskElement;
-            const issueId = Date.now(); // Default ID for local tasks
             
             try {
                 // Disable form during submission
@@ -111,41 +109,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 const originalText = submitBtn ? submitBtn.textContent : 'Add Issue';
                 if (submitBtn) {
                     submitBtn.disabled = true;
-                    submitBtn.textContent = createGitHub ? 'Creating GitHub Issue...' : 'Adding Issue...';
+                    submitBtn.textContent = 'Creating GitHub Issue...';
                 }
                 
-                if (createGitHub && window.GitHub.githubAuth.isAuthenticated && window.GitHub.githubAuth.accessToken) {
-                    // Convert priority and category to GitHub labels
-                    const labels = [];
-                    if (priority && priority !== 'Medium') labels.push(priority.toLowerCase());
-                    if (category) labels.push(category.toLowerCase());
+                // Convert priority and category to GitHub labels
+                const labels = [];
+                if (priority && priority !== 'Medium') labels.push(priority.toLowerCase());
+                if (category) labels.push(category.toLowerCase());
+                
+                // Create GitHub issue
+                const githubIssue = await window.GitHub.createGitHubIssue(title, description, labels);
+                
+                if (githubIssue) {
+                    // Use GitHub issue data to create the task element
+                    taskElement = window.GitHub.createGitHubIssueElement(githubIssue, false);
+                    console.log('✅ Created GitHub issue and local task');
                     
-                    // Create GitHub issue
-                    const githubIssue = await window.GitHub.createGitHubIssue(title, description, labels);
+                    // Add to appropriate column
+                    document.getElementById(column).appendChild(taskElement);
                     
-                    if (githubIssue) {
-                        // Use GitHub issue data to create the task element
-                        taskElement = window.GitHub.createGitHubIssueElement(githubIssue, false);
-                        console.log('✅ Created GitHub issue and local task');
-                    } else {
-                        // Fallback to local task creation
-                        taskElement = createTaskElement(issueId, title, description, priority, category);
-                        console.log('⚠️ Created local task only (GitHub creation failed)');
-                    }
+                    // Update counts
+                    updateColumnCounts();
+                    
+                    // Hide modal and reset form
+                    hideModal();
                 } else {
-                    // Create local task only
-                    taskElement = createTaskElement(issueId, title, description, priority, category);
-                    console.log('📝 Created local task');
+                    alert('Failed to create GitHub issue. Please try again.');
                 }
-                
-                // Add to appropriate column
-                document.getElementById(column).appendChild(taskElement);
-                
-                // Update counts
-                updateColumnCounts();
-                
-                // Hide modal and reset form
-                hideModal();
                 
                 // Restore submit button
                 if (submitBtn) {
@@ -154,8 +144,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
             } catch (error) {
-                console.error('Error during task creation:', error);
-                alert('An error occurred while creating the task. Please try again.');
+                console.error('Error during GitHub issue creation:', error);
+                alert('An error occurred while creating the GitHub issue. Please try again.');
                 
                 // Restore submit button
                 const submitBtn = addTaskForm.querySelector('button[type="submit"]');
@@ -176,35 +166,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 hideModal();
             }
         });
-    }
-
-    // Task element creation
-    function createTaskElement(id, title, description, priority, category) {
-        const taskElement = document.createElement('div');
-        taskElement.className = 'bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-move';
-        taskElement.setAttribute('data-task-id', id);
-        
-        // Priority badge
-        const priorityBadge = priority ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(priority)}">${priority}</span>` : '';
-        
-        // Category badge
-        const categoryBadge = category ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(category)} ml-2">${category}</span>` : '';
-        
-        taskElement.innerHTML = `
-            <div class="flex justify-between items-start mb-2">
-                <h3 class="font-semibold text-gray-900 text-sm leading-tight">${title}</h3>
-            </div>
-            <div class="mb-3">
-                ${priorityBadge}${categoryBadge}
-                </div>
-            ${description ? `<p class="text-gray-600 text-sm mb-3">${description}</p>` : ''}
-            <div class="flex items-center text-xs text-gray-500">
-                <span><i class="fas fa-user mr-1"></i>Local Task</span>
-                <span class="ml-4"><i class="fas fa-calendar mr-1"></i>${new Date().toLocaleDateString()}</span>
-            </div>
-        `;
-
-        return taskElement;
     }
 
     // Update column counts
@@ -355,6 +316,35 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Edit task:', taskElement);
         }
     });
+
+    // Task element creation (kept for testing compatibility)
+    function createTaskElement(id, title, description, priority, category) {
+        const taskElement = document.createElement('div');
+        taskElement.className = 'bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-move';
+        taskElement.setAttribute('data-task-id', id);
+        
+        // Priority badge
+        const priorityBadge = priority ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(priority)}">${priority}</span>` : '';
+        
+        // Category badge
+        const categoryBadge = category ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(category)} ml-2">${category}</span>` : '';
+        
+        taskElement.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="font-semibold text-gray-900 text-sm leading-tight">${title}</h3>
+            </div>
+            <div class="mb-3">
+                ${priorityBadge}${categoryBadge}
+                </div>
+            ${description ? `<p class="text-gray-600 text-sm mb-3">${description}</p>` : ''}
+            <div class="flex items-center text-xs text-gray-500">
+                <span><i class="fas fa-user mr-1"></i>Local Task</span>
+                <span class="ml-4"><i class="fas fa-calendar mr-1"></i>${new Date().toLocaleDateString()}</span>
+            </div>
+        `;
+
+        return taskElement;
+    }
 
     function getPriorityColor(priority) {
         const priorityColors = {
