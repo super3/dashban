@@ -219,8 +219,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 // Clear invalid data
                 localStorage.removeItem('columnCollapseStates');
+                // Fall through to default state
+                applyDefaultCollapseStates();
             }
+        } else {
+            // No saved state - apply default collapse states
+            applyDefaultCollapseStates();
         }
+    }
+    
+    // Apply default collapse states when no saved state exists
+    function applyDefaultCollapseStates() {
+        // Temporarily disable transitions during initial load
+        const style = document.createElement('style');
+        style.textContent = '.column-collapsed { transition: none !important; }';
+        document.head.appendChild(style);
+        
+        // Collapse the review column by default
+        collapseColumn('review');
+        
+        // Re-enable transitions after a brief delay
+        setTimeout(() => {
+            document.head.removeChild(style);
+        }, 50);
     }
 
     // Save collapse states to localStorage
@@ -409,6 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // expose internals for testing
         loadCollapseStates,
         saveCollapseStates,
+        applyDefaultCollapseStates,
         collapseColumn,
         expandColumn,
         toggleColumn,
