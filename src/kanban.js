@@ -23,7 +23,22 @@ document.addEventListener('DOMContentLoaded', function() {
             dragClass: 'sortable-drag',
             onEnd: function(evt) {
                 updateColumnCounts();
-                // Here you could add persistence logic
+                
+                // Check if a GitHub issue was moved between columns
+                const draggedElement = evt.item;
+                const issueNumber = draggedElement.getAttribute('data-issue-number');
+                const newColumnId = evt.to.id;
+                
+                if (issueNumber && evt.from.id !== evt.to.id) {
+                    // This is a GitHub issue that was moved to a different column
+                    console.log(`GitHub issue #${issueNumber} moved from ${evt.from.id} to ${newColumnId}`);
+                    
+                    // Update GitHub issue labels if GitHub integration is available
+                    if (window.GitHub && window.GitHub.updateGitHubIssueLabels) {
+                        window.GitHub.updateGitHubIssueLabels(issueNumber, newColumnId);
+                    }
+                }
+                
                 console.log('Task moved from', evt.from.id, 'to', evt.to.id);
             }
         });

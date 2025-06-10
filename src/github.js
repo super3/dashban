@@ -370,6 +370,81 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
     }
 }
 
+// Update GitHub issue labels when moved between columns
+async function updateGitHubIssueLabels(issueNumber, newColumn) {
+    if (!githubAuth.isAuthenticated || !githubAuth.accessToken) {
+        console.log('❌ Not authenticated with GitHub App - cannot update issue labels');
+        return;
+    }
+
+    try {
+        console.log(`🔄 Updating labels for issue #${issueNumber} moved to ${newColumn}...`);
+
+        // First, get current issue to preserve existing labels
+        const getResponse = await fetch(`${GITHUB_CONFIG.apiBaseUrl}/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${githubAuth.accessToken}`
+            }
+        });
+
+        if (!getResponse.ok) {
+            throw new Error(`Failed to fetch issue: ${getResponse.status}`);
+        }
+
+        const issue = await getResponse.json();
+        const currentLabels = issue.labels.map(label => label.name);
+
+        // Remove existing status labels
+        const statusLabels = ['in progress', 'inprogress', 'review', 'in review', 'done', 'completed'];
+        const filteredLabels = currentLabels.filter(label => 
+            !statusLabels.includes(label.toLowerCase())
+        );
+
+        // Map columns to labels
+        const columnLabelMap = {
+            'backlog': null, // No specific label for backlog
+            'inprogress': 'in progress',
+            'review': 'review',
+            'done': 'done'
+        };
+
+        // Add new status label if applicable
+        const newLabel = columnLabelMap[newColumn];
+        const updatedLabels = newLabel ? [...filteredLabels, newLabel] : filteredLabels;
+
+        // Update labels via API
+        const updateResponse = await fetch(`${GITHUB_CONFIG.apiBaseUrl}/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
+            method: 'PUT',
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${githubAuth.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                labels: updatedLabels
+            })
+        });
+
+        if (!updateResponse.ok) {
+            const errorData = await updateResponse.json();
+            throw new Error(`GitHub API error: ${updateResponse.status} - ${errorData.message || 'Unknown error'}`);
+        }
+
+        const columnDisplayName = newColumn === 'inprogress' ? 'In Progress' : 
+                                 newColumn.charAt(0).toUpperCase() + newColumn.slice(1);
+        console.log(`✅ Successfully updated labels for issue #${issueNumber} (moved to ${columnDisplayName})`);
+        
+    } catch (error) {
+        console.error('❌ Failed to update GitHub issue labels:', error);
+        
+        // Show user-friendly error message but don't revert the UI change
+        const columnDisplayName = newColumn === 'inprogress' ? 'In Progress' : 
+                                 newColumn.charAt(0).toUpperCase() + newColumn.slice(1);
+        alert(`Failed to update GitHub issue labels: ${error.message}\n\nThe issue was moved to ${columnDisplayName} on the board but the labels weren't updated on GitHub.`);
+    }
+}
+
 // Create GitHub issue via API
 async function createGitHubIssue(title, description, labels = []) {
     if (!githubAuth.isAuthenticated || !githubAuth.accessToken) {
@@ -800,6 +875,7 @@ window.GitHub = {
     createGitHubIssue,
     loadGitHubIssues,
     archiveGitHubIssue,
+    updateGitHubIssueLabels,
     createGitHubIssueElement,
     extractPriorityFromLabels,
     extractCategoryFromLabels,
