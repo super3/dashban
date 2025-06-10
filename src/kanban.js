@@ -172,13 +172,19 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateColumnCounts() {
         columns.forEach(columnId => {
             const column = document.getElementById(columnId);
-            const header = document.querySelector(`h2[onclick*="${columnId}"]`);
+            const columnWrapper = document.querySelector(`[data-column="${columnId}"]`);
             
-            if (column && header) {
-                const taskCount = column.children.length;
-                const currentText = header.textContent;
-                const baseName = currentText.split('(')[0].trim();
-                header.textContent = `${baseName} (${taskCount})`;
+            if (column && columnWrapper) {
+                // Count only task cards (div elements with the specific classes, excluding skeleton cards)
+                const taskCards = column.querySelectorAll('.bg-white.border:not(.animate-pulse)');
+                const taskCount = taskCards.length;
+                
+                // Find the count badge span in this column's header
+                const countBadge = columnWrapper.querySelector('.column-header span');
+                
+                if (countBadge) {
+                    countBadge.textContent = taskCount.toString();
+                }
             }
         });
     }

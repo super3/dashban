@@ -371,17 +371,35 @@ describe('Kanban Board Core Functionality', () => {
   describe('column management', () => {
     test('should update column counts correctly', () => {
       const backlog = document.getElementById('backlog');
-      const header = document.querySelector('h2[onclick*="backlog"]');
+      
+      // Create the column wrapper structure that matches the real HTML
+      const columnWrapper = document.createElement('div');
+      columnWrapper.setAttribute('data-column', 'backlog');
+      
+      const columnHeader = document.createElement('div');
+      columnHeader.className = 'column-header';
+      
+      const countBadge = document.createElement('span');
+      countBadge.textContent = '0';
+      
+      columnHeader.appendChild(countBadge);
+      columnWrapper.appendChild(columnHeader);
+      document.body.appendChild(columnWrapper);
 
-      // Add some tasks
+      // Add some task cards with the correct classes
       const task1 = document.createElement('div');
+      task1.className = 'bg-white border';
       const task2 = document.createElement('div');
+      task2.className = 'bg-white border';
       backlog.appendChild(task1);
       backlog.appendChild(task2);
 
       api.updateColumnCounts();
 
-      expect(header.textContent).toContain('(2)');
+      expect(countBadge.textContent).toBe('2');
+      
+      // Clean up
+      columnWrapper.remove();
     });
 
     test('should handle missing columns gracefully', () => {
