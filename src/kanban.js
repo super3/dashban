@@ -29,14 +29,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 const issueNumber = draggedElement.getAttribute('data-issue-number');
                 const newColumnId = evt.to.id;
                 
+                // Debug logging
+                console.log('🔍 Drag end debug:', {
+                    issueNumber,
+                    hasIssueNumber: !!issueNumber,
+                    fromColumn: evt.from.id,
+                    toColumn: evt.to.id,
+                    columnsDifferent: evt.from.id !== evt.to.id,
+                    hasGitHub: !!window.GitHub,
+                    hasUpdateFunction: !!(window.GitHub && window.GitHub.updateGitHubIssueLabels),
+                    elementAttributes: {
+                        'data-issue-number': draggedElement.getAttribute('data-issue-number'),
+                        'data-github-issue': draggedElement.getAttribute('data-github-issue'),
+                        'data-issue-id': draggedElement.getAttribute('data-issue-id'),
+                        'data-task-id': draggedElement.getAttribute('data-task-id')
+                    }
+                });
+                
                 if (issueNumber && evt.from.id !== evt.to.id) {
                     // This is a GitHub issue that was moved to a different column
-                    console.log(`GitHub issue #${issueNumber} moved from ${evt.from.id} to ${newColumnId}`);
+                    console.log(`🏷️ GitHub issue #${issueNumber} moved from ${evt.from.id} to ${newColumnId}`);
                     
                     // Update GitHub issue labels if GitHub integration is available
                     if (window.GitHub && window.GitHub.updateGitHubIssueLabels) {
                         window.GitHub.updateGitHubIssueLabels(issueNumber, newColumnId);
+                    } else {
+                        console.warn('⚠️ GitHub integration or updateGitHubIssueLabels function not available');
                     }
+                } else {
+                    console.log('📝 Not a GitHub issue or same column move - skipping label update');
                 }
                 
                 console.log('Task moved from', evt.from.id, 'to', evt.to.id);
