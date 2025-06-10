@@ -25,7 +25,7 @@ Open `index.html` in your browser to start using Dashban.Be
 - `Ctrl/Cmd + N`: Add new task
 - `Escape`: Close modal
 
-## 🚀 Deployment
+## 🚀 Frontend Deployment
 
 This project includes a GitHub Actions workflow for automatic deployment to GitHub Pages. To enable deployment:
 
@@ -35,3 +35,28 @@ This project includes a GitHub Actions workflow for automatic deployment to GitH
 4. The workflow will automatically deploy your site when you push to the `main` branch
 
 Your Dashban application will then be available at: `https://yourusername.github.io/dashban`
+
+## 🔧 GitHub App Setup
+
+To enable GitHub issue creation directly from Dashban:
+
+### 1. Create GitHub App
+1. Go to **Settings > Developer settings > GitHub Apps > New GitHub App**
+2. Set basic details (name: `dashban-app`, homepage/callback URL: your app URL)
+3. Disable webhooks (uncheck "Active")
+
+### 2. Set Permissions
+- **Repository permissions**: Issues (`Read and write`), Metadata (`Read`)
+- All other permissions: `No access`
+
+### 3. Configure & Install
+1. Copy your **App ID** and **App Name** from the app settings
+2. Update `src/kanban.js` with your App ID, App Name, and repository details
+3. Install the app on your repository
+
+### 4. Usage
+1. Click "Install GitHub App" button in Dashban
+2. Select repositories to grant access
+3. Create issues using the "Add Issue" form with "Create GitHub Issue" enabled
+
+**Benefits**: Fine-grained permissions, better security than personal access tokens, clear permission display during installation.
