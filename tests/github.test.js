@@ -565,7 +565,7 @@ describe('GitHub Integration', () => {
             window.GitHub.updateGitHubSignInUI();
 
             expect(signInButton.innerHTML).toContain('Signed in as testuser');
-            expect(signInButton.className).toContain('bg-green-600');
+            expect(signInButton.className).toContain('bg-gray-900');
 
             // Test app installed but no token
             window.GitHub.githubAuth.accessToken = null;
