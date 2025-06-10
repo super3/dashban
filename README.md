@@ -19,7 +19,8 @@
 git clone https://github.com/super3/dashban.git && cd dashban
 npm install && npm test
 ```
-Open `index.html` in your browser to start using Dashban.Be
+
+Open `index.html` in your browser to start using Dashban.
 
 ### ⌨️ Keyboard Shortcuts
 - `Ctrl/Cmd + N`: Add new task
