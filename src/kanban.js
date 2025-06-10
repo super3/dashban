@@ -44,6 +44,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
                 
+                // Update card indicators for any task moved between columns (both GitHub and local tasks)
+                if (evt.from.id !== evt.to.id && window.GitHub && window.GitHub.updateCardIndicators) {
+                    window.GitHub.updateCardIndicators(draggedElement, newColumnId);
+                }
+                
                 console.log('Task moved from', evt.from.id, 'to', evt.to.id);
             }
         });
@@ -378,6 +383,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize components
     updateColumnCounts();
     loadCollapseStates();
+    
+    // Apply review indicators to existing cards in review column (after GitHub integration loads)
+    setTimeout(() => {
+        if (window.GitHub && window.GitHub.applyReviewIndicatorsToColumn) {
+            window.GitHub.applyReviewIndicatorsToColumn();
+        }
+    }, 100);
     
     // Export functions to global scope for access from github.js
     window.updateColumnCounts = updateColumnCounts;

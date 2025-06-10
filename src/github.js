@@ -608,6 +608,9 @@ async function loadGitHubIssues() {
         // Update column counts
         window.updateColumnCounts();
         
+        // Apply review indicators to all cards in the review column
+        applyReviewIndicatorsToColumn();
+        
         console.log('✅ GitHub issues loaded successfully');
         
     } catch (error) {
@@ -662,7 +665,7 @@ function renderMarkdown(text) {
 
 function createGitHubIssueElement(issue, isCompleted = false) {
     const taskDiv = document.createElement('div');
-    taskDiv.className = 'bg-white border border-gray-200 rounded-md p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
+    taskDiv.className = 'bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-move';
     taskDiv.draggable = true;
     taskDiv.setAttribute('data-github-issue', issue.number);
     taskDiv.setAttribute('data-issue-number', issue.number);
@@ -682,11 +685,11 @@ function createGitHubIssueElement(issue, isCompleted = false) {
                 #${issue.number}
             </a>
         </div>
-        <div class="text-gray-600 text-sm mb-3 line-clamp-2">${description}</div>
+        <p class="text-gray-600 text-sm mb-3">${description}</p>
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2">
-                ${priority ? `<span class="${window.getPriorityColor(priority)} text-xs px-2 py-1 rounded-full font-medium">${priority}</span>` : ''}
-                ${category ? `<span class="${window.getCategoryColor(category)} text-xs px-2 py-1 rounded-full font-medium">${category}</span>` : ''}
+                ${priority ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${window.getPriorityColor(priority)}">${priority}</span>` : ''}
+                ${category ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${window.getCategoryColor(category)}">${category}</span>` : ''}
             </div>
             ${issue.user ? 
                 `<img src="${issue.user.avatar_url}" alt="${issue.user.login}" class="w-6 h-6 rounded-full">` :
@@ -696,7 +699,7 @@ function createGitHubIssueElement(issue, isCompleted = false) {
             }
         </div>
         ${isCompleted ? `
-        <div class="border-t border-gray-200 mt-3 pt-2">
+        <div class="border-t border-gray-200 mt-3 pt-1 -mb-2">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <i class="fas fa-check-circle text-green-500 text-xs"></i>
@@ -920,5 +923,56 @@ window.GitHub = {
     renderMarkdown,
     createSkeletonCard,
     initializeGitHubIssues,
-    closeGitHubIssue
-}; 
+    closeGitHubIssue,
+    updateCardIndicators,
+    applyReviewIndicatorsToColumn
+};
+
+// Add "Ready for review" indicator to a card
+function addReviewIndicator(taskElement) {
+    // Check if indicator already exists
+    if (taskElement.querySelector('.review-indicator')) {
+        return;
+    }
+    
+    // Create the review indicator HTML
+    const reviewIndicator = document.createElement('div');
+    reviewIndicator.className = 'review-indicator mt-3';
+    reviewIndicator.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-clock text-gray-400 text-xs"></i>
+            <span class="text-xs text-gray-500">Ready for review</span>
+        </div>
+    `;
+    
+    // Add to the end of the card
+    taskElement.appendChild(reviewIndicator);
+}
+
+// Remove "Ready for review" indicator from a card
+function removeReviewIndicator(taskElement) {
+    const indicator = taskElement.querySelector('.review-indicator');
+    if (indicator) {
+        indicator.remove();
+    }
+}
+
+// Update card indicators based on column
+function updateCardIndicators(taskElement, columnId) {
+    if (columnId === 'review') {
+        addReviewIndicator(taskElement);
+    } else {
+        removeReviewIndicator(taskElement);
+    }
+}
+
+// Apply review indicators to all cards currently in the review column
+function applyReviewIndicatorsToColumn() {
+    const reviewColumn = document.getElementById('review');
+    if (reviewColumn) {
+        const cards = reviewColumn.querySelectorAll('.bg-white.border');
+        cards.forEach(card => {
+            addReviewIndicator(card);
+        });
+    }
+} 
