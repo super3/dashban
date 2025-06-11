@@ -23,6 +23,40 @@ class MarkdownIt {
 // Simple DOMPurify replacement for tests and demo usage
 const DOMPurify = {
   sanitize(html = '') {
+    if (typeof document !== 'undefined') {
+      const template = document.createElement('template');
+      template.innerHTML = String(html);
+
+      const SHOW_ELEMENT = (typeof NodeFilter !== 'undefined'
+        ? NodeFilter.SHOW_ELEMENT
+        : 1);
+      const walker = document.createTreeWalker(
+        template.content,
+        SHOW_ELEMENT,
+        null,
+        false
+      );
+      let node;
+      while ((node = walker.nextNode())) {
+        if (node.tagName.toLowerCase() === 'script') {
+          node.remove();
+          continue;
+        }
+        Array.from(node.attributes).forEach(attr => {
+          const name = attr.name.toLowerCase();
+          const value = attr.value.trim().toLowerCase();
+          if (name.startsWith('on')) {
+            node.removeAttribute(attr.name);
+          }
+          if (['href', 'src'].includes(name) && value.startsWith('javascript:')) {
+            node.removeAttribute(attr.name);
+          }
+        });
+      }
+      return template.innerHTML;
+    }
+
+    // Fallback: strip script tags with regex if DOM not available
     return String(html).replace(/<script[^>]*>.*?<\/script>/gi, '');
   }
 };

@@ -805,7 +805,15 @@ describe('GitHub Integration', () => {
             const html = window.GitHub.renderMarkdown(markdown);
 
             expect(html).not.toContain('<script>');
-            expect(html).toContain('& "quotes" &');
+            expect(html).toContain('&amp; "quotes" &amp;');
+        });
+
+        test('renderMarkdown should remove event handler attributes', () => {
+            const markdown = '<img src="x" onerror="alert(1)">';
+            const html = window.GitHub.renderMarkdown(markdown);
+
+            expect(html).toContain('<img src="x">');
+            expect(html).not.toContain('onerror');
         });
 
         test('renderMarkdown should handle underscores for bold and italic', () => {
