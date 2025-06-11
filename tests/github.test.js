@@ -114,9 +114,9 @@ beforeEach(() => {
     const event = new Event('DOMContentLoaded');
     document.dispatchEvent(event);
 
-    // Load the github.js module
-    delete require.cache[require.resolve('../src/github.js')];
-    require('../src/github.js');
+    // Load the modular GitHub integration
+    delete require.cache[require.resolve('../src/github/index.js')];
+    require('../src/github/index.js');
 
     // Spy on the real window functions provided by kanban module (after they're loaded)
     if (typeof window.updateColumnCounts === 'function') {
