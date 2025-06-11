@@ -4,7 +4,7 @@
 let MarkdownIt;
 let DOMPurify;
 if (typeof module !== 'undefined' && module.exports) {
-    ({ MarkdownIt, DOMPurify } = require('./markdown-it'));
+    ({ MarkdownIt, DOMPurify } = require('./markdown'));
 } else {
     MarkdownIt = window.MarkdownIt;
     DOMPurify = window.DOMPurify;
