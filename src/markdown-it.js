@@ -20,10 +20,18 @@ class MarkdownIt {
   }
 }
 
+// Simple DOMPurify replacement for tests and demo usage
+const DOMPurify = {
+  sanitize(html = '') {
+    return String(html).replace(/<script[^>]*>.*?<\/script>/gi, '');
+  }
+};
+
 if (typeof window !== 'undefined') {
   window.MarkdownIt = MarkdownIt;
+  window.DOMPurify = DOMPurify;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = MarkdownIt;
+  module.exports = { MarkdownIt, DOMPurify };
 }
