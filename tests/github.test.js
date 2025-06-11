@@ -351,11 +351,11 @@ describe('GitHub Integration', () => {
         test('renderMarkdown should convert basic markdown', () => {
             const markdown = '**bold** *italic* `code` [link](http://example.com)';
             const html = window.GitHub.renderMarkdown(markdown);
-            
+
             expect(html).toContain('<strong>bold</strong>');
             expect(html).toContain('<em>italic</em>');
-            expect(html).toContain('<code class="bg-gray-100 text-gray-800 px-1 rounded text-xs">code</code>');
-            expect(html).toContain('<a href="http://example.com" target="_blank" class="text-blue-600 hover:text-blue-800 underline">link</a>');
+            expect(html).toContain('<code>code</code>');
+            expect(html).toContain('<a href="http://example.com">link</a>');
         });
 
         test('createSkeletonCard should create loading placeholder', () => {
@@ -800,14 +800,12 @@ describe('GitHub Integration', () => {
             expect(html).toContain('<p>Second paragraph.</p>');
         });
 
-        test('renderMarkdown should escape HTML entities', () => {
+        test('renderMarkdown should sanitize script tags', () => {
             const markdown = '<script>alert("xss")</script> & "quotes" & \'apostrophes\'';
             const html = window.GitHub.renderMarkdown(markdown);
-            
-            expect(html).toContain('&lt;script&gt;');
-            expect(html).toContain('&amp;');
-            expect(html).toContain('&quot;');
-            expect(html).toContain('&#39;');
+
+            expect(html).not.toContain('<script>');
+            expect(html).toContain('& "quotes" &');
         });
 
         test('renderMarkdown should handle underscores for bold and italic', () => {

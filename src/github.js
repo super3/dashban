@@ -1,5 +1,18 @@
 // GitHub Integration for Dashban Kanban Board
 
+// Use local markdown-it and DOMPurify implementations
+let MarkdownIt;
+let DOMPurify;
+if (typeof module !== 'undefined' && module.exports) {
+    MarkdownIt = require('./markdown-it');
+    DOMPurify = require('./dompurify');
+} else {
+    MarkdownIt = window.MarkdownIt;
+    DOMPurify = window.DOMPurify;
+}
+
+const md = new MarkdownIt();
+
 // GitHub App configuration
 const GITHUB_CONFIG = {
     appId: '1385203', // Replace with your GitHub App ID
@@ -627,42 +640,9 @@ async function loadGitHubIssues() {
 
 function renderMarkdown(text) {
     if (!text) return 'No description provided';
-    
-    // Escape HTML first to prevent XSS
-    const escapeHtml = (str) => str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    
-    let html = escapeHtml(text);
-    
-    // Convert markdown patterns to HTML
-    html = html
-        // Bold text **text** or __text__
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/__(.*?)__/g, '<strong>$1</strong>')
-        
-        // Italic text *text* or _text_
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/_(.*?)_/g, '<em>$1</em>')
-        
-        // Inline code `code`
-        .replace(/`(.*?)`/g, '<code class="bg-gray-100 text-gray-800 px-1 rounded text-xs">$1</code>')
-        
-        // Links [text](url)
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-blue-600 hover:text-blue-800 underline">$1</a>')
-        
-        // Line breaks (convert double newlines to paragraph breaks)
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/\n/g, '<br>');
-    
-    // Wrap in paragraph tags if it contains paragraph breaks
-    if (html.includes('</p><p>')) {
-        html = '<p>' + html + '</p>';
-    }
-    
+
+    let html = md.render(text);
+    html = DOMPurify.sanitize(html);
     return html;
 }
 
