@@ -3,11 +3,11 @@ name: Run Tests
 on:
   # Runs on pushes targeting any branch
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
   # Runs on pull requests targeting main
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
