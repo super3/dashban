@@ -17,10 +17,21 @@
 ## Quick Start
 ```bash
 git clone https://github.com/super3/dashban.git && cd dashban
-npm install && npm test
+npm install
+npm run build
+npm test
 ```
 
 Open `index.html` in your browser to start using Dashban.
+
+### Building Assets
+The `build` script compiles TailwindCSS and copies JavaScript and font assets
+from `node_modules` into the `dist` directory. Run it whenever dependencies
+change:
+
+```bash
+npm run build
+```
 
 ### ⌨️ Keyboard Shortcuts
 - `Ctrl/Cmd + N`: Add new task

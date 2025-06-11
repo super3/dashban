@@ -6,7 +6,8 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "build": "tailwindcss -i ./src/tailwind.css -o ./dist/tailwind.css --minify && cp node_modules/sortablejs/Sortable.min.js ./dist/sortable.min.js && cp node_modules/@fortawesome/fontawesome-free/css/all.min.css ./dist/all.min.css && cp -r node_modules/@fortawesome/fontawesome-free/webfonts ./dist/webfonts"
   },
   "keywords": ["kanban", "dashboard", "github-actions", "project-management"],
   "author": "Shawn Wilkinson",
@@ -14,6 +15,11 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "*",
+    "sortablejs": "*",
+    "tailwindcss": "*"
   },
   "jest": {
     "testEnvironment": "jsdom",
