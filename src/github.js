@@ -706,9 +706,9 @@ function createGitHubIssueElement(issue, isCompleted = false) {
     const description = renderMarkdown(issue.body);
 
     taskDiv.innerHTML = `
-        <div class="flex items-start justify-between mb-2">
+        <div class="flex items-center justify-between mb-2">
             <h4 class="font-medium text-gray-900 text-sm">${issue.title}</h4>
-            <a href="${issue.html_url}" target="_blank" class="text-gray-500 hover:text-gray-700 text-xs font-medium">
+            <a href="${issue.html_url}" target="_blank" class="text-gray-500 hover:text-gray-700 text-sm font-medium">
                 #${issue.number}
             </a>
         </div>
