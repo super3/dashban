@@ -2,7 +2,6 @@
   "name": "dashban",
   "version": "0.1.0",
   "description": "A modern, responsive Kanban board application with GitHub Actions integration",
-  "main": "script.js",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
