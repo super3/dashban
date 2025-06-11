@@ -7,7 +7,12 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
-  "keywords": ["kanban", "dashboard", "github-actions", "project-management"],
+  "keywords": [
+    "kanban",
+    "dashboard",
+    "github-actions",
+    "project-management"
+  ],
   "author": "Shawn Wilkinson",
   "license": "MIT",
   "engines": {
@@ -19,7 +24,9 @@
   },
   "jest": {
     "testEnvironment": "jsdom",
-    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
     "collectCoverageFrom": [
       "src/**/*.js",
       "!node_modules/**"
@@ -27,5 +34,9 @@
     "testMatch": [
       "<rootDir>/tests/**/*.test.js"
     ]
+  },
+  "dependencies": {
+    "dompurify": "^3.2.6",
+    "markdown-it": "^14.1.0"
   }
-} 
+}
