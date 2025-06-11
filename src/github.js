@@ -708,17 +708,17 @@ function renderMarkdown(text) {
             
             // Add our custom styling classes
             html = html
-                // Style headers to match our design
-                .replace(/<h([1-6])>/g, '<h$1 class="font-bold text-gray-900 mb-2">')
+                // Style headers to match our design - reduce bottom margin to avoid extra spacing
+                .replace(/<h([1-6])>/g, '<h$1 class="font-bold text-gray-900 mb-1">')
                 // Style code blocks
                 .replace(/<code>/g, '<code class="bg-gray-100 text-gray-800 px-1 rounded text-xs">')
-                // Style bullet lists
-                .replace(/<ul>/g, '<ul class="list-disc list-inside mb-2 space-y-1">')
-                .replace(/<ol>/g, '<ol class="list-decimal list-inside mb-2 space-y-1">')
-                // Style list items
+                // Style bullet lists - reduce margin and ensure consistent text size
+                .replace(/<ul>/g, '<ul class="list-disc list-inside mb-1 space-y-0">')
+                .replace(/<ol>/g, '<ol class="list-decimal list-inside mb-1 space-y-0">')
+                // Style list items - ensure consistent text size with description
                 .replace(/<li>/g, '<li class="text-sm text-gray-600">')
-                // Style horizontal rules
-                .replace(/<hr>/g, '<hr class="border-gray-200 my-3">')
+                // Style horizontal rules - reduce margin
+                .replace(/<hr>/g, '<hr class="border-gray-200 my-2">')
                 // Style blockquotes
                 .replace(/<blockquote>/g, '<blockquote class="border-l-4 border-gray-300 pl-4 italic text-gray-600">');
             
@@ -781,11 +781,11 @@ function renderMarkdown(text) {
         // Headers ## Text
         .replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, text) => {
             const level = hashes.length;
-            return `<h${level} class="font-bold text-gray-900 mb-2">${text}</h${level}>`;
+            return `<h${level} class="font-bold text-gray-900 mb-1">${text}</h${level}>`;
         })
         
         // Horizontal rules ------
-        .replace(/^-{3,}$/gm, '<hr class="border-gray-200 my-3">')
+        .replace(/^-{3,}$/gm, '<hr class="border-gray-200 my-2">')
         
         // Lists starting with -
         .replace(/^(\s*)-\s+(.+)$/gm, '<li class="text-sm text-gray-600">$2</li>')
@@ -796,7 +796,7 @@ function renderMarkdown(text) {
     
     // Wrap list items in ul tags
     html = html.replace(/(<li[^>]*>.*?<\/li>)(?:\s*<br>\s*<li[^>]*>.*?<\/li>)*/g, (match) => {
-        return `<ul class="list-disc list-inside mb-2 space-y-1">${match.replace(/<br>/g, '')}</ul>`;
+        return `<ul class="list-disc list-inside mb-1 space-y-0">${match.replace(/<br>/g, '')}</ul>`;
     });
     
     // Now replace all placeholders with their actual HTML
@@ -834,7 +834,7 @@ function createGitHubIssueElement(issue, isCompleted = false) {
                 #${issue.number}
             </a>
         </div>
-        <p class="text-gray-600 text-sm mb-3">${description}</p>
+        <div class="text-gray-600 text-sm mb-3 markdown-content">${description}</div>
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2">
                 ${priority ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${window.getPriorityColor(priority)}">${priority}</span>` : ''}
