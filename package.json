@@ -11,6 +11,9 @@
   "keywords": ["kanban", "dashboard", "github-actions", "project-management"],
   "author": "Shawn Wilkinson",
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0"
