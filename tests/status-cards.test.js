@@ -11,9 +11,6 @@ function setupStatusCardsDOM() {
     <div data-ci-status></div>
     <div data-ci-time></div>
     <div data-coverage-status></div>
-    <div data-traffic-views></div>
-    <div data-traffic-visitors></div>
-    <div data-traffic-time></div>
     <button id="refresh-badge"></button>
     <img id="github-badge" src="" />
   `;
@@ -64,15 +61,6 @@ function createCoverageData(overrides = {}) {
     coverage: 85,
     updatedAt: new Date(),
     htmlUrl: 'https://coveralls.io/github/test/repo',
-    ...overrides
-  };
-}
-
-function createTrafficData(overrides = {}) {
-  return {
-    views: 1234,
-    uniqueVisitors: 567,
-    updatedAt: new Date(),
     ...overrides
   };
 }
@@ -399,7 +387,7 @@ describe('Status Cards Functions', () => {
 
     test('should have all required intervals', () => {
       const intervals = statusAPI.CONFIG.INTERVALS;
-      expect(intervals.REFRESH_ALL).toBe(5 * 60 * 1000);
+      expect(intervals.REFRESH_ALL).toBe(10 * 60 * 1000);
       expect(intervals.UPDATE_TIMESTAMP).toBe(60 * 1000);
       expect(intervals.INITIAL_DELAYS.CI_STATUS).toBe(1000);
       expect(intervals.REFRESH_DELAYS.CI_STATUS).toBe(500);
@@ -889,71 +877,9 @@ describe('Status Cards Functions', () => {
     });
   });
 
-  describe('updateTrafficUI', () => {
-    test('should update traffic data with formatted numbers', () => {
-      const trafficData = createTrafficData();
-
-      statusAPI.updateTrafficUI(trafficData);
-
-      const viewsElement = document.querySelector('[data-traffic-views]');
-      const visitorsElement = document.querySelector('[data-traffic-visitors]');
-      const timeElement = document.querySelector('[data-traffic-time]');
-
-      expect(viewsElement.textContent).toBe('1,234');
-      expect(visitorsElement.textContent).toBe('567');
-      expect(timeElement.innerHTML).toContain('Updated 2m ago');
-    });
-
-    const missingElements = [
-      'data-traffic-views',
-      'data-traffic-time', 
-      'data-traffic-visitors'
-    ];
-
-    test.each(missingElements)(
-      'should handle missing %s element gracefully',
-      (elementSelector) => {
-        document.querySelector(`[${elementSelector}]`).remove();
-        
-        const trafficData = createTrafficData();
-
-        expect(() => {
-          statusAPI.updateTrafficUI(trafficData);
-        }).not.toThrow();
-      }
-    );
-  });
-
   // ============================================================================
   // DATA FETCHING FUNCTION TESTS
   // ============================================================================
-
-  describe('fetchTrafficData', () => {
-    test('should return mock traffic data with correct structure', async () => {
-      const result = await statusAPI.fetchTrafficData();
-      
-      expect(result).toHaveProperty('views');
-      expect(result).toHaveProperty('uniqueVisitors');
-      expect(result).toHaveProperty('updatedAt');
-      expect(typeof result.views).toBe('number');
-      expect(typeof result.uniqueVisitors).toBe('number');
-      expect(result.updatedAt).toBeInstanceOf(Date);
-    });
-
-    test('should return reasonable mock values', async () => {
-      const result = await statusAPI.fetchTrafficData();
-      
-      // Mock data should be within reasonable ranges
-      expect(result.views).toBeGreaterThan(0);
-      expect(result.uniqueVisitors).toBeGreaterThan(0);
-      // Note: The current implementation generates independent random values,
-      // so uniqueVisitors may be greater than views in some cases
-      expect(result.views).toBeGreaterThanOrEqual(100);
-      expect(result.views).toBeLessThanOrEqual(1099);
-      expect(result.uniqueVisitors).toBeGreaterThanOrEqual(50);
-      expect(result.uniqueVisitors).toBeLessThanOrEqual(549);
-    });
-  });
 
   describe('fetchWorkflowStatus', () => {
     test('should fetch workflow status successfully', async () => {
@@ -1103,11 +1029,9 @@ describe('Status Cards Functions', () => {
         'fetchWorkflowStatus',
         'fetchCIStatus',
         'fetchCoverageStatus',
-        'fetchTrafficData',
         'updateWorkflowStatusUI',
         'updateCIStatusUI',
         'updateCoverageStatusUI',
-        'updateTrafficUI',
         'refreshAllStatuses',
         'parseCoverageFromSVG',
         'updateTimestamp',

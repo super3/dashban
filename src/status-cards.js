@@ -12,18 +12,16 @@ document.addEventListener('DOMContentLoaded', function() {
             TEST: 'test.yml'
         },
         INTERVALS: {
-            REFRESH_ALL: 5 * 60 * 1000, // 5 minutes
+            REFRESH_ALL: 10 * 60 * 1000, // 10 minutes
             UPDATE_TIMESTAMP: 60 * 1000, // 1 minute
             INITIAL_DELAYS: {
                 CI_STATUS: 1000,
                 COVERAGE: 2000,
-                TRAFFIC: 3000,
                 FINAL_REFRESH: 5000
             },
             REFRESH_DELAYS: {
                 CI_STATUS: 500,
-                COVERAGE: 1000,
-                TRAFFIC: 1500
+                COVERAGE: 1000
             }
         },
         SELECTORS: {
@@ -32,10 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
             CI_STATUS: '[data-ci-status]',
             CI_TIME: '[data-ci-time]',
             COVERAGE_STATUS: '[data-coverage-status]',
-            TRAFFIC_VIEWS: '[data-traffic-views]',
-            TRAFFIC_VISITORS: '[data-traffic-visitors]',
-            TRAFFIC_TIME: '[data-traffic-time]',
-            TIMESTAMP_ELEMENTS: '[data-frontend-time], [data-ci-time], [data-traffic-time]',
+            TIMESTAMP_ELEMENTS: '[data-frontend-time], [data-ci-time]',
             BADGE_IMG: '#github-badge',
             REFRESH_BTN: '#refresh-badge'
         }
@@ -230,19 +225,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function fetchTrafficData() {
-        // This would require a backend API to fetch GitHub traffic data
-        // For now, return mock data with realistic constraints
-        const views = Math.floor(Math.random() * 1000) + 100;
-        const uniqueVisitors = Math.floor(Math.random() * 500) + 50;
-        
-        return {
-            views: views,
-            uniqueVisitors: uniqueVisitors,
-            updatedAt: new Date()
-        };
-    }
-
     // ============================================================================
     // UI UPDATE FUNCTIONS
     // ============================================================================
@@ -303,16 +285,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         statusElement.innerHTML = `<span class="text-sm ${bgColor} font-medium">${text}</span>`;
         makeElementClickable(statusElement, coverageData.htmlUrl);
-    }
-
-    function updateTrafficUI(data) {
-        const viewsElement = safeQuerySelector(CONFIG.SELECTORS.TRAFFIC_VIEWS);
-        const visitorsElement = safeQuerySelector(CONFIG.SELECTORS.TRAFFIC_VISITORS);
-        const timeElement = safeQuerySelector(CONFIG.SELECTORS.TRAFFIC_TIME);
-        
-        if (viewsElement) viewsElement.textContent = data.views.toLocaleString();
-        if (visitorsElement) visitorsElement.textContent = data.uniqueVisitors.toLocaleString();
-        if (timeElement) timeElement.innerHTML = createTimestampHTML(data.updatedAt);
     }
 
     // ============================================================================
@@ -384,9 +356,6 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchWorkflowStatus();
         setTimeout(() => fetchCIStatus(), CONFIG.INTERVALS.REFRESH_DELAYS.CI_STATUS);
         setTimeout(() => fetchCoverageStatus(), CONFIG.INTERVALS.REFRESH_DELAYS.COVERAGE);
-        setTimeout(() => {
-            fetchTrafficData().then(updateTrafficUI);
-        }, CONFIG.INTERVALS.REFRESH_DELAYS.TRAFFIC);
     }
 
     // ============================================================================
@@ -438,9 +407,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Load other statuses with delays to avoid hitting rate limits
         setTimeout(() => fetchCIStatus(), CONFIG.INTERVALS.INITIAL_DELAYS.CI_STATUS);
         setTimeout(() => fetchCoverageStatus(), CONFIG.INTERVALS.INITIAL_DELAYS.COVERAGE);
-        setTimeout(() => {
-            fetchTrafficData().then(updateTrafficUI);
-        }, CONFIG.INTERVALS.INITIAL_DELAYS.TRAFFIC);
         
         // Then do a full refresh after all initial loads
         setTimeout(() => {
@@ -468,13 +434,11 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchWorkflowStatus,
         fetchCIStatus,
         fetchCoverageStatus,
-        fetchTrafficData,
         
         // UI update functions
         updateWorkflowStatusUI,
         updateCIStatusUI,
         updateCoverageStatusUI,
-        updateTrafficUI,
         
         // Utility functions
         refreshAllStatuses,
