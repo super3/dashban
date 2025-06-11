@@ -19,15 +19,7 @@
 git clone https://github.com/super3/dashban.git && cd dashban
 npm install && npm test
 ```
-Open `index.html` in your browser to start using Dashban.
-
-Dashban's GitHub integration is organized into several modules located in
-`src/github/`:
-
-- `auth.js` – handles authentication and token management
-- `issues.js` – loads issues and communicates with the API
-- `ui.js` – provides helper utilities for issue cards
-- `index.js` – combines the modules and initializes the integration
+Open `index.html` in your browser to start using Dashban.Be
 
 ### ⌨️ Keyboard Shortcuts
 - `Ctrl/Cmd + N`: Add new task
