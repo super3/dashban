@@ -381,7 +381,7 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
         console.log(`🔄 Updating labels for issue #${issueNumber} moved to ${newColumn}...`);
 
         // First, get current issue to preserve existing labels
-        const getResponse = await fetch(`${GITHUB_CONFIG.apiBaseUrl}/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
+        const getResponse = await fetch(`${GITHUB_CONFIG.apiBaseUrl}/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/issues/${issueNumber}?_t=${Date.now()}`, {
             headers: {
                 'Accept': 'application/vnd.github.v3+json',
                 'Authorization': `token ${githubAuth.accessToken}`
@@ -537,10 +537,11 @@ async function loadGitHubIssues() {
     try {
         console.log('Loading GitHub issues...');
         
-        // Fetch both open and closed issues
+        // Fetch both open and closed issues with cache-busting
+        const timestamp = Date.now();
         const [openResponse, closedResponse] = await Promise.all([
-            fetch('https://api.github.com/repos/super3/dashban/issues?state=open'),
-            fetch('https://api.github.com/repos/super3/dashban/issues?state=closed')
+            fetch(`https://api.github.com/repos/super3/dashban/issues?state=open&_t=${timestamp}`),
+            fetch(`https://api.github.com/repos/super3/dashban/issues?state=closed&_t=${timestamp}`)
         ]);
         
         if (!openResponse.ok || !closedResponse.ok) {
@@ -613,6 +614,8 @@ async function loadGitHubIssues() {
         
         // Apply completed sections to all cards in the done column
         applyCompletedSectionsToColumn();
+        
+
         
         console.log('✅ GitHub issues loaded successfully');
         
