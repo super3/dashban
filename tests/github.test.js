@@ -364,6 +364,52 @@ describe('GitHub Integration', () => {
             expect(skeleton.tagName).toBe('DIV');
             expect(skeleton.classList.contains('animate-pulse')).toBe(true);
         });
+
+        test('renderMarkdown should handle underscores for bold and italic', () => {
+            const markdown = '__bold__ _italic_';
+            const html = window.GitHub.renderMarkdown(markdown);
+            
+            expect(html).toContain('<strong>bold</strong>');
+            expect(html).toContain('<em>italic</em>');
+        });
+
+        test('renderMarkdown should truncate long URLs', () => {
+            const longUrl = 'https://chatgpt.com/codex/tasks/task_e_6848d9ef08b0832088b81ad20938a0ba';
+            const markdown = `Check this out: ${longUrl}`;
+            const html = window.GitHub.renderMarkdown(markdown);
+            
+            // Should contain the truncated URL
+            expect(html).toContain('https://chatgpt.com/codex/tasks/task_e_6848d9ef08b...');
+            // Should have the full URL as href
+            expect(html).toContain(`href="${longUrl}"`);
+            // Should have the full URL as title (tooltip)
+            expect(html).toContain(`title="${longUrl}"`);
+            // Should have break-all class for better wrapping
+            expect(html).toContain('break-all');
+        });
+
+        test('renderMarkdown should not truncate short URLs', () => {
+            const shortUrl = 'https://example.com';
+            const markdown = `Visit ${shortUrl}`;
+            const html = window.GitHub.renderMarkdown(markdown);
+            
+            // Should contain the full URL in both href and display text
+            expect(html).toContain(`href="${shortUrl}"`);
+            expect(html).toContain(`>${shortUrl}</a>`);
+            expect(html).toContain(`title="${shortUrl}"`);
+        });
+
+        test('renderMarkdown should handle markdown links without truncation', () => {
+            const longUrl = 'https://chatgpt.com/codex/tasks/task_e_6848d9ef08b0832088b81ad20938a0ba';
+            const markdown = `[Check this task](${longUrl})`;
+            const html = window.GitHub.renderMarkdown(markdown);
+            
+            // Markdown links should not be truncated, just display the link text
+            expect(html).toContain('Check this task');
+            expect(html).toContain(`href="${longUrl}"`);
+            // Should not contain the truncated URL since it's in markdown format
+            expect(html).not.toContain('https://chatgpt.com/codex/tasks/task_e_6848d9ef...');
+        });
     });
 
     describe('GitHub Issue Element Creation', () => {
@@ -1106,7 +1152,7 @@ describe('GitHub Integration', () => {
 
             expect(window.GitHub.githubAuth.isAuthenticated).toBe(false);
             expect(window.GitHub.githubAuth.installationId).toBeNull();
-                });
+        });
 
         test('should handle error logging for handleInstallationCallback', async () => {
             // Lines 117-118: Error logging (no conditional check in this function)

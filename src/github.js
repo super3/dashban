@@ -638,6 +638,28 @@ function renderMarkdown(text) {
     
     let html = escapeHtml(text);
     
+    // Store URLs and markdown links temporarily to avoid conflicts with other markdown processing
+    const placeholders = {};
+    let counter = 0;
+    
+    // First, protect markdown links by replacing them with placeholders
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
+        const placeholder = `LINKPLACEHOLDER${counter++}LINKPLACEHOLDER`;
+        placeholders[placeholder] = `<a href="${url}" target="_blank" class="text-blue-600 hover:text-blue-800 underline">${linkText}</a>`;
+        return placeholder;
+    });
+    
+    // Then find and replace plain URLs with placeholders (now they won't conflict with markdown links)
+    html = html.replace(/(^|[^"'>\]])(https?:\/\/[^\s<>"'\]]+)/g, (match, prefix, url) => {
+        const placeholder = `URLPLACEHOLDER${counter++}URLPLACEHOLDER`;
+        const maxLength = 50; // Maximum characters to display
+        const displayUrl = url.length > maxLength ? 
+            url.substring(0, maxLength) + '...' : 
+            url;
+        placeholders[placeholder] = `<a href="${url}" target="_blank" class="text-blue-600 hover:text-blue-800 underline break-all" title="${url}">${displayUrl}</a>`;
+        return prefix + placeholder;
+    });
+    
     // Convert markdown patterns to HTML
     html = html
         // Bold text **text** or __text__
@@ -651,12 +673,14 @@ function renderMarkdown(text) {
         // Inline code `code`
         .replace(/`(.*?)`/g, '<code class="bg-gray-100 text-gray-800 px-1 rounded text-xs">$1</code>')
         
-        // Links [text](url)
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-blue-600 hover:text-blue-800 underline">$1</a>')
-        
         // Line breaks (convert double newlines to paragraph breaks)
         .replace(/\n\n/g, '</p><p>')
         .replace(/\n/g, '<br>');
+    
+    // Now replace all placeholders with their actual HTML
+    Object.keys(placeholders).forEach(placeholder => {
+        html = html.replace(placeholder, placeholders[placeholder]);
+    });
     
     // Wrap in paragraph tags if it contains paragraph breaks
     if (html.includes('</p><p>')) {
