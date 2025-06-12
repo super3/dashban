@@ -173,5 +173,5 @@ describe('GitHub Integration - Main Coordinator', () => {
                 document.dispatchEvent(new Event('DOMContentLoaded'));
             }).not.toThrow();
         });
-    });
-}); 
+    }); 
+});

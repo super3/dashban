@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize authentication modal listeners
     window.GitHubAuth.initializeAuthModalListeners();
-    
+
     // Initialize GitHub authentication
     window.GitHubAuth.initializeGitHubAuth();
     

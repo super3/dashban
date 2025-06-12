@@ -195,9 +195,9 @@ function createGitHubIssueElement(issue, isCompleted = false) {
     taskDiv.setAttribute('data-issue-number', issue.number);
     taskDiv.setAttribute('data-issue-id', issue.id);
 
-    // Extract priority from labels (default to Medium if not found)
-    const priority = extractPriorityFromLabels(issue.labels);
-    const category = extractCategoryFromLabels(issue.labels);
+    // Extract priority from labels (default to null if not found)
+    const priority = extractPriorityFromLabels(issue.labels || []);
+    const category = extractCategoryFromLabels(issue.labels || []);
 
     // Render markdown description
     const description = renderMarkdown(issue.body);
@@ -242,9 +242,14 @@ function createGitHubIssueElement(issue, isCompleted = false) {
 }
 
 function extractPriorityFromLabels(labels) {
+    // Handle null or undefined labels
+    if (!labels || !Array.isArray(labels)) {
+        return null;
+    }
+    
     const priorityLabels = ['critical', 'high', 'medium', 'low'];
     const foundPriority = labels.find(label => 
-        priorityLabels.includes(label.name.toLowerCase())
+        label && label.name && priorityLabels.includes(label.name.toLowerCase())
     );
     
     if (foundPriority) {
@@ -255,7 +260,13 @@ function extractPriorityFromLabels(labels) {
 }
 
 function extractCategoryFromLabels(labels) {
+    // Handle null or undefined labels
+    if (!labels || !Array.isArray(labels)) {
+        return 'Setup'; // default for GitHub issues
+    }
+    
     const categoryLabel = labels.find(label => {
+        if (!label || !label.name) return false;
         const name = label.name.toLowerCase();
         return ['frontend', 'backend', 'design', 'testing', 'database', 'setup', 'bug', 'enhancement', 'feature'].includes(name);
     });
