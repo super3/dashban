@@ -1,5 +1,10 @@
 // GitHub API Operations for Dashban Kanban Board
 
+// Environment detection helper
+function isTestEnvironment() {
+    return typeof jest !== 'undefined';
+}
+
 // Archive GitHub issue by adding "archive" label
 async function archiveGitHubIssue(issueNumber, taskElement) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
@@ -195,7 +200,7 @@ async function createGitHubIssue(title, description, labels = []) {
 
     } catch (error) {
         // Only log errors in non-test environments
-        if (typeof jest === 'undefined') {
+        if (!isTestEnvironment()) {
             console.error('❌ Failed to create GitHub issue:', error);
         }
         
@@ -296,7 +301,7 @@ async function loadGitHubIssues() {
         
     } catch (error) {
         // Only log errors in non-test environments to avoid console noise during tests
-        if (typeof jest === 'undefined') {
+        if (!isTestEnvironment()) {
             console.error('❌ Failed to load GitHub issues:', error);
         }
         // Don't show alert for loading issues - just log the error

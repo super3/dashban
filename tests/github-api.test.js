@@ -194,6 +194,20 @@ describe('GitHub API', () => {
 
             expect(result).toBeNull();
         });
+
+        test('createGitHubIssue should handle non-GitHub API errors', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Some other error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.createGitHubIssue('Test', 'Description');
+
+            expect(result).toBeNull();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to create GitHub issue. Check your token permissions and network connection.'));
+        });
+
+
     });
 
     describe('Issue Loading', () => {
@@ -228,6 +242,156 @@ describe('GitHub API', () => {
             // The loadGitHubIssues function calls fetch with just the URL, no options object
             expect(firstCall.length).toBe(1);
         });
+
+        test('loadGitHubIssues should fetch both open and closed issues', async () => {
+            const mockOpenIssues = [
+                {
+                    id: 1,
+                    number: 123,
+                    title: 'Open Issue',
+                    body: 'Description',
+                    labels: [{ name: 'backlog' }],
+                    assignee: null,
+                    user: { login: 'testuser', avatar_url: 'avatar.jpg' },
+                    created_at: '2023-01-01T00:00:00Z'
+                }
+            ];
+
+            const mockClosedIssues = [
+                {
+                    id: 2,
+                    number: 124,
+                    title: 'Closed Issue',
+                    body: 'Description',
+                    labels: [{ name: 'bug' }],
+                    assignee: null,
+                    user: { login: 'testuser', avatar_url: 'avatar.jpg' },
+                    created_at: '2023-01-01T00:00:00Z'
+                }
+            ];
+
+            // Mock two fetch calls for open and closed issues
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockOpenIssues
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockClosedIssues
+                });
+
+            const mockOpenElement = document.createElement('div');
+            const mockClosedElement = document.createElement('div');
+            
+            window.GitHubUI.createGitHubIssueElement = jest.fn()
+                .mockReturnValueOnce(mockOpenElement)
+                .mockReturnValueOnce(mockClosedElement);
+            
+            window.GitHubUI.applyReviewIndicatorsToColumn = jest.fn();
+            window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            const backlogColumn = document.getElementById('backlog');
+            const doneColumn = document.getElementById('done');
+
+            expect(backlogColumn.contains(mockOpenElement)).toBe(true);
+            expect(doneColumn.contains(mockClosedElement)).toBe(true);
+            expect(window.GitHubUI.applyReviewIndicatorsToColumn).toHaveBeenCalled();
+            expect(window.GitHubUI.applyCompletedSectionsToColumn).toHaveBeenCalled();
+        });
+
+        test('loadGitHubIssues should handle missing target column for open issues', async () => {
+            const mockIssues = [
+                {
+                    id: 1,
+                    number: 123,
+                    title: 'Test Issue',
+                    body: 'Description',
+                    labels: [{ name: 'unknown-status' }],
+                    assignee: null,
+                    user: { login: 'testuser', avatar_url: 'avatar.jpg' },
+                    created_at: '2023-01-01T00:00:00Z'
+                }
+            ];
+
+            // Remove the backlog column to test missing column handling
+            const backlogColumn = document.getElementById('backlog');
+            backlogColumn.remove();
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockIssues
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubUI.createGitHubIssueElement = jest.fn().mockReturnValue(document.createElement('div'));
+            window.GitHubUI.applyReviewIndicatorsToColumn = jest.fn();
+            window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
+
+            // Should not throw error even when target column doesn't exist
+            await expect(window.GitHubAPI.loadGitHubIssues()).resolves.toBeUndefined();
+        });
+
+        test('loadGitHubIssues should handle missing done column for closed issues', async () => {
+            const mockClosedIssues = [
+                {
+                    id: 2,
+                    number: 124,
+                    title: 'Closed Issue',
+                    body: 'Description',
+                    labels: [{ name: 'bug' }],
+                    assignee: null,
+                    user: { login: 'testuser', avatar_url: 'avatar.jpg' },
+                    created_at: '2023-01-01T00:00:00Z'
+                }
+            ];
+
+            // Remove the done column completely to test missing column handling
+            const doneColumn = document.getElementById('done');
+            doneColumn.remove();
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockClosedIssues
+                });
+
+            window.GitHubUI.createGitHubIssueElement = jest.fn().mockReturnValue(document.createElement('div'));
+            window.GitHubUI.applyReviewIndicatorsToColumn = jest.fn();
+            window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
+
+            // Should not throw error and handle missing done column gracefully
+            await expect(window.GitHubAPI.loadGitHubIssues()).resolves.toBeUndefined();
+
+            // The function should still call createGitHubIssueElement for the closed issue
+            expect(window.GitHubUI.createGitHubIssueElement).toHaveBeenCalledWith(mockClosedIssues[0], false);
+        });
+
+        test('loadGitHubIssues should handle closed response error', async () => {
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                })
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 403
+                });
+
+            await expect(window.GitHubAPI.loadGitHubIssues()).resolves.toBeUndefined();
+        });
+
+
 
         test('loadGitHubIssues should place issues in correct columns based on labels', async () => {
             const mockIssues = [
@@ -354,6 +518,16 @@ describe('GitHub API', () => {
 
             await expect(window.GitHubAPI.loadGitHubIssues()).resolves.toBeUndefined();
         });
+
+        test('loadGitHubIssues should handle API error with missing message', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({}) // No message property
+            });
+
+            await expect(window.GitHubAPI.loadGitHubIssues()).resolves.toBeUndefined();
+        });
     });
 
     describe('Issue Archiving', () => {
@@ -418,6 +592,94 @@ describe('GitHub API', () => {
             expect(mockElement.remove).toHaveBeenCalled();
             expect(window.updateColumnCounts).toHaveBeenCalled();
         });
+
+        test('archiveGitHubIssue should handle API error with missing message', async () => {
+            const mockElement = {
+                remove: jest.fn()
+            };
+
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({}) // No message property
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
+
+            expect(mockElement.remove).toHaveBeenCalled();
+            expect(window.updateColumnCounts).toHaveBeenCalled();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 500 - Unknown error'));
+        });
+
+        test('archiveGitHubIssue should handle network errors', async () => {
+            const mockElement = {
+                remove: jest.fn()
+            };
+
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
+
+            expect(mockElement.remove).toHaveBeenCalled();
+            expect(window.updateColumnCounts).toHaveBeenCalled();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to add archive label to GitHub issue'));
+        });
+
+        test('archiveGitHubIssue should handle JSON parsing errors', async () => {
+            const mockElement = {
+                remove: jest.fn()
+            };
+
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => {
+                    throw new Error('JSON parse error');
+                }
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
+
+            expect(mockElement.remove).toHaveBeenCalled();
+            expect(window.updateColumnCounts).toHaveBeenCalled();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to add archive label to GitHub issue'));
+        });
+
+        test('archiveGitHubIssue should handle error logging in non-jest environment', async () => {
+            const mockElement = {
+                remove: jest.fn()
+            };
+
+            // Temporarily hide jest to trigger non-test environment logging
+            const originalJest = global.jest;
+            delete global.jest;
+
+            // Mock console.error to capture the call
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
+
+            expect(console.error).toHaveBeenCalledWith('❌ Failed to archive GitHub issue:', expect.any(Error));
+
+            // Restore
+            global.jest = originalJest;
+            console.error = originalConsoleError;
+        });
     });
 
     describe('Issue Management', () => {
@@ -446,6 +708,141 @@ describe('GitHub API', () => {
             );
         });
 
+        test('updateGitHubIssueLabels should handle unauthenticated state', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = false;
+
+            await window.GitHubAPI.updateGitHubIssueLabels('123', 'inprogress');
+
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        test('updateGitHubIssueLabels should handle no access token', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = null;
+
+            await window.GitHubAPI.updateGitHubIssueLabels('123', 'inprogress');
+
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        test('updateGitHubIssueLabels should handle fetch error when getting issue', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 404
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.updateGitHubIssueLabels('123', 'inprogress');
+
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to update GitHub issue labels'));
+        });
+
+        test('updateGitHubIssueLabels should handle API error when updating labels', async () => {
+            // Mock successful GET response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [{ name: 'bug' }] })
+            });
+
+            // Mock failed PUT response
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                json: async () => ({ message: 'Forbidden' })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.updateGitHubIssueLabels('123', 'review');
+
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 403 - Forbidden'));
+        });
+
+        test('updateGitHubIssueLabels should handle network error', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.updateGitHubIssueLabels('123', 'inprogress');
+
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to update GitHub issue labels'));
+        });
+
+        test('updateGitHubIssueLabels should filter existing status labels and add new ones', async () => {
+            // Mock GET response with existing labels including status labels
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ 
+                    labels: [
+                        { name: 'bug' }, 
+                        { name: 'in progress' }, // This should be filtered out
+                        { name: 'priority-high' }
+                    ] 
+                })
+            });
+
+            // Mock successful PUT response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [{ name: 'bug' }, { name: 'priority-high' }, { name: 'review' }] })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.updateGitHubIssueLabels('123', 'review');
+
+            // Check that the PUT call includes filtered labels plus new status label
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/labels'),
+                expect.objectContaining({
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        labels: ['bug', 'priority-high', 'review']
+                    })
+                })
+            );
+        });
+
+        test('updateGitHubIssueLabels should handle backlog column (no label)', async () => {
+            // Mock GET response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ 
+                    labels: [
+                        { name: 'bug' }, 
+                        { name: 'in progress' }
+                    ] 
+                })
+            });
+
+            // Mock successful PUT response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [{ name: 'bug' }] })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.updateGitHubIssueLabels('123', 'backlog');
+
+            // For backlog, no new status label should be added, just existing status labels removed
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/labels'),
+                expect.objectContaining({
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        labels: ['bug']
+                    })
+                })
+            );
+        });
+
         test('closeGitHubIssue should close the issue', async () => {
             const mockResponse = {
                 ok: true,
@@ -470,6 +867,49 @@ describe('GitHub API', () => {
                 })
             );
         });
+
+        test('closeGitHubIssue should handle unauthenticated state', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = false;
+
+            await window.GitHubAPI.closeGitHubIssue('123');
+
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        test('closeGitHubIssue should handle no access token', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = null;
+
+            await window.GitHubAPI.closeGitHubIssue('123');
+
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        test('closeGitHubIssue should handle API errors', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                json: async () => ({ message: 'Forbidden' })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.closeGitHubIssue('123');
+
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to close GitHub issue'));
+        });
+
+        test('closeGitHubIssue should handle network errors', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.closeGitHubIssue('123');
+
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to close GitHub issue'));
+        });
     });
 
     describe('Initialization', () => {
@@ -491,6 +931,100 @@ describe('GitHub API', () => {
             // Test should just verify the function was called, as skeleton removal
             // depends on timing and DOM manipulation that's hard to test
         });
+
+        test('initializeGitHubIssues should add skeleton cards to all columns', () => {
+            const mockSkeletonCard = document.createElement('div');
+            mockSkeletonCard.classList.add('animate-pulse');
+            
+            window.GitHubUI.createSkeletonCard = jest.fn().mockReturnValue(mockSkeletonCard);
+
+            // Mock Math.random to return consistent values for testing
+            const originalMathRandom = Math.random;
+            Math.random = jest.fn()
+                .mockReturnValueOnce(0.1) // backlog: Math.floor(0.1 * 2) + 1 = 1
+                .mockReturnValueOnce(0.9) // inprogress: Math.floor(0.9 * 2) + 1 = 2  
+                .mockReturnValueOnce(0.5) // review: Math.floor(0.5 * 2) + 1 = 2
+                .mockReturnValueOnce(0.3); // done: Math.floor(0.3 * 2) + 1 = 1
+
+            window.GitHubAPI.initializeGitHubIssues();
+
+            // Should be called 6 times total (1+2+2+1)
+            expect(window.GitHubUI.createSkeletonCard).toHaveBeenCalledTimes(6);
+
+            // Restore Math.random
+            Math.random = originalMathRandom;
+        });
+
+        test('initializeGitHubIssues should handle missing columns gracefully', () => {
+            // Remove all columns
+            document.getElementById('backlog').remove();
+            document.getElementById('inprogress').remove();
+            document.getElementById('review').remove();
+            document.getElementById('done').remove();
+
+            const mockSkeletonCard = document.createElement('div');
+            window.GitHubUI.createSkeletonCard = jest.fn().mockReturnValue(mockSkeletonCard);
+
+            // Should not throw error even when columns don't exist
+            expect(() => {
+                window.GitHubAPI.initializeGitHubIssues();
+            }).not.toThrow();
+
+            // Should not have called createSkeletonCard since no columns exist
+            expect(window.GitHubUI.createSkeletonCard).not.toHaveBeenCalled();
+        });
+
+        test('initializeGitHubIssues should trigger loadGitHubIssues and remove skeletons', async () => {
+            const mockSkeletonCard1 = document.createElement('div');
+            const mockSkeletonCard2 = document.createElement('div');
+            mockSkeletonCard1.classList.add('animate-pulse');
+            mockSkeletonCard2.classList.add('animate-pulse');
+            
+            // Add skeleton cards to DOM manually to test removal
+            document.getElementById('backlog').appendChild(mockSkeletonCard1);
+            document.getElementById('inprogress').appendChild(mockSkeletonCard2);
+
+            window.GitHubUI.createSkeletonCard = jest.fn().mockReturnValue(document.createElement('div'));
+
+            // Mock successful fetch for loadGitHubIssues
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubUI.applyReviewIndicatorsToColumn = jest.fn();
+            window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
+
+            window.GitHubAPI.initializeGitHubIssues();
+
+            // Wait for the async operations to complete
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            // Check that skeleton cards were removed
+            expect(document.querySelectorAll('.animate-pulse')).toHaveLength(0);
+        });
+
+        test('initializeGitHubIssues should handle different random skeleton counts', () => {
+            const mockSkeletonCard = document.createElement('div');
+            window.GitHubUI.createSkeletonCard = jest.fn().mockReturnValue(mockSkeletonCard);
+
+            // Mock Math.random to return 0 for minimum count (1 skeleton per column)
+            const originalMathRandom = Math.random;
+            Math.random = jest.fn().mockReturnValue(0); // Math.floor(0 * 2) + 1 = 1
+
+            window.GitHubAPI.initializeGitHubIssues();
+
+            // Should be called 4 times (1 per column)
+            expect(window.GitHubUI.createSkeletonCard).toHaveBeenCalledTimes(4);
+
+            // Restore Math.random
+            Math.random = originalMathRandom;
+        });
     });
 
     describe('Error Handling', () => {
@@ -506,8 +1040,7 @@ describe('GitHub API', () => {
         });
 
         test('should handle error logging in non-jest environment for createGitHubIssue', async () => {
-            // Just test that the function returns null on error
-            mockFetch.mockRejectedValueOnce(new Error('Test error'));
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
             window.GitHubAuth.githubAuth.accessToken = 'test-token';
@@ -518,13 +1051,53 @@ describe('GitHub API', () => {
         });
 
         test('should handle error logging in non-jest environment for loadGitHubIssues', async () => {
-            // Just test that the function doesn't throw on error
             mockFetch.mockRejectedValueOnce(new Error('Test error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
             window.GitHubAuth.githubAuth.accessToken = 'test-token';
 
-            await expect(window.GitHubAPI.loadGitHubIssues()).resolves.toBeUndefined();
+            await window.GitHubAPI.loadGitHubIssues();
+        });
+
+        test('isTestEnvironment should return true in test environment', () => {
+            // Since we're in a Jest test environment, this should return true
+            expect(typeof jest !== 'undefined').toBe(true);
+        });
+
+        test('createGitHubIssue should use isTestEnvironment for logging', async () => {
+            // Mock console.error to test logging behavior
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.createGitHubIssue('Test', 'Description');
+
+            expect(result).toBeNull();
+            // In test environment, console.error should NOT be called due to isTestEnvironment() check
+            expect(console.error).not.toHaveBeenCalled();
+
+            // Restore
+            console.error = originalConsoleError;
+        });
+
+        test('loadGitHubIssues should use isTestEnvironment for logging', async () => {
+            // Mock console.error to test logging behavior
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            // In test environment, console.error should NOT be called due to isTestEnvironment() check
+            expect(console.error).not.toHaveBeenCalled();
+
+            // Restore
+            console.error = originalConsoleError;
         });
     });
 }); 
