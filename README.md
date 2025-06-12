@@ -54,10 +54,3 @@ To enable GitHub issue creation directly from Dashban:
 1. Copy your **App ID** and **App Name** from the app settings
 2. Update `src/kanban.js` with your App ID, App Name, and repository details
 3. Install the app on your repository
-
-### 4. Usage
-1. Click "Install GitHub App" button in Dashban
-2. Select repositories to grant access
-3. Create issues using the "Add Issue" form with "Create GitHub Issue" enabled
-
-**Benefits**: Fine-grained permissions, better security than personal access tokens, clear permission display during installation.
