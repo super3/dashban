@@ -111,13 +111,7 @@ function setupDOM() {
             </select>
           </div>
           
-          <div id="github-option" class="mb-4 p-3 bg-gray-50 rounded-md">
-            <label class="flex items-center">
-              <input type="checkbox" id="create-github-issue" name="createGitHubIssue" class="mr-2">
-              <span class="text-sm font-medium text-gray-700">Create real GitHub issue</span>
-            </label>
-            <p id="github-status-text" class="text-xs text-gray-500 mt-0.5">Install GitHub App to create real issues in the repository</p>
-          </div>
+
           
           <div class="flex justify-end space-x-2">
             <button type="button" id="cancel-task" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
