@@ -1,16 +1,14 @@
 // GitHub Authentication and Configuration for Dashban Kanban Board
 
-// GitHub App configuration
+// GitHub configuration
 const GITHUB_CONFIG = {
-    appId: '1385203', // Replace with your GitHub App ID
     redirectUri: window.location.origin + window.location.pathname,
     apiBaseUrl: 'https://api.github.com',
     owner: 'super3',
-    repo: 'dashban',
-    installationUrl: 'https://github.com/apps/dashban' // Replace with your app name
+    repo: 'dashban'
 };
 
-// GitHub App authentication state
+// GitHub authentication state
 let githubAuth = {
     isAuthenticated: false,
     installationId: null,
@@ -49,16 +47,16 @@ function hideGitHubTokenModal() {
     }
 }
 
-// GitHub App Authentication Functions
+// GitHub Authentication Functions
 function initializeGitHubAuth() {
-    // Check if we're returning from GitHub App installation/authorization
+    // Check if we're returning from a legacy GitHub installation
     const urlParams = new URLSearchParams(window.location.search);
     const installationId = urlParams.get('installation_id');
     const setupAction = urlParams.get('setup_action');
     const code = urlParams.get('code');
     
     if (installationId && setupAction === 'install') {
-        // Handle GitHub App installation with OAuth authorization
+        // Handle GitHub installation with OAuth authorization
         handleInstallationCallback(installationId, code);
         
         // Clean up URL
@@ -83,20 +81,20 @@ function initializeGitHubAuth() {
 }
 
 function signInWithGitHub() {
-    // GitHub App step removed - just prompt for a Personal Access Token
+    // Prompt for a Personal Access Token
     showGitHubTokenModal();
 }
 
 async function handleInstallationCallback(installationId, authCode = null) {
     try {
-        console.log('🔄 Processing GitHub App installation...');
+        console.log('🔄 Processing GitHub installation...');
         
         // Store installation ID
         githubAuth.installationId = installationId;
         githubAuth.isAuthenticated = true;
         localStorage.setItem('github_installation_id', installationId);
         
-        console.log('✅ GitHub App installed successfully!');
+        console.log('✅ GitHub installation processed successfully!');
         
         if (authCode) {
             // We have an OAuth authorization code
@@ -154,7 +152,7 @@ async function validateAndSetToken(token) {
 
 async function validateAndSetInstallation(installationId) {
     try {
-        console.log('🔄 Validating GitHub App installation...');
+        console.log('🔄 Validating GitHub installation...');
         
         // Store installation
         githubAuth.installationId = installationId;
@@ -177,7 +175,7 @@ async function validateAndSetInstallation(installationId) {
 }
 
 function signOutGitHub() {
-    console.log('🔓 Signing out of GitHub App...');
+    console.log('🔓 Signing out of GitHub...');
     
     // Check if app was installed before clearing state
     const hadInstallation = !!(githubAuth.installationId || localStorage.getItem('github_installation_id'));
@@ -189,7 +187,7 @@ function signOutGitHub() {
     if (hadInstallation) {
         // Keep installation state, just remove token
         githubAuth.isAuthenticated = true; // App still installed
-        console.log('🔄 Cleared access token but keeping app installation');
+        console.log('🔄 Cleared access token but keeping installation');
     } else {
         // No installation, clear everything
         githubAuth.isAuthenticated = false;

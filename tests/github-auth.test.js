@@ -131,7 +131,6 @@ describe('GitHub Authentication', () => {
     describe('Configuration', () => {
         test('should export GitHub configuration', () => {
             expect(window.GitHubAuth.GITHUB_CONFIG).toBeDefined();
-            expect(window.GitHubAuth.GITHUB_CONFIG.appId).toBe('1385203');
             expect(window.GitHubAuth.GITHUB_CONFIG.owner).toBe('super3');
             expect(window.GitHubAuth.GITHUB_CONFIG.repo).toBe('dashban');
         });
