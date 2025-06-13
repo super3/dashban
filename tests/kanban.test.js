@@ -5,6 +5,8 @@
  * GitHub integration tests are in github.test.js
  */
 
+const Logger = require('../src/logger.js');
+
 // Set up DOM and environment for testing
 function setupDOM() {
   document.body.innerHTML = `
@@ -189,12 +191,18 @@ beforeAll(() => {
   global.window.updateColumnCounts = jest.fn();
   global.window.getPriorityColor = jest.fn().mockReturnValue('bg-gray-100 text-gray-800');
   global.window.getCategoryColor = jest.fn().mockReturnValue('bg-gray-100 text-gray-800');
+  global.window.Logger = Logger;
 });
 
 beforeEach(() => {
   setupDOM();
   localStorageMock.clear();
   jest.clearAllMocks();
+
+  Logger.info = jest.fn();
+  Logger.error = jest.fn();
+  Logger.warn = jest.fn();
+  global.Logger = Logger;
   
   // Ensure localStorage mock is properly set for this test
   global.localStorage = localStorageMock;
@@ -636,14 +644,14 @@ describe('Kanban Board Core Functionality', () => {
       const backlog = document.getElementById('backlog');
       backlog.appendChild(taskElement);
       
-      console.log = jest.fn();
+      Logger.info = jest.fn();
       
       // Simulate double-click
       const event = new Event('dblclick', { bubbles: true });
       taskElement.dispatchEvent(event);
       
       // Should log edit event (placeholder functionality)
-      expect(console.log).toHaveBeenCalledWith('Edit task:', taskElement);
+      expect(Logger.info).toHaveBeenCalledWith('Edit task:', taskElement);
     });
   });
 
@@ -735,7 +743,7 @@ describe('Kanban Board Core Functionality', () => {
       // Wait for async error handling
       await new Promise(resolve => setTimeout(resolve, 0));
       
-      expect(console.error).toHaveBeenCalled();
+      expect(Logger.error).toHaveBeenCalled();
       expect(global.alert).toHaveBeenCalledWith(
         'An error occurred while creating the GitHub issue. Please try again.'
       );
