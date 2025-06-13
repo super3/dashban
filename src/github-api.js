@@ -8,7 +8,7 @@ function isTestEnvironment() {
 // Archive GitHub issue by adding "archive" label
 async function archiveGitHubIssue(issueNumber, taskElement) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
-        console.log('❌ Not authenticated with GitHub App - cannot archive issue');
+        console.log('❌ Not authenticated with GitHub - cannot archive issue');
         // Remove from UI anyway
         taskElement.remove();
         window.updateColumnCounts();
@@ -55,7 +55,7 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
 // Update GitHub issue labels when moved between columns
 async function updateGitHubIssueLabels(issueNumber, newColumn) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
-        console.log('❌ Not authenticated with GitHub App - cannot update issue labels');
+        console.log('❌ Not authenticated with GitHub - cannot update issue labels');
         return;
     }
 
@@ -130,7 +130,7 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
 // Close GitHub issue when moved to Done column
 async function closeGitHubIssue(issueNumber) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
-        console.log('❌ Not authenticated with GitHub App - cannot close issue');
+        console.log('❌ Not authenticated with GitHub - cannot close issue');
         return;
     }
 
@@ -168,7 +168,7 @@ async function closeGitHubIssue(issueNumber) {
 // Create GitHub issue via API
 async function createGitHubIssue(title, description, labels = []) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
-        console.log('❌ Not authenticated with GitHub App - cannot create issue');
+        console.log('❌ Not authenticated with GitHub - cannot create issue');
         return null;
     }
 

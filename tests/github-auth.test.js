@@ -322,17 +322,13 @@ describe('GitHub Authentication', () => {
             expect(window.GitHubAuth.githubAuth.isAuthenticated).toBe(true);
         });
 
-        test('signInWithGitHub should redirect to installation URL', () => {
-            // Mock window.location.href setter
-            const locationMock = { href: '' };
-            Object.defineProperty(window, 'location', {
-                value: locationMock,
-                writable: true
-            });
+        test('signInWithGitHub should show token modal', () => {
+            const modal = document.getElementById('github-token-modal');
+            modal.classList.add('hidden');
 
             window.GitHubAuth.signInWithGitHub();
 
-            expect(locationMock.href).toContain('github.com/apps/dashban');
+            expect(modal.classList.contains('hidden')).toBe(false);
         });
     });
 
@@ -397,9 +393,9 @@ describe('GitHub Authentication', () => {
             window.GitHubAuth.githubAuth.isAuthenticated = false;
             
             // Manually update UI
-            signinBtn.textContent = 'Install GitHub App';
+            signinBtn.textContent = 'Add Access Token';
 
-            expect(signinBtn.textContent).toBe('Install GitHub App');
+            expect(signinBtn.textContent).toBe('Add Access Token');
         });
 
         test('updateGitHubSignInUI should handle sign out click', () => {
@@ -834,8 +830,8 @@ describe('GitHub Authentication', () => {
 
             window.GitHubAuth.updateGitHubSignInUI();
 
-            expect(headerSignInButton.innerHTML).toContain('Install GitHub App');
-            expect(headerSignInButton.title).toBe('Install GitHub App to create issues');
+            expect(headerSignInButton.innerHTML).toContain('Add Access Token');
+            expect(headerSignInButton.title).toBe('Add Personal Access Token to create issues');
             expect(typeof headerSignInButton.onclick).toBe('function');
         });
 
@@ -947,13 +943,6 @@ describe('GitHub Authentication', () => {
             headerSignInButton.textContent = 'GitHub';
             header.appendChild(headerSignInButton);
 
-            // Mock window.location.href setter
-            const locationMock = { href: '' };
-            Object.defineProperty(window, 'location', {
-                value: locationMock,
-                writable: true
-            });
-
             window.GitHubAuth.updateGitHubSignInUI();
 
             // Simulate click event by calling the onclick function
@@ -962,7 +951,8 @@ describe('GitHub Authentication', () => {
                 headerSignInButton.onclick(clickEvent);
             }
 
-            expect(locationMock.href).toContain('github.com/apps/dashban');
+            const modal = document.getElementById('github-token-modal');
+            expect(modal.classList.contains('hidden')).toBe(false);
         });
 
         test('updateGitHubSignInUI should find button with href="#" fallback selector', () => {
@@ -1306,7 +1296,7 @@ describe('GitHub Authentication', () => {
 
             // Wait for setTimeout callback
             setTimeout(() => {
-                expect(console.log).toHaveBeenCalledWith('💡 To reconnect, click "Install GitHub App" and add your access token');
+                expect(console.log).toHaveBeenCalledWith('💡 To reconnect, click "Add Access Token" to add your personal access token');
                 console.log = originalConsoleLog;
                 done();
             }, 150);
