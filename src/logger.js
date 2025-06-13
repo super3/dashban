@@ -1,4 +1,4 @@
-class Logger {
+class LoggerClass {
   constructor() {
     this.levels = { debug: 0, info: 1, warn: 2, error: 3 };
     this.currentLevel = 'info';
@@ -34,14 +34,26 @@ class Logger {
   error(...args) { this.log('error', ...args); }
 }
 
-const logger = new Logger();
+// Create a single instance
+const loggerInstance = new LoggerClass();
 
+// Create the global Logger object
+const Logger = {
+  debug: (...args) => loggerInstance.debug(...args),
+  info: (...args) => loggerInstance.info(...args),
+  warn: (...args) => loggerInstance.warn(...args),
+  error: (...args) => loggerInstance.error(...args),
+  setLevel: (level) => loggerInstance.setLevel(level),
+  setSilent: (value) => loggerInstance.setSilent(value)
+};
+
+// Export for both Node.js and browser environments
 (function(moduleObj, globalObj) {
   if (moduleObj && moduleObj.exports) {
-    moduleObj.exports = logger;
+    moduleObj.exports = Logger;
   }
   if (globalObj) {
-    globalObj.Logger = logger;
+    globalObj.Logger = Logger;
   }
 })(typeof module !== 'undefined' ? module : null,
    typeof window !== 'undefined' ? window : null);
