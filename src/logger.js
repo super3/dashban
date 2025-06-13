@@ -2,6 +2,8 @@ class Logger {
   constructor() {
     this.levels = { debug: 0, info: 1, warn: 2, error: 3 };
     this.currentLevel = 'info';
+    this.silent =
+      typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
   }
 
   setLevel(level) {
@@ -11,7 +13,7 @@ class Logger {
   }
 
   log(level, ...args) {
-    if (this.levels[level] >= this.levels[this.currentLevel]) {
+    if (!this.silent && this.levels[level] >= this.levels[this.currentLevel]) {
       if (level === 'debug' || level === 'info') {
         console.log(...args);
       } else if (level === 'warn') {
@@ -20,6 +22,10 @@ class Logger {
         console.error(...args);
       }
     }
+  }
+
+  setSilent(value) {
+    this.silent = Boolean(value);
   }
 
   debug(...args) { this.log('debug', ...args); }
