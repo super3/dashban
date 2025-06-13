@@ -670,7 +670,9 @@ describe('GitHub API', () => {
 
             // Mock console.error to capture the call
             const originalConsoleError = console.error;
+            const originalConsoleLog = console.log;
             console.error = jest.fn();
+            console.log = jest.fn();
 
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
@@ -684,6 +686,7 @@ describe('GitHub API', () => {
             // Restore
             global.jest = originalJest;
             console.error = originalConsoleError;
+            console.log = originalConsoleLog;
             Logger.setSilent(originalSilent);
         });
     });
