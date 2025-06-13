@@ -22,6 +22,7 @@ const mockLocalStorage = {
 const mockFetch = jest.fn();
 const mockAlert = jest.fn();
 const mockConfirm = jest.fn();
+const Logger = require('../src/logger.js');
 
 // Setup DOM and global mocks
 beforeEach(() => {
@@ -71,7 +72,7 @@ beforeEach(() => {
         destroy: jest.fn()
     }));
     global.window = {
-        location: { 
+        location: {
             origin: 'https://dashban.com',
             pathname: '/',
             href: 'https://dashban.com/',
@@ -79,6 +80,8 @@ beforeEach(() => {
         },
         history: { replaceState: jest.fn() }
     };
+    global.window.Logger = Logger;
+    global.Logger = Logger;
     global.URL = jest.fn().mockImplementation((url) => ({
         searchParams: {
             set: jest.fn()
@@ -94,6 +97,10 @@ beforeEach(() => {
     mockAlert.mockReset();
     mockConfirm.mockReset();
     mockLocalStorage.clear();
+
+    Logger.info = jest.fn();
+    Logger.error = jest.fn();
+    Logger.warn = jest.fn();
 
     // Set up default mock responses for GitHub API calls
     mockFetch.mockImplementation((url) => {
@@ -543,9 +550,9 @@ describe('GitHub Authentication', () => {
                 configurable: true
             });
             
-            // Mock console.warn
-            const originalConsoleWarn = console.warn;
-            console.warn = jest.fn();
+            // Mock logger warn
+            const originalWarn = Logger.warn;
+            Logger.warn = jest.fn();
 
             // Remove all possible sign-in buttons from header
             const header = document.querySelector('header');
@@ -554,10 +561,10 @@ describe('GitHub Authentication', () => {
 
             window.GitHubAuth.updateGitHubSignInUI();
 
-            expect(console.warn).toHaveBeenCalledWith('⚠️ GitHub sign-in button not found in header');
+            expect(Logger.warn).toHaveBeenCalledWith('⚠️ GitHub sign-in button not found in header');
             
             // Restore
-            console.warn = originalConsoleWarn;
+            Logger.warn = originalWarn;
             Object.defineProperty(navigator, 'userAgent', {
                 value: originalUserAgent,
                 configurable: true
@@ -581,7 +588,7 @@ describe('GitHub Authentication', () => {
         });
 
         test('handleInstallationCallback should handle real error during installation', async () => {
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            const consoleSpy = jest.spyOn(Logger, 'error').mockImplementation(() => {});
             global.alert = jest.fn();
 
             // Create an actual error scenario by calling the function with invalid parameters that will cause an error
@@ -601,7 +608,7 @@ describe('GitHub Authentication', () => {
         });
 
         test('validateAndSetInstallation should handle real error', async () => {
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            const consoleSpy = jest.spyOn(Logger, 'error').mockImplementation(() => {});
             
             // Force an error by passing an object that will cause issues
             try {
@@ -1200,7 +1207,7 @@ describe('GitHub Authentication', () => {
 
     describe('Error Handling and Edge Cases', () => {
         test('validateAndSetInstallation should handle error gracefully', async () => {
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            const consoleSpy = jest.spyOn(Logger, 'error').mockImplementation(() => {});
             
             // Mock an error in the validation
             const result = await window.GitHubAuth.validateAndSetInstallation('invalid-id');
@@ -1212,14 +1219,14 @@ describe('GitHub Authentication', () => {
         });
 
         test('handleInstallationCallback should handle error during installation', async () => {
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            const consoleSpy = jest.spyOn(Logger, 'error').mockImplementation(() => {});
             global.alert = jest.fn();
 
             // Force an error by passing invalid data
             try {
                 throw new Error('Installation failed');
             } catch (error) {
-                console.error('❌ Installation callback error:', error);
+                Logger.error('❌ Installation callback error:', error);
                 alert('Installation failed. Please try again.');
             }
 
@@ -1272,16 +1279,16 @@ describe('GitHub Authentication', () => {
             // Mock localStorage to simulate having installation
             localStorage.setItem('github_installation_id', '123456');
 
-            // Mock console.log to capture the timeout callback
-            const originalConsoleLog = console.log;
-            console.log = jest.fn();
+            // Mock logger info to capture the timeout callback
+            const originalInfo = Logger.info;
+            Logger.info = jest.fn();
 
             window.GitHubAuth.signOutGitHub();
 
             // Wait for setTimeout callback
             setTimeout(() => {
-                expect(console.log).toHaveBeenCalledWith('💡 To reconnect, click "Add Access Token" to add your personal access token');
-                console.log = originalConsoleLog;
+                expect(Logger.info).toHaveBeenCalledWith('💡 To reconnect, click "Add Access Token" to add your personal access token');
+                Logger.info = originalInfo;
                 done();
             }, 150);
         });
@@ -1298,16 +1305,16 @@ describe('GitHub Authentication', () => {
             // Clear localStorage to simulate no installation
             localStorage.removeItem('github_installation_id');
 
-            // Mock console.log to capture the timeout callback
-            const originalConsoleLog = console.log;
-            console.log = jest.fn();
+            // Mock logger info to capture the timeout callback
+            const originalInfo = Logger.info;
+            Logger.info = jest.fn();
 
             window.GitHubAuth.signOutGitHub();
 
             // Wait for setTimeout callback
             setTimeout(() => {
-                expect(console.log).toHaveBeenCalledWith('💡 To reconnect, click "Install GitHub App" and add your access token');
-                console.log = originalConsoleLog;
+                expect(Logger.info).toHaveBeenCalledWith('💡 To reconnect, click "Install GitHub App" and add your access token');
+                Logger.info = originalInfo;
                 done();
             }, 150);
         });

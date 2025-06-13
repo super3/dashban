@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function validateDependencies() {
         if (typeof GitHubUtils === 'undefined') {
-            console.error('❌ GitHubUtils not found. Make sure src/utils.js is loaded.');
+            Logger.error('❌ GitHubUtils not found. Make sure src/utils.js is loaded.');
             return false;
         }
         return true;
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    console.log('📊 Status Cards initializing...');
+    Logger.info('📊 Status Cards initializing...');
 
     // ============================================================================
     // UTILITY FUNCTIONS
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function safeQuerySelector(selector) {
         const element = document.querySelector(selector);
         if (!element) {
-            console.log(`❌ Element not found: ${selector}`);
+            Logger.info(`❌ Element not found: ${selector}`);
         }
         return element;
     }
@@ -138,10 +138,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             const badgeUrl = buildBadgeUrl('workflow', workflowFile);
-            console.log('🚀 Fetching Frontend status from:', badgeUrl);
+            Logger.info('🚀 Fetching Frontend status from:', badgeUrl);
             
             const status = await GitHubUtils.parseBadgeSVG(badgeUrl);
-            console.log('🚀 Frontend status result for frontend.yml:', status);
+            Logger.info('🚀 Frontend status result for frontend.yml:', status);
             
             const workflowData = {
                 status: status,
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             updateWorkflowStatusUI(workflowData, skipTimeUpdate);
         } catch (error) {
-            console.error('Error fetching workflow status:', error);
+            Logger.error('Error fetching workflow status:', error);
             
             const fallbackData = {
                 status: 'unknown',
@@ -172,10 +172,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add stronger cache busting for CI status checks
             const timestamp = Date.now();
             const badgeUrl = `${buildBadgeUrl('workflow', workflowFile)}?t=${timestamp}&cacheSeconds=0`;
-            console.log('🔍 Fetching CI status from:', badgeUrl);
+            Logger.info('🔍 Fetching CI status from:', badgeUrl);
             
             const status = await GitHubUtils.parseBadgeSVG(badgeUrl);
-            console.log('🔍 CI status result for test.yml:', status);
+            Logger.info('🔍 CI status result for test.yml:', status);
             
             const ciData = {
                 status: status,
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             updateCIStatusUI(ciData);
         } catch (error) {
-            console.error('Error fetching CI status:', error);
+            Logger.error('Error fetching CI status:', error);
             
             const fallbackData = {
                 status: 'unknown',
@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function fetchCoverageStatus() {
         try {
             const badgeUrl = `${buildBadgeUrl('coverage')}?t=${Date.now()}`;
-            console.log('📊 Fetching coverage from:', badgeUrl);
+            Logger.info('📊 Fetching coverage from:', badgeUrl);
             
             const svgText = await fetch(badgeUrl).then(r => r.text());
             const coverage = parseCoverageFromSVG(svgText);
@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             updateCoverageStatusUI(coverageData);
         } catch (error) {
-            console.error('Error fetching coverage status:', error);
+            Logger.error('Error fetching coverage status:', error);
             
             const fallbackData = {
                 coverage: 'unknown',
@@ -248,13 +248,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateCIStatusUI(ciData) {
-        console.log('🎯 Updating CI status UI with:', ciData);
+        Logger.info('🎯 Updating CI status UI with:', ciData);
         const statusElement = safeQuerySelector(CONFIG.SELECTORS.CI_STATUS);
         
         if (!statusElement) return;
         
         const config = STATUS_CONFIGS.CI[ciData.status] || STATUS_CONFIGS.CI.unknown;
-        console.log('🎯 Using config for CI status:', config);
+        Logger.info('🎯 Using config for CI status:', config);
         
         statusElement.innerHTML = createStatusHTML(config, ciData.status);
         makeElementClickable(statusElement, ciData.htmlUrl);
@@ -292,13 +292,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================================================
     
     function parseCoverageFromSVG(svgText) {
-        console.log('📊 Parsing coverage SVG...');
+        Logger.info('📊 Parsing coverage SVG...');
         
         // Method 1: Look for percentage patterns in SVG text content
         const percentMatch = svgText.match(/(\d+(?:\.\d+)?)%/);
         if (percentMatch) {
             const percent = parseFloat(percentMatch[1]);
-            console.log(`📊 Found coverage percentage: ${percent}%`);
+            Logger.info(`📊 Found coverage percentage: ${percent}%`);
             return percent;
         }
         
@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const percentInText = textContent.match(/(\d+(?:\.\d+)?)%/);
             if (percentInText) {
                 const percent = parseFloat(percentInText[1]);
-                console.log(`📊 Found coverage in text: ${percent}%`);
+                Logger.info(`📊 Found coverage in text: ${percent}%`);
                 return percent;
             }
         }
@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Method 3: Look for common status words
         const lowerText = svgText.toLowerCase();
         if (lowerText.includes('unknown') || lowerText.includes('pending') || lowerText.includes('inaccessible')) {
-            console.log('📊 Coverage status: unknown/pending/inaccessible');
+            Logger.info('📊 Coverage status: unknown/pending/inaccessible');
             return 'unknown';
         }
         
@@ -327,12 +327,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const number = parseFloat(numberMatch[1]);
             // Assume it's a percentage if it's reasonable
             if (number >= 0 && number <= 100) {
-                console.log(`📊 Found potential coverage number: ${number}%`);
+                Logger.info(`📊 Found potential coverage number: ${number}%`);
                 return number;
             }
         }
         
-        console.log('📊 Could not parse coverage from SVG');
+        Logger.info('📊 Could not parse coverage from SVG');
         return 'unknown';
     }
 
@@ -377,19 +377,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Also refresh our status detection and timestamp
                 refreshAllStatuses();
                 
-                console.log('Badge refreshed manually');
+                Logger.info('Badge refreshed manually');
             });
         }
         
         if (badgeImg) {
             badgeImg.addEventListener('load', function() {
-                console.log('Badge loaded successfully');
-                console.log('Badge dimensions:', this.naturalWidth, 'x', this.naturalHeight);
-                console.log('Badge src:', this.src);
+                Logger.info('Badge loaded successfully');
+                Logger.info('Badge dimensions:', this.naturalWidth, 'x', this.naturalHeight);
+                Logger.info('Badge src:', this.src);
             });
             
             badgeImg.addEventListener('error', function() {
-                console.error('Badge failed to load');
+                Logger.error('Badge failed to load');
             });
         }
     }
@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setInterval(refreshAllStatuses, CONFIG.INTERVALS.REFRESH_ALL);
         setInterval(updateTimestamp, CONFIG.INTERVALS.UPDATE_TIMESTAMP);
 
-        console.log('Status Cards initialized successfully!');
+        Logger.info('Status Cards initialized successfully!');
     }
 
     // ============================================================================
