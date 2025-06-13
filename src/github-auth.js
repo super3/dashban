@@ -72,7 +72,7 @@ function initializeGitHubAuth() {
             validateAndSetInstallation(savedInstallationId);
         } else if (savedToken) {
             // We have a token but no installation ID - try to validate token
-            console.log('🔄 Found saved token without installation ID, validating...');
+            Logger.info('🔄 Found saved token without installation ID, validating...');
             githubAuth.isAuthenticated = true; // Assume app is installed
             validateAndSetToken(savedToken);
             return; // Don't call updateGitHubSignInUI() yet, let validateAndSetToken() do it
@@ -94,18 +94,18 @@ function signInWithGitHub() {
 
 async function handleInstallationCallback(installationId, authCode = null) {
     try {
-        console.log('🔄 Processing GitHub App installation...');
+        Logger.info('🔄 Processing GitHub App installation...');
         
         // Store installation ID
         githubAuth.installationId = installationId;
         githubAuth.isAuthenticated = true;
         localStorage.setItem('github_installation_id', installationId);
         
-        console.log('✅ GitHub App installed successfully!');
+        Logger.info('✅ GitHub App installed successfully!');
         
         if (authCode) {
             // We have an OAuth authorization code
-            console.log('🔄 OAuth authorization code received');
+            Logger.info('🔄 OAuth authorization code received');
             
             // Show the GitHub token modal instead of browser prompt
             showGitHubTokenModal();
@@ -114,14 +114,14 @@ async function handleInstallationCallback(installationId, authCode = null) {
             updateGitHubSignInUI();
         }
     } catch (error) {
-        console.error('❌ Installation callback error:', error);
+        Logger.error('❌ Installation callback error:', error);
         alert('Installation failed. Please try again.');
     }
 }
 
 async function validateAndSetToken(token) {
     try {
-        console.log('🔄 Validating GitHub token...');
+        Logger.info('🔄 Validating GitHub token...');
         
         const response = await fetch(`${GITHUB_CONFIG.apiBaseUrl}/user`, {
             headers: {
@@ -143,14 +143,14 @@ async function validateAndSetToken(token) {
         
         localStorage.setItem('github_access_token', token);
         
-        console.log('✅ GitHub authentication successful:', user.login);
+        Logger.info('✅ GitHub authentication successful:', user.login);
         updateGitHubSignInUI();
         
         return true;
     } catch (error) {
         // Only log errors in non-test environments
         if (typeof jest === 'undefined') {
-            console.error('❌ Token validation failed:', error);
+            Logger.error('❌ Token validation failed:', error);
         }
         signOutGitHub();
         return false;
@@ -159,7 +159,7 @@ async function validateAndSetToken(token) {
 
 async function validateAndSetInstallation(installationId) {
     try {
-        console.log('🔄 Validating GitHub App installation...');
+        Logger.info('🔄 Validating GitHub App installation...');
         
         // Store installation
         githubAuth.installationId = installationId;
@@ -175,14 +175,14 @@ async function validateAndSetInstallation(installationId) {
         
         return true;
     } catch (error) {
-        console.error('❌ Installation validation failed:', error);
+        Logger.error('❌ Installation validation failed:', error);
         signOutGitHub();
         return false;
     }
 }
 
 function signOutGitHub() {
-    console.log('🔓 Signing out of GitHub App...');
+    Logger.info('🔓 Signing out of GitHub App...');
     
     // Check if app was installed before clearing state
     const hadInstallation = !!(githubAuth.installationId || localStorage.getItem('github_installation_id'));
@@ -194,7 +194,7 @@ function signOutGitHub() {
     if (hadInstallation) {
         // Keep installation state, just remove token
         githubAuth.isAuthenticated = true; // App still installed
-        console.log('🔄 Cleared access token but keeping app installation');
+        Logger.info('🔄 Cleared access token but keeping app installation');
     } else {
         // No installation, clear everything
         githubAuth.isAuthenticated = false;
@@ -207,15 +207,15 @@ function signOutGitHub() {
     // Update UI
     updateGitHubSignInUI();
     
-    console.log('✅ Successfully signed out and cleared access token');
+    Logger.info('✅ Successfully signed out and cleared access token');
     
     // Show appropriate reconnection message
     setTimeout(() => {
         if (window.location.href.includes('localhost') || window.location.href.includes('127.0.0.1')) {
             if (hadInstallation) {
-                console.log('💡 To reconnect, click "Add Access Token" to add your personal access token');
+                Logger.info('💡 To reconnect, click "Add Access Token" to add your personal access token');
             } else {
-                console.log('💡 To reconnect, click "Install GitHub App" and add your access token');
+                Logger.info('💡 To reconnect, click "Install GitHub App" and add your access token');
             }
         }
     }, 100);
@@ -229,13 +229,13 @@ function updateGitHubSignInUI() {
     if (!signInButton) {
         // Only warn in non-test environments (when we're not in JSDOM)
         if (typeof navigator !== 'undefined' && !navigator.userAgent.includes('jsdom')) {
-            console.warn('⚠️ GitHub sign-in button not found in header');
+            Logger.warn('⚠️ GitHub sign-in button not found in header');
         }
         return;
     }
     
     // Debug logging to see authentication state
-    console.log('🔄 Updating GitHub Sign-In UI - Auth state:', {
+    Logger.info('🔄 Updating GitHub Sign-In UI - Auth state:', {
         isAuthenticated: githubAuth.isAuthenticated,
         hasAccessToken: !!githubAuth.accessToken,
         hasUser: !!githubAuth.user,

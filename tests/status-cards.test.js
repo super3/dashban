@@ -4,6 +4,8 @@
 // TEST UTILITIES AND HELPERS
 // ============================================================================
 
+const Logger = require('../src/logger.js');
+
 function setupStatusCardsDOM() {
   document.body.innerHTML = `
     <div data-frontend-status></div>
@@ -17,6 +19,8 @@ function setupStatusCardsDOM() {
   
   global.window = global.window || {};
   global.window.open = jest.fn();
+  global.window.Logger = Logger;
+  global.Logger = Logger;
 }
 
 function setupMocks() {
@@ -32,9 +36,9 @@ function setupMocks() {
     text: async () => '<svg><text>85%</text></svg>'
   }));
   
-  // Mock console methods
-  console.log = jest.fn();
-  console.error = jest.fn();
+  // Mock logger methods
+  Logger.info = jest.fn();
+  Logger.error = jest.fn();
   
   // Mock timers
   jest.useFakeTimers();
@@ -228,12 +232,12 @@ describe('Status Cards Functions', () => {
       jest.resetModules();
       delete global.GitHubUtils;
       
-      console.error = jest.fn();
+      Logger.error = jest.fn();
       
       require('../src/status-cards.js');
       document.dispatchEvent(new Event('DOMContentLoaded'));
       
-      expect(console.error).toHaveBeenCalledWith('❌ GitHubUtils not found. Make sure src/utils.js is loaded.');
+      expect(Logger.error).toHaveBeenCalledWith('❌ GitHubUtils not found. Make sure src/utils.js is loaded.');
     });
 
     test('should return false when GitHubUtils is missing', () => {
@@ -350,7 +354,7 @@ describe('Status Cards Functions', () => {
       test('should log error and return null when element not found', () => {
         const element = statusAPI.safeQuerySelector('[data-nonexistent]');
         expect(element).toBeNull();
-        expect(console.log).toHaveBeenCalledWith('❌ Element not found: [data-nonexistent]');
+        expect(Logger.info).toHaveBeenCalledWith('❌ Element not found: [data-nonexistent]');
       });
     });
   });
@@ -409,7 +413,7 @@ describe('Status Cards Functions', () => {
       refreshBtn.click();
       
       expect(badgeImg.src).toContain(`?t=${mockNow}`);
-      expect(console.log).toHaveBeenCalledWith('Badge refreshed manually');
+      expect(Logger.info).toHaveBeenCalledWith('Badge refreshed manually');
     });
 
     test('should handle badge image load event', () => {
@@ -421,9 +425,9 @@ describe('Status Cards Functions', () => {
       
       badgeImg.dispatchEvent(new Event('load'));
       
-      expect(console.log).toHaveBeenCalledWith('Badge loaded successfully');
-      expect(console.log).toHaveBeenCalledWith('Badge dimensions:', 100, 'x', 20);
-      expect(console.log).toHaveBeenCalledWith('Badge src:', 'test-url.svg');
+      expect(Logger.info).toHaveBeenCalledWith('Badge loaded successfully');
+      expect(Logger.info).toHaveBeenCalledWith('Badge dimensions:', 100, 'x', 20);
+      expect(Logger.info).toHaveBeenCalledWith('Badge src:', 'test-url.svg');
     });
 
     test('should handle badge image error event', () => {
@@ -431,7 +435,7 @@ describe('Status Cards Functions', () => {
       
       badgeImg.dispatchEvent(new Event('error'));
       
-      expect(console.error).toHaveBeenCalledWith('Badge failed to load');
+      expect(Logger.error).toHaveBeenCalledWith('Badge failed to load');
     });
 
     test('should handle missing refresh button gracefully', () => {
@@ -458,7 +462,7 @@ describe('Status Cards Functions', () => {
         refreshBtn.click();
       }).not.toThrow();
       
-      expect(console.log).toHaveBeenCalledWith('Badge refreshed manually');
+      expect(Logger.info).toHaveBeenCalledWith('Badge refreshed manually');
     });
   });
 
@@ -896,8 +900,8 @@ describe('Status Cards Functions', () => {
       global.GitHubUtils.parseBadgeSVG.mockRejectedValue(new Error('Network error'));
       
       await statusAPI.fetchWorkflowStatus();
-      
-      expect(console.error).toHaveBeenCalledWith('Error fetching workflow status:', expect.any(Error));
+
+      expect(Logger.error).toHaveBeenCalledWith('Error fetching workflow status:', expect.any(Error));
     });
 
     test('should skip timestamp update when requested', async () => {
@@ -924,8 +928,8 @@ describe('Status Cards Functions', () => {
       global.GitHubUtils.parseBadgeSVG.mockRejectedValue(new Error('CI fetch error'));
       
       await statusAPI.fetchCIStatus();
-      
-      expect(console.error).toHaveBeenCalledWith('Error fetching CI status:', expect.any(Error));
+
+      expect(Logger.error).toHaveBeenCalledWith('Error fetching CI status:', expect.any(Error));
     });
   });
 
@@ -946,8 +950,8 @@ describe('Status Cards Functions', () => {
       global.fetch.mockRejectedValue(new Error('Coverage fetch error'));
       
       await statusAPI.fetchCoverageStatus();
-      
-      expect(console.error).toHaveBeenCalledWith('Error fetching coverage status:', expect.any(Error));
+
+      expect(Logger.error).toHaveBeenCalledWith('Error fetching coverage status:', expect.any(Error));
     });
   });
 
@@ -1062,6 +1066,9 @@ describe('Status Cards Functions', () => {
       const code = fs.readFileSync(require.resolve('../src/status-cards.js'), 'utf8');
       const sandbox = {
         console: { log: jest.fn(), error: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
         GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
         document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
         fetch: async () => ({ text: async ()=>'' }),
@@ -1081,6 +1088,9 @@ describe('Status Cards Functions', () => {
       const mockModule = { exports: {} };
       const sandbox = {
         console: { log: jest.fn(), error: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
         GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
         document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
         fetch: async () => ({ text: async ()=>'' }),
@@ -1104,6 +1114,7 @@ describe('Status Cards Functions', () => {
       const mockModule = { exports: null };
       const sandbox = {
         console: { log: jest.fn(), error: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
         GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
         document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
         fetch: async () => ({ text: async ()=>'' }),
@@ -1125,6 +1136,7 @@ describe('Status Cards Functions', () => {
       const mockModule = {};
       const sandbox = {
         console: { log: jest.fn(), error: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
         GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
         document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
         fetch: async () => ({ text: async ()=>'' }),
@@ -1145,6 +1157,7 @@ describe('Status Cards Functions', () => {
       const code = fs.readFileSync(require.resolve('../src/status-cards.js'), 'utf8');
       const sandbox = {
         console: { log: jest.fn(), error: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
         GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
         document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
         fetch: async () => ({ text: async ()=>'' }),
@@ -1166,6 +1179,7 @@ describe('Status Cards Functions', () => {
       const code = fs.readFileSync(require.resolve('../src/status-cards.js'), 'utf8');
       const sandbox = {
         console: { log: jest.fn(), error: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
         GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
         document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
         fetch: async () => ({ text: async ()=>'' }),
@@ -1187,6 +1201,7 @@ describe('Status Cards Functions', () => {
       const code = fs.readFileSync(require.resolve('../src/status-cards.js'), 'utf8');
       const sandbox = {
         console: { log: jest.fn(), error: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
         GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
         document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
         fetch: async () => ({ text: async ()=>'' }),
@@ -1208,6 +1223,7 @@ describe('Status Cards Functions', () => {
       const code = fs.readFileSync(require.resolve('../src/status-cards.js'), 'utf8');
       const sandbox = {
         console: { log: jest.fn(), error: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
         GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
         document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
         fetch: async () => ({ text: async ()=>'' }),
@@ -1229,6 +1245,7 @@ describe('Status Cards Functions', () => {
       const code = fs.readFileSync(require.resolve('../src/status-cards.js'), 'utf8');
       const sandbox = {
         console: { log: jest.fn(), error: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
         GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
         document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
         fetch: async () => ({ text: async ()=>'' }),
@@ -1251,6 +1268,7 @@ describe('Status Cards Functions', () => {
       const code = fs.readFileSync(require.resolve('../src/status-cards.js'), 'utf8');
       const sandbox = {
         console: { log: jest.fn(), error: jest.fn() },
+        Logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
         GitHubUtils: { parseBadgeSVG: async ()=>'success', getTimeAgo: ()=>'1m' },
         document: { addEventListener: (_, cb)=>cb(), querySelector: ()=>null, querySelectorAll: ()=>[], getElementById: ()=>null },
         fetch: async () => ({ text: async ()=>'' }),

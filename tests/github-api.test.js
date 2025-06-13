@@ -22,6 +22,7 @@ const mockLocalStorage = {
 const mockFetch = jest.fn();
 const mockAlert = jest.fn();
 const mockConfirm = jest.fn();
+const Logger = require('../src/logger.js');
 
 // Setup DOM and global mocks
 beforeEach(() => {
@@ -39,6 +40,7 @@ beforeEach(() => {
     global.alert = mockAlert;
     global.confirm = mockConfirm;
     global.navigator = { userAgent: 'test' };
+    global.Logger = Logger;
     
     // Override window.localStorage to ensure the mock is used
     Object.defineProperty(window, 'localStorage', {
@@ -65,6 +67,7 @@ beforeEach(() => {
             sanitize: jest.fn((html) => html)
         }
     };
+    global.window.Logger = Logger;
 
     // Mock window functions needed by GitHub API
     global.window.getPriorityColor = jest.fn((priority) => 'bg-red-100 text-red-800');

@@ -2,11 +2,11 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Check essential dependencies
     if (typeof Sortable === 'undefined') {
-        console.error('❌ SortableJS not found. Make sure SortableJS is loaded.');
+        Logger.error('❌ SortableJS not found. Make sure SortableJS is loaded.');
         return;
     }
     
-    console.log('📋 Kanban Board initializing...');
+    Logger.info('📋 Kanban Board initializing...');
 
     // Initialize sortable lists for each column
     const columns = ['info', 'backlog', 'inprogress', 'review', 'done'];
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (issueNumber && evt.from.id !== evt.to.id) {
                     // This is a GitHub issue that was moved to a different column
-                    console.log(`🏷️ GitHub issue #${issueNumber} moved from ${evt.from.id} to ${newColumnId}`);
+                    Logger.info(`🏷️ GitHub issue #${issueNumber} moved from ${evt.from.id} to ${newColumnId}`);
                     
                     // Update GitHub issue labels if GitHub integration is available
                     if (window.GitHub && window.GitHub.updateGitHubIssueLabels) {
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.GitHub.updateCardIndicators(draggedElement, newColumnId);
                 }
                 
-                console.log('Task moved from', evt.from.id, 'to', evt.to.id);
+                Logger.info('Task moved from', evt.from.id, 'to', evt.to.id);
             }
         });
     });
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (githubIssue) {
                     // Use GitHub issue data to create the task element
                     taskElement = window.GitHub.createGitHubIssueElement(githubIssue, false);
-                    console.log('✅ Created GitHub issue and local task');
+                    Logger.info('✅ Created GitHub issue and local task');
                     
                     // Add to appropriate column
                     document.getElementById(column).appendChild(taskElement);
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
             } catch (error) {
-                console.error('Error during GitHub issue creation:', error);
+                Logger.error('Error during GitHub issue creation:', error);
                 alert('An error occurred while creating the GitHub issue. Please try again.');
                 
                 // Restore submit button
@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (e) {
                 // Only log errors in non-test environments
                 if (typeof jest === 'undefined') {
-                    console.error('Error loading collapse states:', e);
+                    Logger.error('Error loading collapse states:', e);
                 }
                 // Clear invalid data
                 localStorage.removeItem('columnCollapseStates');
@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const taskElement = e.target.closest('.bg-white.border');
         if (taskElement) {
             // Add edit functionality here
-            console.log('Edit task:', taskElement);
+            Logger.info('Edit task:', taskElement);
         }
     });
 
@@ -416,7 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.getPriorityColor = getPriorityColor;
     window.getCategoryColor = getCategoryColor;
     
-    console.log('✅ Kanban Board initialized successfully!');
+    Logger.info('✅ Kanban Board initialized successfully!');
 
     // Export certain functions for testing environments
     const testAPI = {
