@@ -37,20 +37,12 @@ This project includes a GitHub Actions workflow for automatic deployment to GitH
 
 Your Dashban application will then be available at: `https://yourusername.github.io/dashban`
 
-## 🔧 GitHub App Setup
+## 🔧 GitHub Personal Access Token Setup
 
-To enable GitHub issue creation directly from Dashban:
+To create GitHub issues directly from Dashban:
 
-### 1. Create GitHub App
-1. Go to **Settings > Developer settings > GitHub Apps > New GitHub App**
-2. Set basic details (name: `dashban-app`, homepage/callback URL: your app URL)
-3. Disable webhooks (uncheck "Active")
-
-### 2. Set Permissions
-- **Repository permissions**: Issues (`Read and write`), Metadata (`Read`)
-- All other permissions: `No access`
-
-### 3. Configure & Install
-1. Copy your **App ID** and **App Name** from the app settings
-2. Update `src/kanban.js` with your App ID, App Name, and repository details
-3. Install the app on your repository
+1. Go to **Settings → Developer settings → Personal access tokens → Fine-grained tokens**
+2. Click **"Generate new token"**
+3. Select **this repository** as the resource owner
+4. Under permissions, grant **"Issues"** with **Read and Write** access
+5. Generate the token and add it using the **Add Access Token** button in Dashban

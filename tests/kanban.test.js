@@ -357,7 +357,7 @@ describe('Kanban Board Core Functionality', () => {
 
       // Should show auth warning
       expect(global.alert).toHaveBeenCalledWith(
-        'Please install the GitHub App and add a Personal Access Token first to create GitHub issues'
+        'Please add a Personal Access Token first to create GitHub issues'
       );
     });
   });
@@ -666,7 +666,7 @@ describe('Kanban Board Core Functionality', () => {
       
       // Should show auth warning
       expect(global.alert).toHaveBeenCalledWith(
-        'Please install the GitHub App and add a Personal Access Token first to create GitHub issues'
+        'Please add a Personal Access Token first to create GitHub issues'
       );
     });
 

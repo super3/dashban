@@ -83,13 +83,8 @@ function initializeGitHubAuth() {
 }
 
 function signInWithGitHub() {
-    // For GitHub Apps, we redirect to the installation URL
-    // This will install the app on the user's account/organization
-    const installUrl = new URL(GITHUB_CONFIG.installationUrl);
-    installUrl.searchParams.set('state', window.location.href); // Return to current page
-    
-    // Redirect to GitHub App installation
-    window.location.href = installUrl.toString();
+    // GitHub App step removed - just prompt for a Personal Access Token
+    showGitHubTokenModal();
 }
 
 async function handleInstallationCallback(installationId, authCode = null) {
@@ -212,11 +207,7 @@ function signOutGitHub() {
     // Show appropriate reconnection message
     setTimeout(() => {
         if (window.location.href.includes('localhost') || window.location.href.includes('127.0.0.1')) {
-            if (hadInstallation) {
-                console.log('💡 To reconnect, click "Add Access Token" to add your personal access token');
-            } else {
-                console.log('💡 To reconnect, click "Install GitHub App" and add your access token');
-            }
+            console.log('💡 To reconnect, click "Add Access Token" to add your personal access token');
         }
     }, 100);
 }
@@ -276,17 +267,17 @@ function updateGitHubSignInUI() {
             promptForAccessToken();
         };
     } else {
-        // Not installed
+        // Not authenticated
         signInButton.innerHTML = `
             <i class="fab fa-github"></i>
-            <span>Install GitHub App</span>
+            <span>Add Access Token</span>
         `;
-        signInButton.title = 'Install GitHub App to create issues';
+        signInButton.title = 'Add Personal Access Token to create issues';
         signInButton.href = '#';
         signInButton.className = 'flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
         signInButton.onclick = (e) => {
             e.preventDefault();
-            signInWithGitHub();
+            promptForAccessToken();
         };
     }
     
