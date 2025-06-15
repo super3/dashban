@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             if (!window.GitHub.githubAuth.isAuthenticated || !window.GitHub.githubAuth.accessToken) {
-                alert('Please install the GitHub App and add a Personal Access Token first to create GitHub issues');
+                alert('Please connect to GitHub with a Personal Access Token first to create GitHub issues');
                 return;
             }
             
