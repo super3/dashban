@@ -14,6 +14,10 @@
 
 </div>
 
+<p align="center">
+  <img src="src/screenshot.png" alt="Dashban Kanban Board Screenshot" width="800">
+</p>
+
 ## Quick Start
 ```bash
 git clone https://github.com/super3/dashban.git && cd dashban
