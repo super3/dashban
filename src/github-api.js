@@ -8,7 +8,7 @@ function isTestEnvironment() {
 // Archive GitHub issue by adding "archive" label
 async function archiveGitHubIssue(issueNumber, taskElement) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
-        Logger.info('❌ Not authenticated with GitHub App - cannot archive issue');
+        console.log('❌ Not authenticated with GitHub App - cannot archive issue');
         // Remove from UI anyway
         taskElement.remove();
         window.updateColumnCounts();
@@ -16,7 +16,7 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
     }
 
     try {
-        Logger.info(`🗃️ Archiving issue #${issueNumber}...`);
+        console.log(`🗃️ Archiving issue #${issueNumber}...`);
 
         // Add "archive" label to the issue
         const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
@@ -36,14 +36,14 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
             throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
         }
 
-        Logger.info(`✅ Successfully archived issue #${issueNumber}`);
+        console.log(`✅ Successfully archived issue #${issueNumber}`);
         
         // Remove from UI
         taskElement.remove();
         window.updateColumnCounts();
         
     } catch (error) {
-        Logger.error('❌ Failed to archive GitHub issue:', error);
+        console.error('❌ Failed to archive GitHub issue:', error);
         
         // Show user-friendly error message but still remove from UI
         alert(`Failed to add archive label to GitHub issue: ${error.message}\n\nThe task will be removed from the board anyway.`);
@@ -55,12 +55,12 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
 // Update GitHub issue labels when moved between columns
 async function updateGitHubIssueLabels(issueNumber, newColumn) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
-        Logger.info('❌ Not authenticated with GitHub App - cannot update issue labels');
+        console.log('❌ Not authenticated with GitHub App - cannot update issue labels');
         return;
     }
 
     try {
-        Logger.info(`🔄 Updating labels for issue #${issueNumber} moved to ${newColumn}...`);
+        console.log(`🔄 Updating labels for issue #${issueNumber} moved to ${newColumn}...`);
 
         // First, get current issue to preserve existing labels
         const getResponse = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}?_t=${Date.now()}`, {
@@ -115,10 +115,10 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
 
         const columnDisplayName = newColumn === 'inprogress' ? 'In Progress' : 
                                  newColumn.charAt(0).toUpperCase() + newColumn.slice(1);
-        Logger.info(`✅ Successfully updated labels for issue #${issueNumber} (moved to ${columnDisplayName})`);
+        console.log(`✅ Successfully updated labels for issue #${issueNumber} (moved to ${columnDisplayName})`);
         
     } catch (error) {
-        Logger.error('❌ Failed to update GitHub issue labels:', error);
+        console.error('❌ Failed to update GitHub issue labels:', error);
         
         // Show user-friendly error message but don't revert the UI change
         const columnDisplayName = newColumn === 'inprogress' ? 'In Progress' : 
@@ -130,12 +130,12 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
 // Close GitHub issue when moved to Done column
 async function closeGitHubIssue(issueNumber) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
-        Logger.info('❌ Not authenticated with GitHub App - cannot close issue');
+        console.log('❌ Not authenticated with GitHub App - cannot close issue');
         return;
     }
 
     try {
-        Logger.info(`🔒 Closing GitHub issue #${issueNumber}...`);
+        console.log(`🔒 Closing GitHub issue #${issueNumber}...`);
 
         // Close the issue via API
         const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
@@ -155,10 +155,10 @@ async function closeGitHubIssue(issueNumber) {
             throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
         }
 
-        Logger.info(`✅ Successfully closed GitHub issue #${issueNumber}`);
+        console.log(`✅ Successfully closed GitHub issue #${issueNumber}`);
         
     } catch (error) {
-        Logger.error('❌ Failed to close GitHub issue:', error);
+        console.error('❌ Failed to close GitHub issue:', error);
         
         // Show user-friendly error message but don't revert the UI change
         alert(`Failed to close GitHub issue: ${error.message}\n\nThe issue was moved to Done on the board but wasn't closed on GitHub.`);
@@ -168,12 +168,12 @@ async function closeGitHubIssue(issueNumber) {
 // Create GitHub issue via API
 async function createGitHubIssue(title, description, labels = []) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
-        Logger.info('❌ Not authenticated with GitHub App - cannot create issue');
+        console.log('❌ Not authenticated with GitHub App - cannot create issue');
         return null;
     }
 
     try {
-        Logger.info('🔄 Creating GitHub issue...');
+        console.log('🔄 Creating GitHub issue...');
 
         const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues`, {
             method: 'POST',
@@ -195,13 +195,13 @@ async function createGitHubIssue(title, description, labels = []) {
         }
 
         const issue = await response.json();
-        Logger.info('✅ Successfully created GitHub issue:', issue.number);
+        console.log('✅ Successfully created GitHub issue:', issue.number);
         return issue;
 
     } catch (error) {
         // Only log errors in non-test environments
         if (!isTestEnvironment()) {
-            Logger.error('❌ Failed to create GitHub issue:', error);
+            console.error('❌ Failed to create GitHub issue:', error);
         }
         
         // Show user-friendly error message
@@ -217,7 +217,7 @@ async function createGitHubIssue(title, description, labels = []) {
 // GitHub Issues Integration
 async function loadGitHubIssues() {
     try {
-        Logger.info('Loading GitHub issues...');
+        console.log('Loading GitHub issues...');
         
         // Fetch both open and closed issues with cache-busting
         const timestamp = Date.now();
@@ -243,7 +243,7 @@ async function loadGitHubIssues() {
             !issue.labels.some(label => label.name.toLowerCase() === 'archive')
         );
         
-        Logger.info(`Found ${openIssues.length} open and ${closedIssues.length} closed GitHub issues (filtered out archived issues)`);
+        console.log(`Found ${openIssues.length} open and ${closedIssues.length} closed GitHub issues (filtered out archived issues)`);
         
         // Clear existing issue cards (but keep manually created tasks)
         const columns = ['backlog', 'inprogress', 'review', 'done'];
@@ -297,19 +297,19 @@ async function loadGitHubIssues() {
         // Apply completed sections to all cards in the done column
         window.GitHubUI.applyCompletedSectionsToColumn();
         
-        Logger.info('✅ GitHub issues loaded successfully');
+        console.log('✅ GitHub issues loaded successfully');
         
     } catch (error) {
         // Only log errors in non-test environments to avoid console noise during tests
         if (!isTestEnvironment()) {
-            Logger.error('❌ Failed to load GitHub issues:', error);
+            console.error('❌ Failed to load GitHub issues:', error);
         }
         // Don't show alert for loading issues - just log the error
     }
 }
 
 function initializeGitHubIssues() {
-    Logger.info('🔄 Initializing GitHub issues integration...');
+    console.log('🔄 Initializing GitHub issues integration...');
     
     // Add skeleton cards while loading
     const columns = ['backlog', 'inprogress', 'review', 'done'];

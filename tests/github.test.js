@@ -3,8 +3,6 @@
  * Tests the coordination between auth, API, and UI modules
  */
 
-const Logger = require('../src/logger.js');
-
 // Setup DOM and global mocks
 beforeEach(() => {
     // Reset DOM
@@ -23,11 +21,6 @@ beforeEach(() => {
         <div id="done"></div>
     `;
 
-    Logger.info = jest.fn();
-    Logger.error = jest.fn();
-    Logger.warn = jest.fn();
-    global.Logger = Logger;
-
     // Mock global objects
     global.window = {
         location: { 
@@ -43,7 +36,6 @@ beforeEach(() => {
             sanitize: jest.fn((html) => html)
         }
     };
-    global.window.Logger = Logger;
 
     // Load the kanban module first to set up window functions
     delete require.cache[require.resolve('../src/kanban.js')];

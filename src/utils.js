@@ -4,31 +4,31 @@ function parseStatusFromSVG(svgText) {
     // Convert to lowercase for easier matching
     const lowerText = svgText.toLowerCase();
     
-    Logger.info('Searching for status words in SVG...');
+    console.log('Searching for status words in SVG...');
     
     // Look for common status words
     if (lowerText.includes('passing') || lowerText.includes('success')) {
-        Logger.info('✅ Found "passing" or "success" in SVG');
+        console.log('✅ Found "passing" or "success" in SVG');
         return 'success';
     }
     
     if (lowerText.includes('failing') || lowerText.includes('failure') || lowerText.includes('failed')) {
-        Logger.info('❌ Found "failing" or "failure" in SVG');
+        console.log('❌ Found "failing" or "failure" in SVG');
         return 'failure';
     }
     
     if (lowerText.includes('pending') || lowerText.includes('running') || lowerText.includes('in progress')) {
-        Logger.info('🔄 Found "pending" or "running" in SVG');
+        console.log('🔄 Found "pending" or "running" in SVG');
         return 'in_progress';
     }
     
     if (lowerText.includes('no status') || lowerText.includes('unknown')) {
-        Logger.info('❔ Found "no status" or "unknown" in SVG');
+        console.log('❔ Found "no status" or "unknown" in SVG');
         return 'unknown';
     }
     
     // If we can't find specific status words, log what we found
-    Logger.info('⚠️ No recognized status words found. SVG might contain:', 
+    console.log('⚠️ No recognized status words found. SVG might contain:', 
                svgText.match(/>([^<]+)</g)?.map(match => match.slice(1, -1)).filter(text => text.trim()));
     
     return 'unknown';
@@ -48,7 +48,7 @@ function parseShieldsStatus(statusValue) {
     if (!statusValue) return 'unknown';
     
     const status = statusValue.toLowerCase();
-    Logger.info('Status value from shields.io:', status);
+    console.log('Status value from shields.io:', status);
     
     // Map shields.io status values to our status system
     if (status.includes('passing') || status.includes('success')) {
@@ -78,14 +78,14 @@ async function parseBadgeSVG(badgeUrl) {
         }
         
         const svgText = await response.text();
-        Logger.info('Badge SVG content:', svgText);
+        console.log('Badge SVG content:', svgText);
         
         // Parse the SVG text for status words
         const status = parseStatusFromSVG(svgText);
         return status;
         
     } catch (error) {
-        Logger.error('Error fetching SVG badge:', error);
+        console.error('Error fetching SVG badge:', error);
         return 'unknown';
     }
 }

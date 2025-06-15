@@ -2,8 +2,6 @@
  * GitHub UI Tests
  */
 
-const Logger = require('../src/logger.js');
-
 // Setup DOM and global mocks
 beforeEach(() => {
     // Reset DOM
@@ -13,11 +11,6 @@ beforeEach(() => {
         <div id="review"></div>
         <div id="done"></div>
     `;
-
-    Logger.info = jest.fn();
-    Logger.error = jest.fn();
-    Logger.warn = jest.fn();
-    global.Logger = Logger;
 
     // Mock SortableJS
     global.Sortable = jest.fn().mockImplementation(() => ({
@@ -39,7 +32,6 @@ beforeEach(() => {
         getCategoryColor: jest.fn((category) => 'bg-green-100 text-green-800'),
         GitHubUI: {}
     };
-    global.window.Logger = Logger;
 
     // Load the module
     require('../src/github-ui.js');

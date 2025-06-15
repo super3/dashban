@@ -100,7 +100,7 @@ function renderMarkdown(text) {
             return html;
             
         } catch (error) {
-            Logger.error('Error rendering markdown with markdown-it:', error);
+            console.error('Error rendering markdown with markdown-it:', error);
             // Fall through to regex-based fallback
         }
     }

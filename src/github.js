@@ -3,7 +3,7 @@
 
 // Initialize GitHub integration when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    Logger.info('🔄 Initializing GitHub integration...');
+    console.log('🔄 Initializing GitHub integration...');
     
     // Initialize authentication modal listeners
     window.GitHubAuth.initializeAuthModalListeners();
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load GitHub issues
     window.GitHubAPI.initializeGitHubIssues();
     
-    Logger.info('✅ GitHub integration initialized');
+    console.log('✅ GitHub integration initialized');
 });
 
 // Export functions to global scope for access from kanban.js and backward compatibility

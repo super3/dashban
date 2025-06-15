@@ -1,14 +1,12 @@
 // Tests for GitHub Actions utility functions
 const utils = require('../src/utils.js');
-const Logger = require('../src/logger.js');
 
 describe('GitHub Actions Status Functions', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         global.fetch = jest.fn();
-        Logger.info = jest.fn();
-        Logger.error = jest.fn();
-        global.Logger = Logger;
+        console.log = jest.fn();
+        console.error = jest.fn();
     });
 
     describe('parseStatusFromSVG', () => {
@@ -16,7 +14,7 @@ describe('GitHub Actions Status Functions', () => {
             const svgWithPassing = '<svg><text>build passing</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithPassing);
             expect(result).toBe('success');
-            expect(Logger.info).toHaveBeenCalledWith('✅ Found "passing" or "success" in SVG');
+            expect(console.log).toHaveBeenCalledWith('✅ Found "passing" or "success" in SVG');
         });
 
         test('should detect success status from SVG containing "success"', () => {
@@ -29,7 +27,7 @@ describe('GitHub Actions Status Functions', () => {
             const svgWithFailing = '<svg><text>build failing</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithFailing);
             expect(result).toBe('failure');
-            expect(Logger.info).toHaveBeenCalledWith('❌ Found "failing" or "failure" in SVG');
+            expect(console.log).toHaveBeenCalledWith('❌ Found "failing" or "failure" in SVG');
         });
 
         test('should detect failure status from SVG containing "failure"', () => {
@@ -48,7 +46,7 @@ describe('GitHub Actions Status Functions', () => {
             const svgWithRunning = '<svg><text>build running</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithRunning);
             expect(result).toBe('in_progress');
-            expect(Logger.info).toHaveBeenCalledWith('🔄 Found "pending" or "running" in SVG');
+            expect(console.log).toHaveBeenCalledWith('🔄 Found "pending" or "running" in SVG');
         });
 
         test('should detect in_progress status from SVG containing "pending"', () => {
@@ -61,14 +59,14 @@ describe('GitHub Actions Status Functions', () => {
             const svgWithInProgress = '<svg><text>build in progress</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithInProgress);
             expect(result).toBe('in_progress');
-            expect(Logger.info).toHaveBeenCalledWith('🔄 Found "pending" or "running" in SVG');
+            expect(console.log).toHaveBeenCalledWith('🔄 Found "pending" or "running" in SVG');
         });
 
         test('should detect unknown status from SVG containing "no status"', () => {
             const svgWithNoStatus = '<svg><text>no status</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithNoStatus);
             expect(result).toBe('unknown');
-            expect(Logger.info).toHaveBeenCalledWith('❔ Found "no status" or "unknown" in SVG');
+            expect(console.log).toHaveBeenCalledWith('❔ Found "no status" or "unknown" in SVG');
         });
 
         test('should return unknown for SVG without recognizable status', () => {
@@ -94,7 +92,7 @@ describe('GitHub Actions Status Functions', () => {
             const result = utils.parseStatusFromSVG(svgWithText);
             expect(result).toBe('unknown');
             // This should trigger the regex matching logic and logging
-            expect(Logger.info).toHaveBeenCalledWith(
+            expect(console.log).toHaveBeenCalledWith(
                 '⚠️ No recognized status words found. SVG might contain:',
                 expect.any(Array)
             );
@@ -250,9 +248,8 @@ describe('parseBadgeSVG function', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         global.fetch = jest.fn();
-        Logger.info = jest.fn();
-        Logger.error = jest.fn();
-        global.Logger = Logger;
+        console.log = jest.fn();
+        console.error = jest.fn();
     });
 
     test('should successfully parse SVG from a valid URL', async () => {
@@ -265,7 +262,7 @@ describe('parseBadgeSVG function', () => {
         const result = await utils.parseBadgeSVG('https://example.com/badge.svg');
         
         expect(result).toBe('success');
-        expect(Logger.info).toHaveBeenCalledWith('Badge SVG content:', mockSVG);
+        expect(console.log).toHaveBeenCalledWith('Badge SVG content:', mockSVG);
     });
 
     test('should handle HTTP errors gracefully', async () => {
@@ -277,7 +274,7 @@ describe('parseBadgeSVG function', () => {
         const result = await utils.parseBadgeSVG('https://example.com/nonexistent.svg');
         
         expect(result).toBe('unknown');
-        expect(Logger.error).toHaveBeenCalledWith(
+        expect(console.error).toHaveBeenCalledWith(
             'Error fetching SVG badge:',
             expect.any(Error)
         );
@@ -289,7 +286,7 @@ describe('parseBadgeSVG function', () => {
         const result = await utils.parseBadgeSVG('https://example.com/badge.svg');
         
         expect(result).toBe('unknown');
-        expect(Logger.error).toHaveBeenCalledWith(
+        expect(console.error).toHaveBeenCalledWith(
             'Error fetching SVG badge:',
             expect.any(Error)
         );
