@@ -662,8 +662,6 @@ describe('GitHub API', () => {
             // Temporarily hide jest to trigger non-test environment logging
             const originalJest = global.jest;
             delete global.jest;
-            const originalSilent = Logger.silent;
-            Logger.setSilent(false);
 
             // Mock console.error to capture the call
             const originalConsoleError = console.error;
@@ -684,7 +682,6 @@ describe('GitHub API', () => {
             global.jest = originalJest;
             console.error = originalConsoleError;
             console.log = originalConsoleLog;
-            Logger.setSilent(originalSilent);
         });
     });
 
