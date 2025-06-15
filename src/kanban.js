@@ -62,7 +62,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show modal
     if (addTaskBtn) {
-        addTaskBtn.addEventListener('click', function() {
+        addTaskBtn.addEventListener('click', function(e) {
+            // Check if button is disabled
+            if (addTaskBtn.disabled) {
+                e.preventDefault();
+                alert('Please connect to GitHub with a Personal Access Token first to create issues');
+                return;
+            }
+            
             addTaskModal.classList.remove('hidden');
             document.getElementById('task-title').focus();
         });
@@ -408,6 +415,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (window.GitHub && window.GitHub.applyCompletedSectionsToColumn) {
             window.GitHub.applyCompletedSectionsToColumn();
+        }
+        // Update Add Issue button state based on authentication
+        if (window.GitHubAuth && window.GitHubAuth.updateAddIssueButtonState) {
+            window.GitHubAuth.updateAddIssueButtonState();
         }
     }, 100);
     

@@ -313,6 +313,40 @@ describe('Kanban Board Core Functionality', () => {
       expect(modal.classList.contains('hidden')).toBe(true);
       expect(titleInput.value).toBe('');
     });
+
+    test('should prevent modal from opening when button is disabled', () => {
+      const addBtn = api.addTaskBtn;
+      const modal = api.addTaskModal;
+      
+      global.alert = jest.fn();
+      
+      // Disable the button
+      addBtn.disabled = true;
+      
+      expect(modal.classList.contains('hidden')).toBe(true);
+      
+      // Manually trigger the click event since disabled buttons don't fire click events in JSDOM
+      const clickEvent = new Event('click');
+      addBtn.dispatchEvent(clickEvent);
+      
+      // Modal should remain hidden and alert should be shown
+      expect(modal.classList.contains('hidden')).toBe(true);
+      expect(global.alert).toHaveBeenCalledWith('Please connect to GitHub with a Personal Access Token first to create issues');
+    });
+
+    test('should allow modal to open when button is enabled', () => {
+      const addBtn = api.addTaskBtn;
+      const modal = api.addTaskModal;
+      
+      // Ensure button is enabled
+      addBtn.disabled = false;
+      
+      expect(modal.classList.contains('hidden')).toBe(true);
+      
+      addBtn.click();
+      
+      expect(modal.classList.contains('hidden')).toBe(false);
+    });
   });
 
   describe('form submission', () => {
