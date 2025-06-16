@@ -97,6 +97,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const category = formData.get('category');
             const column = formData.get('column');
             
+            // Fallback to backlog if column is null/undefined/empty
+            const targetColumn = column || 'backlog';
+            
             // Validate required fields
             if (!title || !title.trim()) {
                 alert('Please enter an issue title');
@@ -133,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('✅ Created GitHub issue and local task');
                     
                     // Add to appropriate column
-                    document.getElementById(column).appendChild(taskElement);
+                    document.getElementById(targetColumn).appendChild(taskElement);
                     
                     // Update counts
                     updateColumnCounts();
