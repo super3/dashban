@@ -27,9 +27,7 @@ window.GitHub = {
     // Authentication functions (from GitHubAuth)
     initializeGitHubAuth: window.GitHubAuth.initializeGitHubAuth,
     signInWithGitHub: window.GitHubAuth.signInWithGitHub,
-    handleInstallationCallback: window.GitHubAuth.handleInstallationCallback,
     validateAndSetToken: window.GitHubAuth.validateAndSetToken,
-    validateAndSetInstallation: window.GitHubAuth.validateAndSetInstallation,
     signOutGitHub: window.GitHubAuth.signOutGitHub,
     updateGitHubSignInUI: window.GitHubAuth.updateGitHubSignInUI,
     updateGitHubOptionUI: window.GitHubAuth.updateGitHubOptionUI,
