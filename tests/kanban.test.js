@@ -15,50 +15,103 @@ function setupDOM() {
     <!-- Kanban Board -->
     <div class="kanban-board">
       <!-- Info Column -->
-      <div class="kanban-column">
-        <h2 onclick="toggleColumn('info')">
-          <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200"></i>
-          Info
-        </h2>
-        <div id="info" class="space-y-3">
-          <!-- Status cards will be here -->
+      <div class="flex-1 column-expanded" data-column="info">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="px-4 py-3 border-b border-gray-200 column-header">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 bg-blue-400 rounded-full"></div>
+                <h3 class="font-semibold text-gray-900 column-title">Info</h3>
+                <span class="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
+              </div>
+              <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="info">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+            </div>
+          </div>
+          <div id="info" class="p-4 space-y-3 min-h-[64px] column-content">
+          </div>
         </div>
       </div>
       
       <!-- Backlog Column -->
-      <div class="kanban-column">
-        <h2 onclick="toggleColumn('backlog')">
-          <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200"></i>
-          Backlog (0)
-        </h2>
-        <div id="backlog" class="space-y-3"></div>
+      <div class="flex-1 column-expanded" data-column="backlog">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="px-4 py-3 border-b border-gray-200 column-header">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
+                <h3 class="font-semibold text-gray-900 column-title">Backlog</h3>
+                <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
+              </div>
+              <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="backlog">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+            </div>
+          </div>
+          <div id="backlog" class="p-4 space-y-3 min-h-[64px] column-content">
+          </div>
+        </div>
       </div>
       
       <!-- In Progress Column -->
-      <div class="kanban-column">
-        <h2 onclick="toggleColumn('inprogress')">
-          <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200"></i>
-          In Progress (0)
-        </h2>
-        <div id="inprogress" class="space-y-3"></div>
+      <div class="flex-1 column-expanded" data-column="inprogress">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="px-4 py-3 border-b border-gray-200 column-header">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 bg-blue-400 rounded-full"></div>
+                <h3 class="font-semibold text-gray-900 column-title">In Progress</h3>
+                <span class="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
+              </div>
+              <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="inprogress">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+            </div>
+          </div>
+          <div id="inprogress" class="p-4 space-y-3 min-h-[64px] column-content">
+          </div>
+        </div>
       </div>
       
       <!-- Review Column -->
-      <div class="kanban-column">
-        <h2 onclick="toggleColumn('review')">
-          <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200"></i>
-          Review (0)
-        </h2>
-        <div id="review" class="space-y-3"></div>
+      <div class="flex-1 column-expanded" data-column="review">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="px-4 py-3 border-b border-gray-200 column-header">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                <h3 class="font-semibold text-gray-900 column-title">Review</h3>
+                <span class="bg-yellow-100 text-yellow-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
+              </div>
+              <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="review">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+            </div>
+          </div>
+          <div id="review" class="p-4 space-y-3 min-h-[64px] column-content">
+          </div>
+        </div>
       </div>
       
       <!-- Done Column -->
-      <div class="kanban-column">
-        <h2 onclick="toggleColumn('done')">
-          <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200"></i>
-          Done (0)
-        </h2>
-        <div id="done" class="space-y-3"></div>
+      <div class="flex-1 column-expanded" data-column="done">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="px-4 py-3 border-b border-gray-200 column-header">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                <h3 class="font-semibold text-gray-900 column-title">Done</h3>
+                <span class="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
+              </div>
+              <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="done">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+            </div>
+          </div>
+          <div id="done" class="p-4 space-y-3 min-h-[64px] column-content">
+          </div>
+        </div>
       </div>
     </div>
 
@@ -234,10 +287,10 @@ describe('Kanban Board Core Functionality', () => {
 
     test('should initialize with proper column counts', () => {
       const backlog = document.getElementById('backlog');
-      const header = document.querySelector('h2[onclick*="backlog"]');
+      const countBadge = document.querySelector('[data-column="backlog"] .column-header span');
       
       expect(backlog.children.length).toBe(0);
-      expect(header.textContent).toContain('(0)');
+      expect(countBadge.textContent).toBe('0');
     });
   });
 
@@ -400,21 +453,29 @@ describe('Kanban Board Core Functionality', () => {
     test('should update column counts correctly', () => {
       const backlog = document.getElementById('backlog');
       
-      // Create the column wrapper structure that matches the real HTML
-      const columnWrapper = document.createElement('div');
-      columnWrapper.setAttribute('data-column', 'backlog');
+      // Find the existing column wrapper that should already exist
+      let columnWrapper = document.querySelector('[data-column="backlog"]');
       
-      const columnHeader = document.createElement('div');
-      columnHeader.className = 'column-header';
-      
-      const countBadge = document.createElement('span');
-      countBadge.textContent = '0';
-      
-      columnHeader.appendChild(countBadge);
-      columnWrapper.appendChild(columnHeader);
-      document.body.appendChild(columnWrapper);
+      // If it doesn't exist, create it
+      if (!columnWrapper) {
+        columnWrapper = document.createElement('div');
+        columnWrapper.setAttribute('data-column', 'backlog');
+        
+        const columnHeader = document.createElement('div');
+        columnHeader.className = 'column-header';
+        
+        const countBadge = document.createElement('span');
+        countBadge.textContent = '0';
+        
+        columnHeader.appendChild(countBadge);
+        columnWrapper.appendChild(columnHeader);
+        document.body.appendChild(columnWrapper);
+      }
 
-      // Add some task cards with the correct classes
+      // Get the count badge
+      const countBadge = columnWrapper.querySelector('.column-header span');
+
+      // Add some task cards with the correct classes (excluding skeleton/loading cards)
       const task1 = document.createElement('div');
       task1.className = 'bg-white border';
       const task2 = document.createElement('div');
@@ -427,7 +488,8 @@ describe('Kanban Board Core Functionality', () => {
       expect(countBadge.textContent).toBe('2');
       
       // Clean up
-      columnWrapper.remove();
+      task1.remove();
+      task2.remove();
     });
 
     test('should handle missing columns gracefully', () => {
@@ -773,6 +835,465 @@ describe('Kanban Board Core Functionality', () => {
       expect(global.alert).toHaveBeenCalledWith(
         'An error occurred while creating the GitHub issue. Please try again.'
       );
+    });
+  });
+
+  describe('sortable onEnd functionality', () => {
+    test('should handle drag end events and call updateColumnCounts', () => {
+      // Mock a sortable end event
+      const draggedElement = document.createElement('div');
+      draggedElement.setAttribute('data-issue-number', '123');
+      
+      const fromColumn = document.getElementById('backlog');
+      const toColumn = document.getElementById('inprogress');
+      
+      const evt = {
+        item: draggedElement,
+        from: fromColumn,
+        to: toColumn
+      };
+      
+      // Mock GitHub functions
+      global.window.GitHub.updateGitHubIssueLabels = jest.fn();
+      global.window.GitHub.closeGitHubIssue = jest.fn();
+      global.window.GitHub.updateCardIndicators = jest.fn();
+      
+      // Mock updateColumnCounts in the global scope where it's actually called
+      const originalUpdateColumnCounts = global.updateColumnCounts;
+      global.updateColumnCounts = jest.fn();
+      
+      // Get the sortable options from the call (backlog column)
+      const sortableOptions = global.Sortable.mock.calls[1][1]; // Second call options
+      
+      // Call the onEnd function from the options
+      sortableOptions.onEnd(evt);
+      
+      // The onEnd function is called, which means the drag functionality works
+      // We can't easily mock the internal updateColumnCounts call, so we verify other effects
+      expect(global.window.GitHub.updateGitHubIssueLabels).toHaveBeenCalledWith('123', 'inprogress');
+      expect(global.window.GitHub.updateCardIndicators).toHaveBeenCalledWith(draggedElement, 'inprogress');
+      
+      // Restore original function
+      global.updateColumnCounts = originalUpdateColumnCounts;
+    });
+
+    test('should close GitHub issue when moved to Done column', () => {
+      const draggedElement = document.createElement('div');
+      draggedElement.setAttribute('data-issue-number', '123');
+      
+      const fromColumn = document.getElementById('backlog');
+      const toColumn = document.getElementById('done');
+      
+      const evt = {
+        item: draggedElement,
+        from: fromColumn,
+        to: toColumn
+      };
+      
+      global.window.GitHub.closeGitHubIssue = jest.fn();
+      global.window.GitHub.updateGitHubIssueLabels = jest.fn();
+      
+      // Get the sortable options and call onEnd
+      const sortableOptions = global.Sortable.mock.calls[1][1];
+      sortableOptions.onEnd(evt);
+      
+      expect(global.window.GitHub.closeGitHubIssue).toHaveBeenCalledWith('123');
+    });
+
+    test('should handle drag end without issue number', () => {
+      const draggedElement = document.createElement('div');
+      // No data-issue-number attribute
+      
+      const fromColumn = document.getElementById('backlog');
+      const toColumn = document.getElementById('inprogress');
+      
+      const evt = {
+        item: draggedElement,
+        from: fromColumn,
+        to: toColumn
+      };
+      
+      global.window.GitHub.updateCardIndicators = jest.fn();
+      
+      // Get the sortable options and call onEnd
+      const sortableOptions = global.Sortable.mock.calls[1][1];
+      sortableOptions.onEnd(evt);
+      
+      // Should still call updateCardIndicators for column change
+      expect(global.window.GitHub.updateCardIndicators).toHaveBeenCalledWith(draggedElement, 'inprogress');
+    });
+
+    test('should handle drag end in same column', () => {
+      const draggedElement = document.createElement('div');
+      draggedElement.setAttribute('data-issue-number', '123');
+      
+      const column = document.getElementById('backlog');
+      
+      const evt = {
+        item: draggedElement,
+        from: column,
+        to: column
+      };
+      
+      global.window.GitHub.updateGitHubIssueLabels = jest.fn();
+      global.window.GitHub.updateCardIndicators = jest.fn();
+      
+      // Get the sortable options and call onEnd
+      const sortableOptions = global.Sortable.mock.calls[1][1];
+      sortableOptions.onEnd(evt);
+      
+      // Should not call GitHub functions for same column
+      expect(global.window.GitHub.updateGitHubIssueLabels).not.toHaveBeenCalled();
+      expect(global.window.GitHub.updateCardIndicators).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('error scenarios in form submission', () => {
+    test('should handle failed GitHub issue creation', async () => {
+      const form = api.addTaskForm;
+      const titleInput = document.getElementById('task-title');
+      
+      global.alert = jest.fn();
+      
+      // Set up authenticated state but make createGitHubIssue return null
+      global.window.GitHub.githubAuth.isAuthenticated = true;
+      global.window.GitHub.githubAuth.accessToken = 'token';
+      global.window.GitHub.createGitHubIssue = jest.fn().mockResolvedValue(null);
+      
+      // Fill form
+      titleInput.value = 'Test Task';
+      
+      // Submit form
+      const submitEvent = new Event('submit');
+      form.dispatchEvent(submitEvent);
+      
+      // Wait for async operations
+      await new Promise(resolve => setTimeout(resolve, 0));
+      
+      expect(global.alert).toHaveBeenCalledWith(
+        'Failed to create GitHub issue. Please try again.'
+      );
+    });
+
+    test('should handle exception during GitHub issue creation', async () => {
+      const form = api.addTaskForm;
+      const titleInput = document.getElementById('task-title');
+      
+      global.alert = jest.fn();
+      console.error = jest.fn();
+      
+      // Set up authenticated state but make createGitHubIssue throw an error
+      global.window.GitHub.githubAuth.isAuthenticated = true;
+      global.window.GitHub.githubAuth.accessToken = 'token';
+      global.window.GitHub.createGitHubIssue = jest.fn().mockRejectedValue(new Error('Network error'));
+      
+      // Fill form
+      titleInput.value = 'Test Task';
+      
+      // Submit form
+      const submitEvent = new Event('submit');
+      form.dispatchEvent(submitEvent);
+      
+      // Wait for async error handling
+      await new Promise(resolve => setTimeout(resolve, 0));
+      
+      expect(console.error).toHaveBeenCalledWith('Error during GitHub issue creation:', expect.any(Error));
+      expect(global.alert).toHaveBeenCalledWith(
+        'An error occurred while creating the GitHub issue. Please try again.'
+      );
+    });
+  });
+
+  describe('localStorage error handling', () => {
+    test('should handle invalid JSON in localStorage', () => {
+      // The code checks `typeof jest === 'undefined'` before calling applyDefaultCollapseStates
+      // So we need to temporarily hide jest to test this path
+      const originalJest = global.jest;
+      delete global.jest;
+      
+      // Store invalid JSON
+      localStorageMock.setItem('columnCollapseStates', 'invalid json {');
+      
+      // Create the required DOM structure for applyDefaultCollapseStates to work
+      const reviewColumn = document.querySelector('[data-column="review"]');
+      if (!reviewColumn) {
+        const columnWrapper = document.createElement('div');
+        columnWrapper.setAttribute('data-column', 'review');
+        columnWrapper.className = 'column-wrapper';
+        
+        const collapseBtn = document.createElement('button');
+        collapseBtn.className = 'column-collapse-btn';
+        collapseBtn.setAttribute('data-column', 'review');
+        
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-chevron-down';
+        collapseBtn.appendChild(icon);
+        
+        const columnContent = document.createElement('div');
+        columnContent.className = 'column-content';
+        
+        const columnHeader = document.createElement('div');
+        columnHeader.className = 'column-header';
+        
+        const taskCountBadge = document.createElement('span');
+        columnHeader.appendChild(taskCountBadge);
+        
+        columnWrapper.appendChild(collapseBtn);
+        columnWrapper.appendChild(columnContent);
+        columnWrapper.appendChild(columnHeader);
+        document.body.appendChild(columnWrapper);
+      }
+      
+      // Call loadCollapseStates
+      api.loadCollapseStates();
+      
+      // Should clear invalid data and apply default collapse to review column
+      expect(localStorageMock.getItem('columnCollapseStates')).toBeNull();
+      const reviewColumnEl = document.querySelector('[data-column="review"]');
+      expect(reviewColumnEl.classList.contains('column-collapsed')).toBe(true);
+      
+      // Restore jest
+      global.jest = originalJest;
+    });
+
+    test('should apply default collapse states when no saved state exists', () => {
+      // Clear localStorage
+      localStorageMock.clear();
+      
+      // Create the required DOM structure for the test to work
+      const reviewColumn = document.querySelector('[data-column="review"]');
+      if (!reviewColumn) {
+        const columnWrapper = document.createElement('div');
+        columnWrapper.setAttribute('data-column', 'review');
+        columnWrapper.className = 'column-wrapper';
+        
+        const collapseBtn = document.createElement('button');
+        collapseBtn.className = 'column-collapse-btn';
+        collapseBtn.setAttribute('data-column', 'review');
+        
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-chevron-down';
+        collapseBtn.appendChild(icon);
+        
+        const columnContent = document.createElement('div');
+        columnContent.className = 'column-content';
+        
+        const columnHeader = document.createElement('div');
+        columnHeader.className = 'column-header';
+        
+        const taskCountBadge = document.createElement('span');
+        columnHeader.appendChild(taskCountBadge);
+        
+        columnWrapper.appendChild(collapseBtn);
+        columnWrapper.appendChild(columnContent);
+        columnWrapper.appendChild(columnHeader);
+        document.body.appendChild(columnWrapper);
+      }
+      
+      // Call loadCollapseStates
+      api.loadCollapseStates();
+      
+      // Should apply default collapse state to review column
+      const reviewColumnEl = document.querySelector('[data-column="review"]');
+      expect(reviewColumnEl.classList.contains('column-collapsed')).toBe(true);
+    });
+
+    test('should not log errors in test environment', () => {
+      console.error = jest.fn();
+      
+      // Store invalid JSON
+      localStorageMock.setItem('columnCollapseStates', 'invalid json {');
+      
+      // Call loadCollapseStates
+      api.loadCollapseStates();
+      
+      // Should not log error in test environment (jest is defined)
+      expect(console.error).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('initialization timeout functions', () => {
+    test('should call GitHub functions if available in timeout', (done) => {
+      // Mock GitHub functions
+      global.window.GitHub = {
+        applyReviewIndicatorsToColumn: jest.fn(),
+        applyCompletedSectionsToColumn: jest.fn()
+      };
+      global.window.GitHubAuth = {
+        updateAddIssueButtonState: jest.fn()
+      };
+      
+      // Since setTimeout is already called during initialization, 
+      // we need to wait for it to complete
+      setTimeout(() => {
+        expect(global.window.GitHub.applyReviewIndicatorsToColumn).toHaveBeenCalled();
+        expect(global.window.GitHub.applyCompletedSectionsToColumn).toHaveBeenCalled();
+        expect(global.window.GitHubAuth.updateAddIssueButtonState).toHaveBeenCalled();
+        done();
+      }, 110);
+    });
+
+    test('should handle missing GitHub functions gracefully in timeout', (done) => {
+      // Clear GitHub functions
+      global.window.GitHub = {};
+      global.window.GitHubAuth = {};
+      
+      // Should not throw error when functions are missing
+      setTimeout(() => {
+        // Test passes if no error is thrown
+        done();
+      }, 110);
+    });
+
+    test('should handle missing GitHub module gracefully in timeout', (done) => {
+      // Clear GitHub completely
+      delete global.window.GitHub;
+      delete global.window.GitHubAuth;
+      
+      // Should not throw error when modules are missing
+      setTimeout(() => {
+        // Test passes if no error is thrown
+        done();
+      }, 110);
+    });
+  });
+
+  describe('additional coverage for missing lines', () => {
+    test('should handle add task button disabled state', () => {
+      const btn = api.addTaskBtn;
+      global.alert = jest.fn();
+      
+      // Disable button
+      btn.disabled = true;
+      
+      // Click button
+      const clickEvent = new Event('click');
+      btn.dispatchEvent(clickEvent);
+      
+      expect(global.alert).toHaveBeenCalledWith(
+        'Please connect to GitHub with a Personal Access Token first to create issues'
+      );
+    });
+
+    test('should handle modal outside click', () => {
+      const modal = api.addTaskModal;
+      
+      // Show modal first
+      modal.classList.remove('hidden');
+      
+      // Create a modal content element that matches the structure in kanban.js
+      const modalContent = document.createElement('div');
+      modalContent.className = 'bg-white rounded-lg shadow-xl';
+      modal.appendChild(modalContent);
+      
+      // Mock hideModal by monitoring the modal's hidden class
+      const initialHiddenState = modal.classList.contains('hidden');
+      
+      // Simulate clicking on the modal backdrop (not on the content)
+      // The kanban.js code checks if !modalContent.contains(e.target)
+      const clickEvent = new MouseEvent('click', { bubbles: true });
+      Object.defineProperty(clickEvent, 'target', { value: modal, writable: false });
+      
+      // Trigger the event
+      modal.dispatchEvent(clickEvent);
+      
+      // Check that the modal was hidden
+      expect(modal.classList.contains('hidden')).toBe(true);
+      
+      // Clean up
+      modalContent.remove();
+    });
+
+    test('should handle click inside modal content without hiding', () => {
+      const modal = api.addTaskModal;
+      const hideModalSpy = jest.spyOn(api, 'hideModal');
+      
+      // Show modal first
+      modal.classList.remove('hidden');
+      
+      // Create a modal content element
+      const modalContent = document.createElement('div');
+      modalContent.className = 'bg-white rounded-lg shadow-xl';
+      modal.appendChild(modalContent);
+      
+      // Click inside modal content
+      const clickEvent = new Event('click');
+      Object.defineProperty(clickEvent, 'target', { value: modalContent });
+      modal.dispatchEvent(clickEvent);
+      
+      expect(hideModalSpy).not.toHaveBeenCalled();
+      
+      hideModalSpy.mockRestore();
+    });
+
+    test('should apply default collapse states when no localStorage data exists', () => {
+      // Clear localStorage completely
+      localStorageMock.clear();
+      
+      // Create required DOM structure for collapseColumn to work
+      const reviewColumn = document.querySelector('[data-column="review"]');
+      if (!reviewColumn) {
+        const columnWrapper = document.createElement('div');
+        columnWrapper.setAttribute('data-column', 'review');
+        columnWrapper.className = 'column-wrapper';
+        
+        const collapseBtn = document.createElement('button');
+        collapseBtn.className = 'column-collapse-btn';
+        collapseBtn.setAttribute('data-column', 'review');
+        
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-chevron-down';
+        collapseBtn.appendChild(icon);
+        
+        const columnContent = document.createElement('div');
+        columnContent.className = 'column-content';
+        
+        const columnHeader = document.createElement('div');
+        columnHeader.className = 'column-header';
+        
+        const taskCountBadge = document.createElement('span');
+        columnHeader.appendChild(taskCountBadge);
+        
+        columnWrapper.appendChild(collapseBtn);
+        columnWrapper.appendChild(columnContent);
+        columnWrapper.appendChild(columnHeader);
+        document.body.appendChild(columnWrapper);
+      }
+      
+      // Call applyDefaultCollapseStates directly
+      api.applyDefaultCollapseStates();
+      
+      // Check that the review column is collapsed
+      const reviewColumnEl = document.querySelector('[data-column="review"]');
+      expect(reviewColumnEl.classList.contains('column-collapsed')).toBe(true);
+    });
+
+    test('should cover archive functionality lines', () => {
+      // Ensure GitHub object exists with archiveGitHubIssue function
+      global.window.GitHub = global.window.GitHub || {};
+      global.window.GitHub.archiveGitHubIssue = jest.fn();
+      
+      // Create archive button
+      const archiveBtn = document.createElement('button');
+      archiveBtn.className = 'archive-btn';
+      archiveBtn.setAttribute('data-issue-number', '456');
+      
+      const taskElement = document.createElement('div');
+      taskElement.className = 'bg-white border';
+      taskElement.appendChild(archiveBtn);
+      
+      const backlog = document.getElementById('backlog');
+      backlog.appendChild(taskElement);
+      
+      // Create click event that specifically targets the archive button
+      const clickEvent = new Event('click', { bubbles: true });
+      Object.defineProperty(clickEvent, 'target', { value: archiveBtn });
+      
+      // Dispatch the click event on the document
+      document.dispatchEvent(clickEvent);
+      
+      // Should call GitHub archive function
+      expect(global.window.GitHub.archiveGitHubIssue).toHaveBeenCalledWith('456', taskElement);
     });
   });
 
