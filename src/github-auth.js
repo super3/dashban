@@ -180,6 +180,30 @@ function updateGitHubSignInUI() {
     
     // Update GitHub option in form
     updateGitHubOptionUI();
+    
+    // Update Add Issue button state
+    updateAddIssueButtonState();
+}
+
+function updateAddIssueButtonState() {
+    const addIssueButton = document.getElementById('add-task-btn');
+    if (!addIssueButton) {
+        return;
+    }
+    
+    const isAuthenticated = githubAuth.isAuthenticated && githubAuth.accessToken && githubAuth.user;
+    
+    if (isAuthenticated) {
+        // Enable the button
+        addIssueButton.disabled = false;
+        addIssueButton.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2';
+        addIssueButton.title = 'Create a new GitHub issue';
+    } else {
+        // Disable the button
+        addIssueButton.disabled = true;
+        addIssueButton.className = 'bg-gray-400 cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2';
+        addIssueButton.title = 'Connect to GitHub first to create issues';
+    }
 }
 
 function promptForAccessToken() {
@@ -282,6 +306,7 @@ window.GitHubAuth = {
     signOutGitHub,
     updateGitHubSignInUI,
     updateGitHubOptionUI,
+    updateAddIssueButtonState,
     promptForAccessToken,
     
     // Modal functions

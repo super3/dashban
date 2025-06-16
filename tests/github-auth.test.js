@@ -594,6 +594,97 @@ describe('GitHub Authentication', () => {
         });
     });
 
+    describe('Add Issue Button State Management', () => {
+        beforeEach(() => {
+            // Create Add Issue button in DOM
+            const addIssueBtn = document.createElement('button');
+            addIssueBtn.id = 'add-task-btn';
+            addIssueBtn.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2';
+            addIssueBtn.innerHTML = '<i class="fas fa-plus"></i><span>Add Issue</span>';
+            document.body.appendChild(addIssueBtn);
+        });
+
+        afterEach(() => {
+            // Clean up
+            const addIssueBtn = document.getElementById('add-task-btn');
+            if (addIssueBtn) {
+                addIssueBtn.remove();
+            }
+        });
+
+        test('should disable Add Issue button when not authenticated', () => {
+            // Set unauthenticated state
+            window.GitHubAuth.githubAuth.isAuthenticated = false;
+            window.GitHubAuth.githubAuth.accessToken = null;
+            window.GitHubAuth.githubAuth.user = null;
+
+            const addIssueBtn = document.getElementById('add-task-btn');
+            
+            // Call the function
+            window.GitHubAuth.updateAddIssueButtonState();
+            
+            expect(addIssueBtn.disabled).toBe(true);
+            expect(addIssueBtn.className).toBe('bg-gray-400 cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2');
+            expect(addIssueBtn.title).toBe('Connect to GitHub first to create issues');
+        });
+
+        test('should enable Add Issue button when authenticated', () => {
+            // Set authenticated state
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.user = { login: 'testuser' };
+
+            const addIssueBtn = document.getElementById('add-task-btn');
+            
+            // Call the function
+            window.GitHubAuth.updateAddIssueButtonState();
+            
+            expect(addIssueBtn.disabled).toBe(false);
+            expect(addIssueBtn.className).toBe('bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2');
+            expect(addIssueBtn.title).toBe('Create a new GitHub issue');
+        });
+
+        test('should handle missing Add Issue button gracefully', () => {
+            // Remove the button
+            const addIssueBtn = document.getElementById('add-task-btn');
+            if (addIssueBtn) {
+                addIssueBtn.remove();
+            }
+            
+            // Should not throw error
+            expect(() => {
+                window.GitHubAuth.updateAddIssueButtonState();
+            }).not.toThrow();
+        });
+
+        test('should update button state when called directly', () => {
+            // Set unauthenticated state
+            window.GitHubAuth.githubAuth.isAuthenticated = false;
+            window.GitHubAuth.githubAuth.accessToken = null;
+            window.GitHubAuth.githubAuth.user = null;
+
+            const addIssueBtn = document.getElementById('add-task-btn');
+            
+            // Call the function directly
+            window.GitHubAuth.updateAddIssueButtonState();
+            
+            expect(addIssueBtn.disabled).toBe(true);
+            expect(addIssueBtn.className).toBe('bg-gray-400 cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2');
+            expect(addIssueBtn.title).toBe('Connect to GitHub first to create issues');
+            
+            // Now test authenticated state
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.user = { login: 'testuser' };
+            
+            window.GitHubAuth.updateAddIssueButtonState();
+            
+            expect(addIssueBtn.disabled).toBe(false);
+            expect(addIssueBtn.className).toBe('bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2');
+            expect(addIssueBtn.title).toBe('Create a new GitHub issue');
+        });
+    });
+
     describe('Export API', () => {
         test('should export all required functions', () => {
             expect(typeof window.GitHubAuth.GITHUB_CONFIG).toBe('object');
@@ -604,6 +695,7 @@ describe('GitHub Authentication', () => {
             expect(typeof window.GitHubAuth.signOutGitHub).toBe('function');
             expect(typeof window.GitHubAuth.updateGitHubSignInUI).toBe('function');
             expect(typeof window.GitHubAuth.updateGitHubOptionUI).toBe('function');
+            expect(typeof window.GitHubAuth.updateAddIssueButtonState).toBe('function');
             expect(typeof window.GitHubAuth.promptForAccessToken).toBe('function');
             expect(typeof window.GitHubAuth.showGitHubTokenModal).toBe('function');
             expect(typeof window.GitHubAuth.hideGitHubTokenModal).toBe('function');
