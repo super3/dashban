@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashban - Everything. One Board.</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%234f46e5'/><rect x='7' y='8' width='4' height='16' fill='white'/><rect x='14' y='8' width='4' height='16' fill='white'/><rect x='21' y='8' width='4' height='16' fill='white'/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Markdown parsing and sanitization -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.0.0/dist/markdown-it.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+    <script src="src/utils.js"></script>
+    <style>
+        .sortable-ghost {
+            opacity: 0.4;
+        }
+        .sortable-chosen {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+        }
+        .sortable-drag {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+        }
+        .column-collapsed {
+            flex: 0 0 48px !important;
+            min-width: 48px !important;
+            max-width: 48px !important;
+            transition: all 0.3s ease;
+        }
+        .column-collapsed .column-content {
+            display: none;
+        }
+        .column-collapsed .w-3 {
+            width: 12px !important;
+            height: 12px !important;
+            margin: 0;
+            align-self: center !important;
+        }
+        .column-collapsed .bg-gray-100,
+        .column-collapsed .bg-blue-100,
+        .column-collapsed .bg-yellow-100,
+        .column-collapsed .bg-green-100,
+        .column-collapsed .bg-orange-100,
+        .column-collapsed .bg-purple-100 {
+            font-size: 10px !important;
+            padding: 0 !important;
+            width: 20px !important;
+            height: 20px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 0 !important;
+            writing-mode: vertical-rl !important;
+            text-orientation: mixed !important;
+        }
+        .column-collapsed .space-x-2 {
+            gap: 0;
+        }
+        .column-collapsed .column-header {
+            padding: 12px 0;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: center;
+            width: 100%;
+        }
+        .column-collapsed .column-header .flex {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+        }
+        .column-collapsed .column-title {
+            font-size: 16px;
+            font-weight: 600;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            line-height: 1.1;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            align-self: center !important;
+            transform: translateX(-3px);
+        }
+        .column-expanded {
+            flex: 1 1 0% !important;
+            min-width: 250px !important;
+            transition: all 0.3s ease;
+        }
+        .column-header .bg-gray-100,
+        .column-header .bg-blue-100,
+        .column-header .bg-yellow-100,
+        .column-header .bg-green-100,
+        .column-header .bg-orange-100,
+        .column-header .bg-purple-100 {
+            padding: 0 !important;
+            width: 20px !important;
+            height: 20px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+        }
+        
+        /* Markdown content styling */
+        .markdown-content p {
+            font-size: 0.875rem; /* text-sm */
+            margin: 0;
+        }
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4,
+        .markdown-content h5,
+        .markdown-content h6 {
+            font-size: 0.875rem; /* text-sm */
+        }
+        .markdown-content ul,
+        .markdown-content ol {
+            margin-top: 0;
+            margin-bottom: 0.25rem;
+        }
+        .markdown-content li {
+            font-size: 0.875rem; /* text-sm */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-none mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <rect x="0.5" y="1" width="4" height="14" fill="white"/>
+                                <rect x="6" y="1" width="4" height="14" fill="white"/>
+                                <rect x="11.5" y="1" width="4" height="14" fill="white"/>
+                            </svg>
+                        </div>
+                        <h1 class="text-xl font-semibold text-gray-900">Dashban</h1>
+                    </div>
+                    <span class="text-gray-500">/</span>
+                    <span class="text-gray-600">Project Board</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="add-task-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2">
+                        <i class="fas fa-plus"></i>
+                                                    <span>Add Issue</span>
+                    </button>
+                                          <a href="https://github.com/super3/dashban" target="_blank" class="flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                          <i class="fab fa-github"></i>
+                          <span>Connect to GitHub</span>
+                      </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-none mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Kanban Board -->
+        <div class="flex space-x-4 overflow-x-auto pb-4">
+            <!-- Info Column -->
+            <div class="flex-1 column-expanded" data-column="info">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div class="px-4 py-3 border-b border-gray-200 column-header">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-purple-400 rounded-full"></div>
+                                <h3 class="font-semibold text-gray-900 column-title">Info</h3>
+                                <span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full font-medium">2</span>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="info">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="info" class="p-4 space-y-3 min-h-[64px] column-content">
+                        <!-- Project Status Card -->
+                        <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 mb-1">Status</h4>
+                                </div>
+                                <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">CODE</span>
+                            </div>
+                            
+                            <!-- Horizontal Separator -->
+                            <div class="border-b border-gray-200 mb-3"></div>
+                            
+                            <!-- Frontend Status -->
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-globe text-indigo-500"></i>
+                                    <span class="text-sm text-gray-700">Frontend</span>
+                                </div>
+                                <div data-frontend-status class="flex items-center space-x-1">
+                                    <i class="fas fa-check-circle text-green-500 text-sm"></i>
+                                    <span class="text-sm text-green-600 font-medium">Deployed</span>
+                                </div>
+                            </div>
+                            
+                            <!-- GitHub Testing Status -->
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fab fa-github text-gray-700"></i>
+                                    <span class="text-sm text-gray-700">CI Tests</span>
+                                </div>
+                                <div data-ci-status class="flex items-center space-x-1">
+                                    <i class="fas fa-check-circle text-green-500 text-sm"></i>
+                                    <span class="text-sm text-green-600 font-medium">Passing</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Code Coverage Status -->
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-shield-alt text-gray-700"></i>
+                                    <span class="text-sm text-gray-700">Coverage</span>
+                                </div>
+                                <div data-coverage-status class="flex items-center space-x-1">
+                                    <span class="text-sm text-green-600 font-medium">99%</span>
+                                </div>
+                            </div>
+                            
+
+                            
+                            <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                                <div data-frontend-time class="flex items-center space-x-2">
+                                    <i class="fas fa-sync text-gray-400 text-xs"></i>
+                                    <span class="text-xs text-gray-500">Updated <1m ago</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- About Card -->
+                        <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 mb-1">About</h4>
+                                </div>
+                                <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">INFO</span>
+                            </div>
+                            
+                            <!-- Horizontal Separator -->
+                            <div class="border-b border-gray-200 mb-3"></div>
+                            
+                            <!-- Project Description -->
+                            <div class="mb-3">
+                                <p class="text-sm text-gray-700">
+                                    <strong>Dashban</strong> combines kanban project management with a realtime status dashboards in one clean interface.
+                                </p>
+                            </div>
+                            
+                            <!-- Features List -->
+                            <div class="mb-3">
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li class="flex items-center space-x-2">
+                                        <i class="fas fa-check text-green-500 text-xs"></i>
+                                        <span>Drag & drop task management</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2">
+                                        <i class="fas fa-check text-green-500 text-xs"></i>
+                                        <span>Code and deployment monitoring</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2">
+                                        <i class="fas fa-check text-green-500 text-xs"></i>
+                                        <span>Open-source (MIT License)</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Buttons Row -->
+                            <div class="flex space-x-2">
+                                <!-- Fork Button -->
+                                <a href="https://github.com/super3/dashban" target="_blank" class="flex items-center justify-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex-1">
+                                    <i class="fab fa-github"></i>
+                                    <span>Fork</span>
+                                </a>
+                                
+                                <!-- Give Feedback Button -->
+                                <a href="https://github.com/super3/dashban/issues/new?template=feedback.md&title=[Feedback]%20" target="_blank" class="flex items-center justify-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex-1">
+                                    <i class="fas fa-comment"></i>
+                                    <span>Feedback</span>
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backlog Column -->
+            <div class="flex-1 column-expanded" data-column="backlog">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div class="px-4 py-3 border-b border-gray-200 column-header">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
+                                <h3 class="font-semibold text-gray-900 column-title">Backlog</h3>
+                                <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="backlog">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="backlog" class="p-4 space-y-3 min-h-[64px] column-content">
+                    </div>
+                </div>
+            </div>
+
+            <!-- In Progress Column -->
+            <div class="flex-1 column-expanded" data-column="inprogress">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div class="px-4 py-3 border-b border-gray-200 column-header">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                <h3 class="font-semibold text-gray-900 column-title">In Progress</h3>
+                                <span class="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="inprogress">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="inprogress" class="p-4 space-y-3 min-h-[64px] column-content">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Column -->
+            <div class="flex-1 column-expanded" data-column="review">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div class="px-4 py-3 border-b border-gray-200 column-header">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                                <h3 class="font-semibold text-gray-900 column-title">Review</h3>
+                                <span class="bg-yellow-100 text-yellow-600 text-xs px-2 py-1 rounded-full font-medium">1</span>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="review">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="review" class="p-4 space-y-3 min-h-[64px] column-content">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Done Column -->
+            <div class="flex-1 column-expanded" data-column="done">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div class="px-4 py-3 border-b border-gray-200 column-header">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                                <h3 class="font-semibold text-gray-900 column-title">Done</h3>
+                                <span class="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="done">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="done" class="p-4 space-y-3 min-h-[64px] column-content">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Issue Modal -->
+    <div id="add-task-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Add New Issue</h3>
+                </div>
+                <form id="add-task-form" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Issue Title</label>
+                        <input type="text" id="task-title" name="title" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter issue title">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="task-description" name="description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter issue description"></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                            <select id="task-priority" name="priority" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                            <select id="task-category" name="category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="Frontend">Frontend</option>
+                                <option value="Backend">Backend</option>
+                                <option value="Design">Design</option>
+                                <option value="Testing">Testing</option>
+                                <option value="Database">Database</option>
+                                <option value="Setup">Setup</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Column</label>
+                        <select id="task-column" name="column" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="backlog">Backlog</option>
+                            <option value="inprogress">In Progress</option>
+                            <option value="review">Review</option>
+                            <option value="done">Done</option>
+                        </select>
+                    </div>
+                      
+
+                      
+                      <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" id="cancel-task" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200">Add Issue</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- GitHub Personal Access Token Modal -->
+    <div id="github-token-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center space-x-3">
+                        <i class="fab fa-github text-gray-700"></i>
+                        <h3 class="text-lg font-semibold text-gray-900">Add Personal Access Token</h3>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="mb-4">
+
+                        
+                        <p class="text-sm text-gray-600 mb-4">
+                            To create and manage GitHub issues, you'll need a Personal Access Token with Issues permissions.
+                        </p>
+                        
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                            <h4 class="text-sm font-medium text-blue-800 mb-2">Quick Setup Instructions:</h4>
+                            <ol class="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+                                <li>Go to <strong>GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens</strong></li>
+                                <li>Click <strong>"Generate new token"</strong></li>
+                                <li>Select <strong>this repository</strong> as the resource owner</li>
+                                <li>Under permissions, grant <strong>"Issues"</strong> with <strong>Read and Write</strong> access</li>
+                                <li>Generate the token and copy it below</li>
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <form id="github-token-form" class="space-y-4">
+                        <div>
+                            <label for="github-token-input" class="block text-sm font-medium text-gray-700 mb-1">
+                                Personal Access Token
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="password" 
+                                    id="github-token-input" 
+                                    name="token" 
+                                    class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm" 
+                                    placeholder="github_pat_11ABCDEFGH0123456789_..."
+                                    required
+                                >
+                                <button 
+                                    type="button" 
+                                    id="toggle-token-visibility"
+                                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <i class="fas fa-eye" id="token-eye-icon"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">
+                                Token will be stored securely in your browser's local storage
+                            </p>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3 pt-4">
+                            <button 
+                                type="button" 
+                                id="cancel-github-token" 
+                                class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                            >
+                                Skip for now
+                            </button>
+                            <button 
+                                type="submit" 
+                                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+                            >
+                                <i class="fas fa-key mr-2"></i>
+                                Save Token
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="flex items-start space-x-2">
+                            <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+                            <div class="text-xs text-gray-600">
+                                <p><strong>Need help?</strong> Visit the <a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-fine-grained-personal-access-token" target="_blank" class="text-blue-600 hover:text-blue-800 underline">GitHub documentation</a> for detailed setup instructions.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script defer src="src/kanban.js"></script>
+    <!-- GitHub modules - must be loaded in order -->
+    <script defer src="src/github-auth.js"></script>
+    <script defer src="src/github-api.js"></script>
+    <script defer src="src/github-ui.js"></script>
+    <script defer src="src/github.js"></script>
+    <script defer src="src/status-cards.js"></script>
+</body>
+</html> 
