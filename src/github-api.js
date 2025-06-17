@@ -217,7 +217,7 @@ async function createGitHubIssue(title, description, labels = []) {
 // GitHub Issues Integration
 async function loadGitHubIssues() {
     try {
-        console.log('Loading GitHub issues...');
+        
         
         // Fetch both open and closed issues with cache-busting
         const timestamp = Date.now();
@@ -243,7 +243,7 @@ async function loadGitHubIssues() {
             !issue.labels.some(label => label.name.toLowerCase() === 'archive')
         );
         
-        console.log(`Found ${openIssues.length} open and ${closedIssues.length} closed GitHub issues (filtered out archived issues)`);
+        
         
         // Clear existing issue cards (but keep manually created tasks)
         const columns = ['backlog', 'inprogress', 'review', 'done'];
@@ -297,7 +297,7 @@ async function loadGitHubIssues() {
         // Apply completed sections to all cards in the done column
         window.GitHubUI.applyCompletedSectionsToColumn();
         
-        console.log('✅ GitHub issues loaded successfully');
+        
         
     } catch (error) {
         // Only log errors in non-test environments to avoid console noise during tests
@@ -309,7 +309,7 @@ async function loadGitHubIssues() {
 }
 
 function initializeGitHubIssues() {
-    console.log('🔄 Initializing GitHub issues integration...');
+    
     
     // Add skeleton cards while loading
     const columns = ['backlog', 'inprogress', 'review', 'done'];

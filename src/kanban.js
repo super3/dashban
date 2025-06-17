@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    console.log('📋 Kanban Board initializing...');
+    
 
     // Initialize sortable lists for each column
     const columns = ['info', 'backlog', 'inprogress', 'review', 'done'];
@@ -430,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.getPriorityColor = getPriorityColor;
     window.getCategoryColor = getCategoryColor;
     
-    console.log('✅ Kanban Board initialized successfully!');
+    
 
     // Export certain functions for testing environments
     const testAPI = {

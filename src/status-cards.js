@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    console.log('📊 Status Cards initializing...');
+    
 
     // ============================================================================
     // UTILITY FUNCTIONS
@@ -406,7 +406,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setInterval(refreshAllStatuses, CONFIG.INTERVALS.REFRESH_ALL);
         setInterval(updateTimestamp, CONFIG.INTERVALS.UPDATE_TIMESTAMP);
 
-        console.log('Status Cards initialized successfully!');
+        
     }
 
     // ============================================================================

@@ -139,15 +139,7 @@ function updateGitHubSignInUI() {
         return;
     }
     
-    // Debug logging to see authentication state
-    console.log('🔄 Updating GitHub Sign-In UI - Auth state:', {
-        isAuthenticated: githubAuth.isAuthenticated,
-        hasAccessToken: !!githubAuth.accessToken,
-        hasUser: !!githubAuth.user,
-        userLogin: githubAuth.user?.login,
-        accessTokenLength: githubAuth.accessToken ? githubAuth.accessToken.length : 0,
-        fullAuthObject: githubAuth
-    });
+
     
     if (githubAuth.isAuthenticated && githubAuth.accessToken && githubAuth.user) {
         // Fully authenticated
