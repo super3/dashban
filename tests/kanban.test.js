@@ -1319,3 +1319,275 @@ describe('Kanban Board Core Functionality', () => {
     });
   });
 });
+
+describe('Card Order Persistence', () => {
+    beforeEach(() => {
+        // Clear localStorage before each test
+        localStorageMock.clear();
+        
+        // Set up HTML structure with mock cards
+        document.body.innerHTML = `
+            <div id="backlog">
+                <div class="bg-white border" data-issue-number="123">Card 1</div>
+                <div class="bg-white border" data-task-id="local-1">Card 2</div>
+                <div class="bg-white border" data-issue-number="456">Card 3</div>
+            </div>
+            <div id="inprogress">
+                <div class="bg-white border" data-issue-number="789">Card 4</div>
+            </div>
+            <div id="review"></div>
+            <div id="done"></div>
+            <div id="info"></div>
+        `;
+    });
+
+    test('saveCardOrder should save card order to localStorage', () => {
+        kanbanTestExports.saveCardOrder();
+        
+        const saved = localStorageMock.getItem('cardOrder');
+        expect(saved).toBeTruthy();
+        
+        const cardOrder = JSON.parse(saved);
+        expect(cardOrder.backlog).toEqual(['123', 'local-1', '456']);
+        expect(cardOrder.inprogress).toEqual(['789']);
+        expect(cardOrder.review).toEqual([]);
+        expect(cardOrder.done).toEqual([]);
+        expect(cardOrder.info).toEqual([]);
+    });
+
+    test('loadCardOrder should return saved order from localStorage', () => {
+        const testOrder = {
+            backlog: ['123', '456'],
+            inprogress: ['789'],
+            review: [],
+            done: [],
+            info: []
+        };
+        
+        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        
+        const loaded = kanbanTestExports.loadCardOrder();
+        expect(loaded).toEqual(testOrder);
+    });
+
+    test('loadCardOrder should return null when no saved order exists', () => {
+        const loaded = kanbanTestExports.loadCardOrder();
+        expect(loaded).toBeNull();
+    });
+
+    test('loadCardOrder should handle invalid JSON gracefully', () => {
+        localStorageMock.setItem('cardOrder', 'invalid json');
+        
+        const loaded = kanbanTestExports.loadCardOrder();
+        expect(loaded).toBeNull();
+    });
+
+    test('applyCardOrder should reorder cards according to saved order', () => {
+        // Save an order where Card 3 comes before Card 1
+        const testOrder = {
+            backlog: ['456', '123', 'local-1'],
+            inprogress: ['789'],
+            review: [],
+            done: [],
+            info: []
+        };
+        
+        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        
+        kanbanTestExports.applyCardOrder();
+        
+        const backlogColumn = document.getElementById('backlog');
+        const cards = backlogColumn.querySelectorAll('.bg-white.border');
+        
+        expect(cards[0].getAttribute('data-issue-number')).toBe('456');
+        expect(cards[1].getAttribute('data-issue-number')).toBe('123');
+        expect(cards[2].getAttribute('data-task-id')).toBe('local-1');
+    });
+
+    test('applyCardOrder should handle missing cards gracefully', () => {
+        // Order includes a card that doesn't exist
+        const testOrder = {
+            backlog: ['nonexistent', '123', '456'],
+            inprogress: [],
+            review: [],
+            done: [],
+            info: []
+        };
+        
+        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        
+        expect(() => kanbanTestExports.applyCardOrder()).not.toThrow();
+        
+        const backlogColumn = document.getElementById('backlog');
+        const cards = backlogColumn.querySelectorAll('.bg-white.border');
+        
+        // Should still have the existing cards
+        expect(cards.length).toBe(3);
+    });
+
+    test('applyCardOrder should append cards not in saved order at the end', () => {
+        // Add a new card not in the saved order
+        const backlogColumn = document.getElementById('backlog');
+        const newCard = document.createElement('div');
+        newCard.className = 'bg-white border';
+        newCard.setAttribute('data-issue-number', '999');
+        newCard.textContent = 'New Card';
+        backlogColumn.appendChild(newCard);
+        
+        const testOrder = {
+            backlog: ['123', '456'],
+            inprogress: [],
+            review: [],
+            done: [],
+            info: []
+        };
+        
+        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        
+        kanbanTestExports.applyCardOrder();
+        
+        const cards = backlogColumn.querySelectorAll('.bg-white.border');
+        
+        // First two cards should be in saved order
+        expect(cards[0].getAttribute('data-issue-number')).toBe('123');
+        expect(cards[1].getAttribute('data-issue-number')).toBe('456');
+        
+        // Cards not in saved order should be at the end
+        expect(cards[2].getAttribute('data-task-id')).toBe('local-1');
+        expect(cards[3].getAttribute('data-issue-number')).toBe('999');
+    });
+
+    test('applyCardOrder should do nothing when no saved order exists', () => {
+        const backlogColumn = document.getElementById('backlog');
+        const originalOrder = Array.from(backlogColumn.querySelectorAll('.bg-white.border'))
+            .map(card => card.getAttribute('data-issue-number') || card.getAttribute('data-task-id'));
+        
+        kanbanTestExports.applyCardOrder();
+        
+        const newOrder = Array.from(backlogColumn.querySelectorAll('.bg-white.border'))
+            .map(card => card.getAttribute('data-issue-number') || card.getAttribute('data-task-id'));
+        
+        expect(newOrder).toEqual(originalOrder);
+    });
+
+    test('applyCardOrder should skip skeleton cards', () => {
+        // Add skeleton card
+        const backlogColumn = document.getElementById('backlog');
+        const skeleton = document.createElement('div');
+        skeleton.className = 'bg-white border animate-pulse';
+        skeleton.textContent = 'Loading...';
+        backlogColumn.appendChild(skeleton);
+        
+        const testOrder = {
+            backlog: ['123', '456'],
+            inprogress: [],
+            review: [],
+            done: [],
+            info: []
+        };
+        
+        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        
+        kanbanTestExports.applyCardOrder();
+        
+        // Skeleton should still be there and not interfere with ordering
+        expect(backlogColumn.querySelector('.animate-pulse')).toBeTruthy();
+        
+        const realCards = backlogColumn.querySelectorAll('.bg-white.border:not(.animate-pulse)');
+        expect(realCards[0].getAttribute('data-issue-number')).toBe('123');
+        expect(realCards[1].getAttribute('data-issue-number')).toBe('456');
+    });
+
+    test('saveCardOrder should generate ID for cards without identifiers', () => {
+        // Add card without any identifier
+        const backlogColumn = document.getElementById('backlog');
+        const cardWithoutId = document.createElement('div');
+        cardWithoutId.className = 'bg-white border';
+        cardWithoutId.textContent = 'Card without ID';
+        backlogColumn.appendChild(cardWithoutId);
+        
+        kanbanTestExports.saveCardOrder();
+        
+        const saved = localStorageMock.getItem('cardOrder');
+        const cardOrder = JSON.parse(saved);
+        
+        // Should have 4 cards in backlog (3 original + 1 new)
+        expect(cardOrder.backlog).toHaveLength(4);
+        
+        // The last card should have a generated ID starting with 'card-'
+        expect(cardOrder.backlog[3]).toMatch(/^card-\d+-[a-z0-9]+$/);
+    });
+
+    test('saveCardOrder should handle info column cards with special IDs', () => {
+        // Clear and set up info column with status card and about card
+        document.body.innerHTML = `
+            <div id="info">
+                <div class="bg-white border">
+                    <h4>Status</h4>
+                    <div data-frontend-status>Frontend Status</div>
+                    <div data-ci-status>CI Status</div>
+                </div>
+                <div class="bg-white border">
+                    <h4>About This Project</h4>
+                    <p>This is about the project</p>
+                </div>
+                <div class="bg-white border">
+                    <h4>Other Info</h4>
+                    <p>Some other info</p>
+                </div>
+            </div>
+            <div id="backlog"></div>
+            <div id="inprogress"></div>
+            <div id="review"></div>
+            <div id="done"></div>
+        `;
+        
+        kanbanTestExports.saveCardOrder();
+        
+        const saved = localStorageMock.getItem('cardOrder');
+        const cardOrder = JSON.parse(saved);
+        
+        expect(cardOrder.info).toEqual(['status-card', 'about-card', 'info-card-2']);
+    });
+
+    test('applyCardOrder should handle info column cards correctly', () => {
+        // Set up info column 
+        document.body.innerHTML = `
+            <div id="info">
+                <div class="bg-white border">
+                    <h4>About This Project</h4>
+                    <p>This is about the project</p>
+                </div>
+                <div class="bg-white border">
+                    <h4>Status</h4>
+                    <div data-frontend-status>Frontend Status</div>
+                    <div data-ci-status>CI Status</div>
+                </div>
+            </div>
+            <div id="backlog"></div>
+            <div id="inprogress"></div>
+            <div id="review"></div>
+            <div id="done"></div>
+        `;
+        
+        // Save order where status card comes first
+        const testOrder = {
+            info: ['status-card', 'about-card'],
+            backlog: [],
+            inprogress: [],
+            review: [],
+            done: []
+        };
+        
+        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        
+        kanbanTestExports.applyCardOrder();
+        
+        const infoColumn = document.getElementById('info');
+        const cards = infoColumn.querySelectorAll('.bg-white.border');
+        
+        // Status card should be first, about card second
+        expect(cards[0].querySelector('[data-frontend-status]')).toBeTruthy();
+        expect(cards[1].querySelector('h4').textContent).toContain('About');
+    });
+});

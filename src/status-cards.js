@@ -452,6 +452,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof module !== 'undefined' && module !== null && module.exports) {
         module.exports = statusAPI;
     }
+    
+    // Export key functions to global scope for use by other modules
+    window.StatusCards = {
+        refreshAllStatuses: refreshAllStatuses,
+        updateTimestamp: updateTimestamp
+    };
 
     // Initialize the application
     initializeStatusCards();

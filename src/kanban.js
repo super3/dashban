@@ -6,7 +6,128 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
+    // Card order persistence functions
+    function saveCardOrder() {
+        const cardOrder = {};
+        const columns = ['info', 'backlog', 'inprogress', 'review', 'done'];
+        
+        columns.forEach(columnId => {
+            const column = document.getElementById(columnId);
+            if (column) {
+                const cards = column.querySelectorAll('.bg-white.border:not(.animate-pulse)');
+                cardOrder[columnId] = Array.from(cards).map((card, index) => {
+                    // For info column cards, create stable IDs based on content/structure
+                    if (columnId === 'info') {
+                        // Check if this is a status card (has data-frontend-status or similar)
+                        if (card.querySelector('[data-frontend-status], [data-ci-status], [data-coverage-status]')) {
+                            return 'status-card';
+                        }
+                        // Check if this is an about card (contains "About" in title)
+                        const title = card.querySelector('h4');
+                        if (title && title.textContent.includes('About')) {
+                            return 'about-card';
+                        }
+                        // For other info cards, use index-based ID
+                        return `info-card-${index}`;
+                    }
+                    
+                    // For other columns, use GitHub issue number if available, otherwise generate/use task ID
+                    return card.getAttribute('data-issue-number') || 
+                           card.getAttribute('data-task-id') || 
+                           card.getAttribute('data-card-id') || 
+                           `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                });
+            }
+        });
+        
+        try {
+            localStorage.setItem('cardOrder', JSON.stringify(cardOrder));
+        } catch (error) {
+            console.warn('Failed to save card order to localStorage:', error);
+        }
+    }
     
+    function loadCardOrder() {
+        try {
+            const saved = localStorage.getItem('cardOrder');
+            return saved ? JSON.parse(saved) : null;
+        } catch (error) {
+            console.warn('Failed to load card order from localStorage:', error);
+            return null;
+        }
+    }
+    
+    function applyCardOrder() {
+        const savedOrder = loadCardOrder();
+        if (!savedOrder) return;
+        
+        const columns = ['info', 'backlog', 'inprogress', 'review', 'done'];
+        
+        columns.forEach(columnId => {
+            const column = document.getElementById(columnId);
+            const savedColumnOrder = savedOrder[columnId];
+            
+            if (column && savedColumnOrder && savedColumnOrder.length > 0) {
+                const cards = column.querySelectorAll('.bg-white.border:not(.animate-pulse)');
+                const cardMap = new Map();
+                
+                // Create a map of card identifiers to card elements
+                Array.from(cards).forEach((card, index) => {
+                    let id;
+                    
+                    if (columnId === 'info') {
+                        // Use the same logic as saveCardOrder for info column
+                        if (card.querySelector('[data-frontend-status], [data-ci-status], [data-coverage-status]')) {
+                            id = 'status-card';
+                        } else {
+                            const title = card.querySelector('h4');
+                            if (title && title.textContent.includes('About')) {
+                                id = 'about-card';
+                            } else {
+                                id = `info-card-${index}`;
+                            }
+                        }
+                    } else {
+                        // For other columns, use existing attributes
+                        id = card.getAttribute('data-issue-number') || 
+                             card.getAttribute('data-task-id') || 
+                             card.getAttribute('data-card-id');
+                    }
+                    
+                    if (id) {
+                        cardMap.set(id, card);
+                    }
+                });
+                
+                // Reorder cards according to saved order
+                const fragment = document.createDocumentFragment();
+                savedColumnOrder.forEach(cardId => {
+                    const card = cardMap.get(cardId);
+                    if (card) {
+                        fragment.appendChild(card);
+                        cardMap.delete(cardId);
+                    }
+                });
+                
+                // Append any remaining cards that weren't in the saved order
+                cardMap.forEach(card => {
+                    fragment.appendChild(card);
+                });
+                
+                // Clear the column and append the reordered cards
+                const existingCards = column.querySelectorAll('.bg-white.border:not(.animate-pulse)');
+                existingCards.forEach(card => card.remove());
+                column.appendChild(fragment);
+            }
+        });
+        
+        // If we've reordered the info column and status cards exist, trigger a refresh
+        if (savedOrder.info && window.StatusCards && window.StatusCards.refreshAllStatuses) {
+            setTimeout(() => {
+                window.StatusCards.refreshAllStatuses();
+            }, 100);
+        }
+    }
 
     // Initialize sortable lists for each column
     const columns = ['info', 'backlog', 'inprogress', 'review', 'done'];
@@ -23,6 +144,9 @@ document.addEventListener('DOMContentLoaded', function() {
             dragClass: 'sortable-drag',
             onEnd: function(evt) {
                 updateColumnCounts();
+                
+                // Save card order after any drag operation
+                saveCardOrder();
                 
                 // Check if a GitHub issue was moved between columns
                 const draggedElement = evt.item;
@@ -49,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.GitHub.updateCardIndicators(draggedElement, newColumnId);
                 }
                 
-                console.log('Task moved from', evt.from.id, 'to', evt.to.id);
+
             }
         });
     });
@@ -423,6 +547,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.GitHubAuth && window.GitHubAuth.updateAddIssueButtonState) {
             window.GitHubAuth.updateAddIssueButtonState();
         }
+        // Apply saved card order after GitHub issues are loaded
+        applyCardOrder();
     }, 100);
     
     // Export functions to global scope for access from github.js
@@ -449,7 +575,11 @@ document.addEventListener('DOMContentLoaded', function() {
         expandColumn,
         toggleColumn,
         getPriorityColor,
-        getCategoryColor
+        getCategoryColor,
+        // Card order persistence functions
+        saveCardOrder,
+        loadCardOrder,
+        applyCardOrder
     };
 
     // Attach to global for browser/Node access

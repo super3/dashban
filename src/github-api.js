@@ -330,6 +330,11 @@ function initializeGitHubIssues() {
         document.querySelectorAll('.animate-pulse').forEach(skeleton => {
             skeleton.remove();
         });
+        
+        // Apply saved card order after GitHub issues are loaded
+        if (window.kanbanTestExports && window.kanbanTestExports.applyCardOrder) {
+            window.kanbanTestExports.applyCardOrder();
+        }
     });
 }
 
