@@ -16,7 +16,7 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
     }
 
     try {
-        console.log(`🗃️ Archiving issue #${issueNumber}...`);
+
 
         // Add "archive" label to the issue
         const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
@@ -36,7 +36,7 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
             throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
         }
 
-        console.log(`✅ Successfully archived issue #${issueNumber}`);
+
         
         // Remove from UI
         taskElement.remove();
@@ -60,7 +60,7 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
     }
 
     try {
-        console.log(`🔄 Updating labels for issue #${issueNumber} moved to ${newColumn}...`);
+
 
         // First, get current issue to preserve existing labels
         const getResponse = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}?_t=${Date.now()}`, {
@@ -115,7 +115,7 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
 
         const columnDisplayName = newColumn === 'inprogress' ? 'In Progress' : 
                                  newColumn.charAt(0).toUpperCase() + newColumn.slice(1);
-        console.log(`✅ Successfully updated labels for issue #${issueNumber} (moved to ${columnDisplayName})`);
+
         
     } catch (error) {
         console.error('❌ Failed to update GitHub issue labels:', error);
@@ -135,7 +135,7 @@ async function closeGitHubIssue(issueNumber) {
     }
 
     try {
-        console.log(`🔒 Closing GitHub issue #${issueNumber}...`);
+
 
         // Close the issue via API
         const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
@@ -155,7 +155,7 @@ async function closeGitHubIssue(issueNumber) {
             throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
         }
 
-        console.log(`✅ Successfully closed GitHub issue #${issueNumber}`);
+
         
     } catch (error) {
         console.error('❌ Failed to close GitHub issue:', error);
@@ -173,7 +173,7 @@ async function createGitHubIssue(title, description, labels = []) {
     }
 
     try {
-        console.log('🔄 Creating GitHub issue...');
+
 
         const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues`, {
             method: 'POST',
@@ -195,7 +195,7 @@ async function createGitHubIssue(title, description, labels = []) {
         }
 
         const issue = await response.json();
-        console.log('✅ Successfully created GitHub issue:', issue.number);
+
         return issue;
 
     } catch (error) {

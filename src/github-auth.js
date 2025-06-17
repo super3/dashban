@@ -51,7 +51,6 @@ function initializeGitHubAuth() {
     const savedToken = localStorage.getItem('github_access_token');
     
     if (savedToken) {
-        console.log('🔄 Found saved token, validating...');
         validateAndSetToken(savedToken);
         return;
     }
@@ -66,7 +65,7 @@ function signInWithGitHub() {
 
 async function validateAndSetToken(token) {
     try {
-        console.log('🔄 Validating GitHub token...');
+
         
         const response = await fetch(`${GITHUB_CONFIG.apiBaseUrl}/user`, {
             headers: {
@@ -88,7 +87,7 @@ async function validateAndSetToken(token) {
         
         localStorage.setItem('github_access_token', token);
         
-        console.log('✅ GitHub authentication successful:', user.login);
+
         updateGitHubSignInUI();
         
         return true;
@@ -103,7 +102,7 @@ async function validateAndSetToken(token) {
 }
 
 function signOutGitHub() {
-    console.log('🔓 Signing out of GitHub...');
+    
     
     // Clear authentication state
     githubAuth.isAuthenticated = false;
@@ -116,7 +115,7 @@ function signOutGitHub() {
     // Update UI
     updateGitHubSignInUI();
     
-    console.log('✅ Successfully signed out and cleared access token');
+    
     
     // Show reconnection message
     setTimeout(() => {
