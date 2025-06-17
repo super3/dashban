@@ -14,7 +14,6 @@ describe('GitHub Actions Status Functions', () => {
             const svgWithPassing = '<svg><text>build passing</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithPassing);
             expect(result).toBe('success');
-            expect(console.log).toHaveBeenCalledWith('✅ Found "passing" or "success" in SVG');
         });
 
         test('should detect success status from SVG containing "success"', () => {
@@ -27,7 +26,6 @@ describe('GitHub Actions Status Functions', () => {
             const svgWithFailing = '<svg><text>build failing</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithFailing);
             expect(result).toBe('failure');
-            expect(console.log).toHaveBeenCalledWith('❌ Found "failing" or "failure" in SVG');
         });
 
         test('should detect failure status from SVG containing "failure"', () => {
@@ -46,7 +44,6 @@ describe('GitHub Actions Status Functions', () => {
             const svgWithRunning = '<svg><text>build running</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithRunning);
             expect(result).toBe('in_progress');
-            expect(console.log).toHaveBeenCalledWith('🔄 Found "pending" or "running" in SVG');
         });
 
         test('should detect in_progress status from SVG containing "pending"', () => {
@@ -59,14 +56,12 @@ describe('GitHub Actions Status Functions', () => {
             const svgWithInProgress = '<svg><text>build in progress</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithInProgress);
             expect(result).toBe('in_progress');
-            expect(console.log).toHaveBeenCalledWith('🔄 Found "pending" or "running" in SVG');
         });
 
         test('should detect unknown status from SVG containing "no status"', () => {
             const svgWithNoStatus = '<svg><text>no status</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithNoStatus);
             expect(result).toBe('unknown');
-            expect(console.log).toHaveBeenCalledWith('❔ Found "no status" or "unknown" in SVG');
         });
 
         test('should return unknown for SVG without recognizable status', () => {
@@ -91,11 +86,6 @@ describe('GitHub Actions Status Functions', () => {
             const svgWithText = '<svg><text>some text</text><text>other text</text></svg>';
             const result = utils.parseStatusFromSVG(svgWithText);
             expect(result).toBe('unknown');
-            // This should trigger the regex matching logic and logging
-            expect(console.log).toHaveBeenCalledWith(
-                '⚠️ No recognized status words found. SVG might contain:',
-                expect.any(Array)
-            );
         });
 
         test('should handle SVG with no text content for regex matching', () => {
@@ -262,7 +252,6 @@ describe('parseBadgeSVG function', () => {
         const result = await utils.parseBadgeSVG('https://example.com/badge.svg');
         
         expect(result).toBe('success');
-        expect(console.log).toHaveBeenCalledWith('Badge SVG content:', mockSVG);
     });
 
     test('should handle HTTP errors gracefully', async () => {

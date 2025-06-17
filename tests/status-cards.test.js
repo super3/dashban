@@ -422,8 +422,6 @@ describe('Status Cards Functions', () => {
       badgeImg.dispatchEvent(new Event('load'));
       
       expect(console.log).toHaveBeenCalledWith('Badge loaded successfully');
-      expect(console.log).toHaveBeenCalledWith('Badge dimensions:', 100, 'x', 20);
-      expect(console.log).toHaveBeenCalledWith('Badge src:', 'test-url.svg');
     });
 
     test('should handle badge image error event', () => {

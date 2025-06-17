@@ -4,32 +4,22 @@ function parseStatusFromSVG(svgText) {
     // Convert to lowercase for easier matching
     const lowerText = svgText.toLowerCase();
     
-    console.log('Searching for status words in SVG...');
-    
     // Look for common status words
     if (lowerText.includes('passing') || lowerText.includes('success')) {
-        console.log('✅ Found "passing" or "success" in SVG');
         return 'success';
     }
     
     if (lowerText.includes('failing') || lowerText.includes('failure') || lowerText.includes('failed')) {
-        console.log('❌ Found "failing" or "failure" in SVG');
         return 'failure';
     }
     
     if (lowerText.includes('pending') || lowerText.includes('running') || lowerText.includes('in progress')) {
-        console.log('🔄 Found "pending" or "running" in SVG');
         return 'in_progress';
     }
     
     if (lowerText.includes('no status') || lowerText.includes('unknown')) {
-        console.log('❔ Found "no status" or "unknown" in SVG');
         return 'unknown';
     }
-    
-    // If we can't find specific status words, log what we found
-    console.log('⚠️ No recognized status words found. SVG might contain:', 
-               svgText.match(/>([^<]+)</g)?.map(match => match.slice(1, -1)).filter(text => text.trim()));
     
     return 'unknown';
 }
@@ -48,7 +38,6 @@ function parseShieldsStatus(statusValue) {
     if (!statusValue) return 'unknown';
     
     const status = statusValue.toLowerCase();
-    console.log('Status value from shields.io:', status);
     
     // Map shields.io status values to our status system
     if (status.includes('passing') || status.includes('success')) {
@@ -78,7 +67,6 @@ async function parseBadgeSVG(badgeUrl) {
         }
         
         const svgText = await response.text();
-        console.log('Badge SVG content:', svgText);
         
         // Parse the SVG text for status words
         const status = parseStatusFromSVG(svgText);

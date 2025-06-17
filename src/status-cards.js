@@ -138,10 +138,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             const badgeUrl = buildBadgeUrl('workflow', workflowFile);
-            console.log('🚀 Fetching Frontend status from:', badgeUrl);
             
             const status = await GitHubUtils.parseBadgeSVG(badgeUrl);
-            console.log('🚀 Frontend status result for frontend.yml:', status);
             
             const workflowData = {
                 status: status,
@@ -172,10 +170,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add stronger cache busting for CI status checks
             const timestamp = Date.now();
             const badgeUrl = `${buildBadgeUrl('workflow', workflowFile)}?t=${timestamp}&cacheSeconds=0`;
-            console.log('🔍 Fetching CI status from:', badgeUrl);
             
             const status = await GitHubUtils.parseBadgeSVG(badgeUrl);
-            console.log('🔍 CI status result for test.yml:', status);
             
             const ciData = {
                 status: status,
@@ -200,7 +196,6 @@ document.addEventListener('DOMContentLoaded', function() {
     async function fetchCoverageStatus() {
         try {
             const badgeUrl = `${buildBadgeUrl('coverage')}?t=${Date.now()}`;
-            console.log('📊 Fetching coverage from:', badgeUrl);
             
             const svgText = await fetch(badgeUrl).then(r => r.text());
             const coverage = parseCoverageFromSVG(svgText);
@@ -248,13 +243,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateCIStatusUI(ciData) {
-        console.log('🎯 Updating CI status UI with:', ciData);
         const statusElement = safeQuerySelector(CONFIG.SELECTORS.CI_STATUS);
         
         if (!statusElement) return;
         
         const config = STATUS_CONFIGS.CI[ciData.status] || STATUS_CONFIGS.CI.unknown;
-        console.log('🎯 Using config for CI status:', config);
         
         statusElement.innerHTML = createStatusHTML(config, ciData.status);
         makeElementClickable(statusElement, ciData.htmlUrl);
@@ -292,13 +285,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================================================
     
     function parseCoverageFromSVG(svgText) {
-        console.log('📊 Parsing coverage SVG...');
-        
         // Method 1: Look for percentage patterns in SVG text content
         const percentMatch = svgText.match(/(\d+(?:\.\d+)?)%/);
         if (percentMatch) {
             const percent = parseFloat(percentMatch[1]);
-            console.log(`📊 Found coverage percentage: ${percent}%`);
             return percent;
         }
         
@@ -309,7 +299,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const percentInText = textContent.match(/(\d+(?:\.\d+)?)%/);
             if (percentInText) {
                 const percent = parseFloat(percentInText[1]);
-                console.log(`📊 Found coverage in text: ${percent}%`);
                 return percent;
             }
         }
@@ -317,7 +306,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Method 3: Look for common status words
         const lowerText = svgText.toLowerCase();
         if (lowerText.includes('unknown') || lowerText.includes('pending') || lowerText.includes('inaccessible')) {
-            console.log('📊 Coverage status: unknown/pending/inaccessible');
             return 'unknown';
         }
         
@@ -327,12 +315,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const number = parseFloat(numberMatch[1]);
             // Assume it's a percentage if it's reasonable
             if (number >= 0 && number <= 100) {
-                console.log(`📊 Found potential coverage number: ${number}%`);
                 return number;
             }
         }
         
-        console.log('📊 Could not parse coverage from SVG');
         return 'unknown';
     }
 
@@ -384,8 +370,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (badgeImg) {
             badgeImg.addEventListener('load', function() {
                 console.log('Badge loaded successfully');
-                console.log('Badge dimensions:', this.naturalWidth, 'x', this.naturalHeight);
-                console.log('Badge src:', this.src);
             });
             
             badgeImg.addEventListener('error', function() {
