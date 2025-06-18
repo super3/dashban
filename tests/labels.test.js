@@ -627,6 +627,34 @@ describe('GitHub Labels Management', () => {
             expect(installButton.disabled).toBe(false);
             expect(installButton.textContent).toBe('Install Labels');
         });
+
+        test('should trigger catch block when DOM manipulation throws error', async () => {
+            // Create a warning section that throws an error when accessing style property
+            let accessCount = 0;
+            const mockElement = {
+                get style() {
+                    accessCount++;
+                    if (accessCount === 1) {
+                        // First access (in the try block) - throw error to trigger catch block
+                        throw new Error('DOM manipulation error');
+                    }
+                    // Second access (in catch block) - return a working style object
+                    return { display: '' };
+                }
+            };
+            
+            // Override getElementById to return our problematic element
+            const originalGetElementById = document.getElementById;
+            document.getElementById = jest.fn().mockReturnValue(mockElement);
+
+            await updateLabelWarning();
+
+            expect(mockConsoleError).toHaveBeenCalledWith('❌ Failed to update label warning:', expect.any(Error));
+            expect(accessCount).toBe(2); // Verify both accesses happened
+            
+            // Restore original function
+            document.getElementById = originalGetElementById;
+        });
     });
 
     describe('Module Export', () => {
