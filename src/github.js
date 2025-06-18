@@ -4,6 +4,10 @@
 // Initialize GitHub integration when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     
+    // Initialize repository management FIRST
+    if (window.RepoManager) {
+        window.RepoManager.initializeRepositorySelector();
+    }
     
     // Initialize authentication modal listeners
     window.GitHubAuth.initializeAuthModalListeners();
@@ -60,5 +64,12 @@ window.GitHub = {
     addReviewIndicator: window.GitHubUI.addReviewIndicator,
     removeReviewIndicator: window.GitHubUI.removeReviewIndicator,
     addCompletedSection: window.GitHubUI.addCompletedSection,
-    removeCompletedSection: window.GitHubUI.removeCompletedSection
+    removeCompletedSection: window.GitHubUI.removeCompletedSection,
+    
+    // Repository management functions (from RepoManager)
+    validateRepository: window.RepoManager?.validateRepository,
+    addRepository: window.RepoManager?.addRepository,
+    removeRepository: window.RepoManager?.removeRepository,
+    switchRepository: window.RepoManager?.switchRepository,
+    updateRepositoryDropdown: window.RepoManager?.updateRepositoryDropdown
 }; 

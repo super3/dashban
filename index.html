@@ -12,6 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.0.0/dist/markdown-it.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
     <script src="src/utils.js"></script>
+    <script src="src/repo.js"></script>
     <style>
         .sortable-ghost {
             opacity: 0.4;
@@ -165,10 +166,14 @@
                     <span class="text-gray-300">|</span>
                     
                     <!-- Project Selector -->
-                    <div class="flex items-center space-x-2 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors duration-200 cursor-pointer">
-                        <i class="fab fa-github text-gray-500 text-sm"></i>
-                        <span id="repo-name" class="text-gray-700 font-medium">Project Board</span>
-                        <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                    <div id="repo-selector" class="relative">
+                        <div class="flex items-center space-x-2 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors duration-200 cursor-pointer project-selector">
+                            <i class="fab fa-github text-gray-500 text-sm"></i>
+                            <span id="repo-name" class="text-gray-700 font-medium">Project Board</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                        </div>
+                        
+                        <!-- Dropdown will be dynamically created here -->
                     </div>
                 </div>
 

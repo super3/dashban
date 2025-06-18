@@ -222,8 +222,8 @@ async function loadGitHubIssues() {
         // Fetch both open and closed issues with cache-busting
         const timestamp = Date.now();
         const [openResponse, closedResponse] = await Promise.all([
-            fetch(`https://api.github.com/repos/super3/dashban/issues?state=open&_t=${timestamp}`),
-            fetch(`https://api.github.com/repos/super3/dashban/issues?state=closed&_t=${timestamp}`)
+            fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=open&_t=${timestamp}`),
+            fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=closed&_t=${timestamp}`)
         ]);
         
         if (!openResponse.ok || !closedResponse.ok) {
