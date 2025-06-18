@@ -198,6 +198,13 @@ async function switchRepository(owner, repo) {
 // UI Functions
 function initializeRepositorySelector() {
     loadSavedRepositories();
+    
+    // Sync GitHub config with the loaded current repository
+    if (repoState.currentRepo && window.GitHubAuth?.GITHUB_CONFIG) {
+        window.GitHubAuth.GITHUB_CONFIG.owner = repoState.currentRepo.owner;
+        window.GitHubAuth.GITHUB_CONFIG.repo = repoState.currentRepo.repo;
+    }
+    
     createRepositoryDropdown();
     updateHeaderRepoName();
     

@@ -1023,6 +1023,39 @@ describe('Repository Management', () => {
 
              expect(window.RepoManager.repoState.savedRepos.length).toBe(initialLength);
          });
+
+         test('initializeRepositorySelector should sync GitHub config with current repo on refresh', () => {
+             // Mock localStorage with a different current repo
+             Storage.prototype.getItem = jest.fn((key) => {
+                 if (key === 'dashban_current_repo') {
+                     return JSON.stringify({ owner: 'facebook', repo: 'react' });
+                 }
+                 if (key === 'dashban_repositories') {
+                     return JSON.stringify([
+                         { owner: 'facebook', repo: 'react', accessLevel: 'read-only', canModify: false }
+                     ]);
+                 }
+                 return null;
+             });
+
+             // Reset GitHub config to default
+             window.GitHubAuth.GITHUB_CONFIG.owner = 'super3';
+             window.GitHubAuth.GITHUB_CONFIG.repo = 'dashban';
+
+             // Initialize repository selector (simulating page refresh)
+             window.RepoManager.initializeRepositorySelector();
+
+             // Verify current repo was loaded from localStorage
+             expect(window.RepoManager.repoState.currentRepo.owner).toBe('facebook');
+             expect(window.RepoManager.repoState.currentRepo.repo).toBe('react');
+
+             // Verify GitHub config was synced with the loaded repository
+             expect(window.GitHubAuth.GITHUB_CONFIG.owner).toBe('facebook');
+             expect(window.GitHubAuth.GITHUB_CONFIG.repo).toBe('react');
+
+             // Clean up
+             Storage.prototype.getItem.mockRestore();
+         });
      });
 
      describe('Edge Cases and Boundary Conditions', () => {
