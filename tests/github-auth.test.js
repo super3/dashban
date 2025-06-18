@@ -15,11 +15,28 @@ describe('GitHub Authentication', () => {
         // Create test DOM
         container = document.createElement('div');
         container.innerHTML = `
-            <header>
-                <a href="https://github.com/super3/dashban" target="_blank" class="flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    <i class="fab fa-github"></i>
-                    <span>Connect to GitHub</span>
-                </a>
+            <header class="bg-gray-900 text-white px-6 py-4 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <!-- Left: Logo and Project Section -->
+                    <div class="flex items-center space-x-4">
+                        <i class="fas fa-kanban text-3xl text-indigo-400"></i>
+                        <h1 class="text-2xl font-bold">Dashban</h1>
+                        <span class="text-gray-400">|</span>
+                        <div class="flex items-center space-x-2 text-gray-400">
+                            <i class="fab fa-github text-lg"></i>
+                            <span id="repo-name">dashban</span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Action Buttons -->
+                    <div class="flex items-center space-x-2">
+                        <a href="https://github.com/super3/dashban" target="_blank" class="flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                            <i class="fab fa-github"></i>
+                            <span>Connect to GitHub</span>
+                        </a>
+                    </div>
+                </div>
             </header>
             <div id="github-token-modal" class="hidden">
                 <form id="github-token-form">
@@ -287,8 +304,10 @@ describe('GitHub Authentication', () => {
             window.GitHubAuth.updateGitHubSignInUI();
 
             const signInButton = document.querySelector('header a');
-            expect(signInButton.innerHTML).toContain('Signed in as testuser');
-            expect(signInButton.title).toBe('Click to sign out');
+            expect(signInButton.innerHTML).toContain('testuser');
+            expect(signInButton.innerHTML).toContain('fa-user');
+            expect(signInButton.innerHTML).toContain('fa-chevron-down');
+            expect(signInButton.title).toBe('User menu');
         });
 
         test('updateGitHubSignInUI should show unauthenticated state', () => {
@@ -384,6 +403,84 @@ describe('GitHub Authentication', () => {
             expect(() => {
                 window.GitHubAuth.updateGitHubOptionUI();
             }).not.toThrow();
+        });
+
+        test('toggleUserDropdown should create and remove dropdown', () => {
+            // Set up authenticated state first
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'token';
+            window.GitHubAuth.githubAuth.user = { login: 'testuser' };
+            window.GitHubAuth.updateGitHubSignInUI();
+
+            // The container should be the parent of the updated button which now has href="#"
+            const signInButton = document.querySelector('header a[href="#"]');
+            expect(signInButton).toBeTruthy(); // Ensure button was updated
+            const container = signInButton.parentElement;
+            
+            // First call should create dropdown
+            window.GitHubAuth.toggleUserDropdown();
+            
+            const dropdown = container.querySelector('.user-dropdown');
+            expect(dropdown).toBeTruthy();
+            expect(dropdown.innerHTML).toContain('Sign out');
+            
+            // Second call should remove dropdown
+            window.GitHubAuth.toggleUserDropdown();
+            
+            const dropdownAfter = container.querySelector('.user-dropdown');
+            expect(dropdownAfter).toBeNull();
+        });
+
+        test('toggleUserDropdown should handle missing button gracefully', () => {
+            // Remove all header content
+            const header = document.querySelector('header');
+            const originalHTML = header.innerHTML;
+            header.innerHTML = '';
+            
+            // Should not throw error
+            expect(() => {
+                window.GitHubAuth.toggleUserDropdown();
+            }).not.toThrow();
+            
+            // Restore
+            header.innerHTML = originalHTML;
+        });
+
+        test('updateHeaderRepoName should update repository name in header', () => {
+            // Call the function
+            window.GitHubAuth.updateHeaderRepoName();
+            
+            const repoNameElement = document.getElementById('repo-name');
+            expect(repoNameElement).toBeTruthy();
+            expect(repoNameElement.textContent).toBe('dashban');
+        });
+
+        test('updateHeaderRepoName should handle missing element gracefully', () => {
+            // Remove the repo name element
+            const repoElement = document.getElementById('repo-name');
+            if (repoElement) {
+                const originalText = repoElement.textContent;
+                repoElement.remove();
+                
+                // Should not throw error
+                expect(() => {
+                    window.GitHubAuth.updateHeaderRepoName();
+                }).not.toThrow();
+                
+                // Restore by re-adding the element
+                const newRepoElement = document.createElement('span');
+                newRepoElement.id = 'repo-name';
+                newRepoElement.textContent = originalText;
+                const container = document.querySelector('header .flex.items-center.space-x-4');
+                if (container) {
+                    container.appendChild(newRepoElement);
+                }
+            } else {
+                // If element doesn't exist, just test that the function doesn't throw
+                expect(() => {
+                    window.GitHubAuth.updateHeaderRepoName();
+                }).not.toThrow();
+            }
         });
     });
 
@@ -700,6 +797,8 @@ describe('GitHub Authentication', () => {
             expect(typeof window.GitHubAuth.showGitHubTokenModal).toBe('function');
             expect(typeof window.GitHubAuth.hideGitHubTokenModal).toBe('function');
             expect(typeof window.GitHubAuth.initializeAuthModalListeners).toBe('function');
+            expect(typeof window.GitHubAuth.toggleUserDropdown).toBe('function');
+            expect(typeof window.GitHubAuth.updateHeaderRepoName).toBe('function');
         });
 
         test('should export configuration with correct structure', () => {

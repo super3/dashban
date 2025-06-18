@@ -143,18 +143,21 @@ function updateGitHubSignInUI() {
 
     
     if (githubAuth.isAuthenticated && githubAuth.accessToken && githubAuth.user) {
-        // Fully authenticated
+        // Fully authenticated - setup dropdown
+        const container = signInButton.parentElement;
+        container.style.position = 'relative';
+        
         signInButton.innerHTML = `
-            <i class="fab fa-github"></i>
-            <span>Signed in as ${githubAuth.user.login}</span>
-            <i class="fas fa-sign-out-alt text-xs"></i>
+            <i class="fas fa-user text-xs"></i>
+            <span>${githubAuth.user.login}</span>
+            <i class="fas fa-chevron-down text-xs"></i>
         `;
-        signInButton.title = 'Click to sign out';
+        signInButton.title = 'User menu';
         signInButton.href = '#';
         signInButton.className = 'flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
         signInButton.onclick = (e) => {
             e.preventDefault();
-            signOutGitHub();
+            toggleUserDropdown();
         };
     } else {
         // Not authenticated
@@ -286,6 +289,50 @@ function initializeAuthModalListeners() {
     }
 }
 
+// Function to toggle user dropdown menu
+function toggleUserDropdown() {
+    const signInButton = document.querySelector('header a[href="#"]') ||
+                        document.querySelector('header .flex.items-center.space-x-2:last-child a');
+    if (!signInButton) return;
+    
+    const container = signInButton.parentElement;
+    
+    // Remove existing dropdown
+    const existingDropdown = container.querySelector('.user-dropdown');
+    if (existingDropdown) {
+        existingDropdown.remove();
+        return;
+    }
+    
+    // Create dropdown
+    const dropdown = document.createElement('div');
+    dropdown.className = 'user-dropdown absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50';
+    dropdown.innerHTML = `
+        <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+            <i class="fas fa-sign-out-alt text-xs"></i>
+            <span>Sign out</span>
+        </button>
+    `;
+    
+    // Add click handler for sign out
+    dropdown.querySelector('button').onclick = () => {
+        dropdown.remove();
+        signOutGitHub();
+    };
+    
+    // Close dropdown when clicking outside
+    setTimeout(() => {
+        document.addEventListener('click', function closeDropdown(e) {
+            if (!container.contains(e.target)) {
+                dropdown.remove();
+                document.removeEventListener('click', closeDropdown);
+            }
+        });
+    }, 0);
+    
+    container.appendChild(dropdown);
+}
+
 // Function to update the header with repo name
 function updateHeaderRepoName() {
     const repoNameElement = document.getElementById('repo-name');
@@ -317,5 +364,8 @@ window.GitHubAuth = {
     showGitHubTokenModal,
     hideGitHubTokenModal,
     initializeAuthModalListeners,
+    
+    // UI functions
+    toggleUserDropdown,
     updateHeaderRepoName
 }; 
