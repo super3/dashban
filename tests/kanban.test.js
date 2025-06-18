@@ -1591,3 +1591,37 @@ describe('Card Order Persistence', () => {
         expect(cards[1].querySelector('h4').textContent).toContain('About');
     });
 });
+
+test('should toggle column when clicking on column title', () => {
+    const columnId = 'backlog';
+    const columnWrapper = document.querySelector(`[data-column="${columnId}"]`);
+    const columnTitle = columnWrapper.querySelector('.column-title');
+    
+    // Simulate clicking on the column title
+    const clickEvent = new MouseEvent('click', { bubbles: true });
+    columnTitle.dispatchEvent(clickEvent);
+    
+    // Should collapse the column
+    expect(columnWrapper.classList.contains('column-collapsed')).toBe(true);
+    
+    // Click again to expand
+    columnTitle.dispatchEvent(clickEvent);
+    expect(columnWrapper.classList.contains('column-collapsed')).toBe(false);
+});
+
+test('should handle column title click when column wrapper is missing', () => {
+    // Create a column title without a wrapper
+    const columnTitle = document.createElement('h3');
+    columnTitle.className = 'column-title';
+    columnTitle.textContent = 'Test Column';
+    document.body.appendChild(columnTitle);
+    
+    // Should not throw an error when clicking
+    const clickEvent = new MouseEvent('click', { bubbles: true });
+    expect(() => {
+        columnTitle.dispatchEvent(clickEvent);
+    }).not.toThrow();
+    
+    // Clean up
+    document.body.removeChild(columnTitle);
+});

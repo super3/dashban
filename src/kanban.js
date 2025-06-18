@@ -456,6 +456,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 toggleColumn(columnId);
             }
         }
+        
+        // Also handle clicks on column titles
+        const columnTitle = e.target.closest('.column-title');
+        if (columnTitle) {
+            const columnWrapper = columnTitle.closest('[data-column]');
+            if (columnWrapper) {
+                const columnId = columnWrapper.getAttribute('data-column');
+                if (columnId) {
+                    toggleColumn(columnId);
+                }
+            }
+        }
     });
 
     // Add archive functionality for GitHub issues
