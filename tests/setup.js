@@ -52,5 +52,7 @@ global.localStorage = {
 // Clear all mocks before each test
 beforeEach(() => {
   jest.clearAllMocks();
-  fetch.mockClear();
+  if (global.fetch && global.fetch.mockClear) {
+    global.fetch.mockClear();
+  }
 }); 

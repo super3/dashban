@@ -196,6 +196,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             addTaskModal.classList.remove('hidden');
             document.getElementById('task-title').focus();
+            
+            // Check for missing labels and update warning
+            if (window.GitHubLabels && window.GitHubLabels.updateLabelWarning) {
+                setTimeout(() => {
+                    window.GitHubLabels.updateLabelWarning();
+                }, 100); // Small delay to ensure modal is fully shown
+            }
         });
     }
 
@@ -559,6 +566,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.GitHubAuth && window.GitHubAuth.updateAddIssueButtonState) {
             window.GitHubAuth.updateAddIssueButtonState();
         }
+
         // Apply saved card order after GitHub issues are loaded
         applyCardOrder();
     }, 100);
