@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load GitHub issues
     window.GitHubAPI.initializeGitHubIssues();
     
+    // Update header with repo name
+    window.GitHubAuth.updateHeaderRepoName();
     
 });
 
@@ -32,6 +34,7 @@ window.GitHub = {
     updateGitHubSignInUI: window.GitHubAuth.updateGitHubSignInUI,
     updateGitHubOptionUI: window.GitHubAuth.updateGitHubOptionUI,
     promptForAccessToken: window.GitHubAuth.promptForAccessToken,
+    updateHeaderRepoName: window.GitHubAuth.updateHeaderRepoName,
     
     // Modal functions (from GitHubAuth)
     showGitHubTokenModal: window.GitHubAuth.showGitHubTokenModal,

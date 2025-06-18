@@ -149,6 +149,7 @@
     <header class="bg-white shadow-sm border-b border-gray-200">
         <div class="max-w-none mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-4">
+                <!-- Logo and Project Section -->
                 <div class="flex items-center space-x-4">
                     <div class="flex items-center space-x-2">
                         <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
@@ -160,18 +161,27 @@
                         </div>
                         <h1 class="text-xl font-semibold text-gray-900">Dashban</h1>
                     </div>
-                    <span class="text-gray-500">/</span>
-                    <span class="text-gray-600">Project Board</span>
+                    
+                    <span class="text-gray-300">|</span>
+                    
+                    <!-- Project Selector -->
+                    <div class="flex items-center space-x-2 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors duration-200 cursor-pointer">
+                        <i class="fab fa-github text-gray-500 text-sm"></i>
+                        <span id="repo-name" class="text-gray-700 font-medium">Project Board</span>
+                        <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                    </div>
                 </div>
+
+                <!-- Action Buttons Section -->
                 <div class="flex items-center space-x-4">
                     <button id="add-task-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2">
                         <i class="fas fa-plus"></i>
-                                                    <span>Add Issue</span>
+                        <span>Add Issue</span>
                     </button>
-                                          <a href="https://github.com/super3/dashban" target="_blank" class="flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                          <i class="fab fa-github"></i>
-                          <span>Connect to GitHub</span>
-                      </a>
+                    <a href="https://github.com/super3/dashban" target="_blank" class="flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                        <i class="fab fa-github"></i>
+                        <span>Connect to GitHub</span>
+                    </a>
                 </div>
             </div>
         </div>

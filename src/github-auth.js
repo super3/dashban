@@ -52,10 +52,12 @@ function initializeGitHubAuth() {
     
     if (savedToken) {
         validateAndSetToken(savedToken);
+        updateHeaderRepoName();
         return;
     }
     
     updateGitHubSignInUI();
+    updateHeaderRepoName();
 }
 
 function signInWithGitHub() {
@@ -284,6 +286,17 @@ function initializeAuthModalListeners() {
     }
 }
 
+// Function to update the header with repo name
+function updateHeaderRepoName() {
+    const repoNameElement = document.getElementById('repo-name');
+    if (repoNameElement && GITHUB_CONFIG) {
+        const { repo } = GITHUB_CONFIG;
+        
+        // Update just the repo name text
+        repoNameElement.textContent = repo;
+    }
+}
+
 // Export authentication functions and state
 window.GitHubAuth = {
     // Configuration
@@ -303,5 +316,6 @@ window.GitHubAuth = {
     // Modal functions
     showGitHubTokenModal,
     hideGitHubTokenModal,
-    initializeAuthModalListeners
+    initializeAuthModalListeners,
+    updateHeaderRepoName
 }; 
