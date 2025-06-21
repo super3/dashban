@@ -571,10 +571,20 @@ document.addEventListener('DOMContentLoaded', function() {
         applyCardOrder();
     }, 100);
     
-    // Export functions to global scope for access from github.js
-    window.updateColumnCounts = updateColumnCounts;
-    window.getPriorityColor = getPriorityColor;
-    window.getCategoryColor = getCategoryColor;
+    // Export functions as ES6 modules
+    if (typeof window !== 'undefined') {
+        // ES6 module exports
+        window.kanbanExports = {
+            updateColumnCounts,
+            getPriorityColor,
+            getCategoryColor
+        };
+        
+        // Keep global assignments for backward compatibility (can be removed later)
+        window.updateColumnCounts = updateColumnCounts;
+        window.getPriorityColor = getPriorityColor;
+        window.getCategoryColor = getCategoryColor;
+    }
     
     
 
@@ -612,4 +622,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-}); 
+});
+
+// ES6 Module exports (available after DOM content is loaded)
+export const getKanbanUtils = () => {
+    if (typeof window !== 'undefined' && window.kanbanExports) {
+        return window.kanbanExports;
+    }
+    return null;
+};

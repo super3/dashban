@@ -338,7 +338,17 @@ function initializeGitHubIssues() {
     });
 }
 
-// Export API functions
+// Export API functions as ES6 modules
+export {
+    createGitHubIssue,
+    loadGitHubIssues,
+    archiveGitHubIssue,
+    updateGitHubIssueLabels,
+    closeGitHubIssue,
+    initializeGitHubIssues
+};
+
+// Keep window.GitHubAPI for backward compatibility (can be removed later)
 window.GitHubAPI = {
     // API functions
     createGitHubIssue,

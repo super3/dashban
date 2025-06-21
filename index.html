@@ -576,5 +576,17 @@
     <script defer src="src/github.js"></script>
     <script defer src="src/labels.js"></script>
     <script defer src="src/status-cards.js"></script>
+    
+    <!-- ES6 Module Entry Point (demonstrates new architecture) -->
+    <script type="module">
+        // Import and initialize the ES6 module version
+        import { default as DashbanApp } from './src/main.js';
+        
+        // The app auto-initializes, but we can access it via:
+        // window.DashbanApp for the new module-based approach
+        // window.GitHubAuth for backward compatibility
+        
+        console.log('📦 ES6 modules loaded successfully');
+    </script>
 </body>
 </html> 

@@ -344,7 +344,33 @@ function updateHeaderRepoName() {
     }
 }
 
-// Export authentication functions and state
+// Export authentication functions and state as ES6 modules
+export {
+    // Configuration
+    GITHUB_CONFIG,
+    githubAuth,
+    
+    // Authentication functions
+    initializeGitHubAuth,
+    signInWithGitHub,
+    validateAndSetToken,
+    signOutGitHub,
+    updateGitHubSignInUI,
+    updateGitHubOptionUI,
+    updateAddIssueButtonState,
+    promptForAccessToken,
+    
+    // Modal functions
+    showGitHubTokenModal,
+    hideGitHubTokenModal,
+    initializeAuthModalListeners,
+    
+    // UI functions
+    toggleUserDropdown,
+    updateHeaderRepoName
+};
+
+// Keep window.GitHubAuth for backward compatibility (can be removed later)
 window.GitHubAuth = {
     // Configuration
     GITHUB_CONFIG,
