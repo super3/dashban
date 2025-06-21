@@ -7,11 +7,14 @@ function isTestEnvironment() {
 
 // Archive GitHub issue by adding "archive" label
 async function archiveGitHubIssue(issueNumber, taskElement) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    const globalObject = (typeof window !== 'undefined') ? window : global;
+    if (!globalObject.GitHubAuth.githubAuth.isAuthenticated || !globalObject.GitHubAuth.githubAuth.accessToken) {
         console.log('❌ Not authenticated with GitHub - cannot archive issue');
         // Remove from UI anyway
         taskElement.remove();
-        window.updateColumnCounts();
+        if (typeof window !== 'undefined' && window.updateColumnCounts) {
+            window.updateColumnCounts();
+        }
         return;
     }
 
@@ -19,11 +22,11 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
 
 
         // Add "archive" label to the issue
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
+        const response = await fetch(`${globalObject.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${globalObject.GitHubAuth.GITHUB_CONFIG.owner}/${globalObject.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
             method: 'POST',
             headers: {
                 'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
+                'Authorization': `token ${globalObject.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -40,7 +43,9 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
         
         // Remove from UI
         taskElement.remove();
-        window.updateColumnCounts();
+        if (typeof window !== 'undefined' && window.updateColumnCounts) {
+            window.updateColumnCounts();
+        }
         
     } catch (error) {
         console.error('❌ Failed to archive GitHub issue:', error);
@@ -48,13 +53,16 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
         // Show user-friendly error message but still remove from UI
         alert(`Failed to add archive label to GitHub issue: ${error.message}\n\nThe task will be removed from the board anyway.`);
         taskElement.remove();
-        window.updateColumnCounts();
+        if (typeof window !== 'undefined' && window.updateColumnCounts) {
+            window.updateColumnCounts();
+        }
     }
 }
 
 // Update GitHub issue labels when moved between columns
 async function updateGitHubIssueLabels(issueNumber, newColumn) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    const globalObject = (typeof window !== 'undefined') ? window : global;
+    if (!globalObject.GitHubAuth.githubAuth.isAuthenticated || !globalObject.GitHubAuth.githubAuth.accessToken) {
         console.log('❌ Not authenticated with GitHub - cannot update issue labels');
         return;
     }
@@ -63,10 +71,10 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
 
 
         // First, get current issue to preserve existing labels
-        const getResponse = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}?_t=${Date.now()}`, {
+        const getResponse = await fetch(`${globalObject.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${globalObject.GitHubAuth.GITHUB_CONFIG.owner}/${globalObject.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}?_t=${Date.now()}`, {
             headers: {
                 'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`
+                'Authorization': `token ${globalObject.GitHubAuth.githubAuth.accessToken}`
             }
         });
 
@@ -96,11 +104,11 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
         const updatedLabels = newLabel ? [...filteredLabels, newLabel] : filteredLabels;
 
         // Update labels via API
-        const updateResponse = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
+        const updateResponse = await fetch(`${globalObject.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${globalObject.GitHubAuth.GITHUB_CONFIG.owner}/${globalObject.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
+                'Authorization': `token ${globalObject.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -129,7 +137,8 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
 
 // Close GitHub issue when moved to Done column
 async function closeGitHubIssue(issueNumber) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    const globalObject = (typeof window !== 'undefined') ? window : global;
+    if (!globalObject.GitHubAuth.githubAuth.isAuthenticated || !globalObject.GitHubAuth.githubAuth.accessToken) {
         console.log('❌ Not authenticated with GitHub - cannot close issue');
         return;
     }
@@ -138,11 +147,11 @@ async function closeGitHubIssue(issueNumber) {
 
 
         // Close the issue via API
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
+        const response = await fetch(`${globalObject.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${globalObject.GitHubAuth.GITHUB_CONFIG.owner}/${globalObject.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
             method: 'PATCH',
             headers: {
                 'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
+                'Authorization': `token ${globalObject.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -167,7 +176,8 @@ async function closeGitHubIssue(issueNumber) {
 
 // Create GitHub issue via API
 async function createGitHubIssue(title, description, labels = []) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    const globalObject = (typeof window !== 'undefined') ? window : global;
+    if (!globalObject.GitHubAuth.githubAuth.isAuthenticated || !globalObject.GitHubAuth.githubAuth.accessToken) {
         console.log('❌ Not authenticated with GitHub - cannot create issue');
         return null;
     }
@@ -175,11 +185,11 @@ async function createGitHubIssue(title, description, labels = []) {
     try {
 
 
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues`, {
+        const response = await fetch(`${globalObject.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${globalObject.GitHubAuth.GITHUB_CONFIG.owner}/${globalObject.GitHubAuth.GITHUB_CONFIG.repo}/issues`, {
             method: 'POST',
             headers: {
                 'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
+                'Authorization': `token ${globalObject.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -217,13 +227,13 @@ async function createGitHubIssue(title, description, labels = []) {
 // GitHub Issues Integration
 async function loadGitHubIssues() {
     try {
-        
+        const globalObject = (typeof window !== 'undefined') ? window : global;
         
         // Fetch both open and closed issues with cache-busting
         const timestamp = Date.now();
         const [openResponse, closedResponse] = await Promise.all([
-            fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=open&_t=${timestamp}`),
-            fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=closed&_t=${timestamp}`)
+            fetch(`${globalObject.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${globalObject.GitHubAuth.GITHUB_CONFIG.owner}/${globalObject.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=open&_t=${timestamp}`),
+            fetch(`${globalObject.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${globalObject.GitHubAuth.GITHUB_CONFIG.owner}/${globalObject.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=closed&_t=${timestamp}`)
         ]);
         
         if (!openResponse.ok || !closedResponse.ok) {
@@ -258,7 +268,9 @@ async function loadGitHubIssues() {
         
         // Add open issues to appropriate columns
         openIssues.forEach(issue => {
-            const taskElement = window.GitHubUI.createGitHubIssueElement(issue, false);
+            const taskElement = (typeof window !== 'undefined' && window.GitHubUI) ? 
+                window.GitHubUI.createGitHubIssueElement(issue, false) : null;
+            if (!taskElement) return;
             
             // Determine column based on labels or default to backlog
             let targetColumn = 'backlog';
@@ -273,15 +285,20 @@ async function loadGitHubIssues() {
                 targetColumn = 'done';
             }
             
-            const column = document.getElementById(targetColumn);
-            if (column) {
-                column.appendChild(taskElement);
+            if (typeof document !== 'undefined') {
+                const column = document.getElementById(targetColumn);
+                if (column) {
+                    column.appendChild(taskElement);
+                }
             }
         });
         
         // Add closed issues to done column
         closedIssues.forEach(issue => {
-            const taskElement = window.GitHubUI.createGitHubIssueElement(issue, false); // Don't add completed section here
+            const taskElement = (typeof window !== 'undefined' && window.GitHubUI) ? 
+                window.GitHubUI.createGitHubIssueElement(issue, false) : null; // Don't add completed section here
+            if (!taskElement || typeof document === 'undefined') return;
+            
             const doneColumn = document.getElementById('done');
             if (doneColumn) {
                 doneColumn.appendChild(taskElement);
@@ -289,13 +306,19 @@ async function loadGitHubIssues() {
         });
         
         // Update column counts
-        window.updateColumnCounts();
+        if (typeof window !== 'undefined' && window.updateColumnCounts) {
+            window.updateColumnCounts();
+        }
         
         // Apply review indicators to all cards in the review column
-        window.GitHubUI.applyReviewIndicatorsToColumn();
+        if (typeof window !== 'undefined' && window.GitHubUI && window.GitHubUI.applyReviewIndicatorsToColumn) {
+            window.GitHubUI.applyReviewIndicatorsToColumn();
+        }
         
         // Apply completed sections to all cards in the done column
-        window.GitHubUI.applyCompletedSectionsToColumn();
+        if (typeof window !== 'undefined' && window.GitHubUI && window.GitHubUI.applyCompletedSectionsToColumn) {
+            window.GitHubUI.applyCompletedSectionsToColumn();
+        }
         
         
         
@@ -312,27 +335,31 @@ function initializeGitHubIssues() {
     
     
     // Add skeleton cards while loading
-    const columns = ['backlog', 'inprogress', 'review', 'done'];
-    columns.forEach(columnId => {
-        const column = document.getElementById(columnId);
-        if (column) {
-            // Add 1-2 skeleton cards per column
-            const skeletonCount = Math.floor(Math.random() * 2) + 1;
-            for (let i = 0; i < skeletonCount; i++) {
-                column.appendChild(window.GitHubUI.createSkeletonCard());
+    if (typeof document !== 'undefined' && typeof window !== 'undefined' && window.GitHubUI) {
+        const columns = ['backlog', 'inprogress', 'review', 'done'];
+        columns.forEach(columnId => {
+            const column = document.getElementById(columnId);
+            if (column) {
+                // Add 1-2 skeleton cards per column
+                const skeletonCount = Math.floor(Math.random() * 2) + 1;
+                for (let i = 0; i < skeletonCount; i++) {
+                    column.appendChild(window.GitHubUI.createSkeletonCard());
+                }
             }
-        }
-    });
+        });
+    }
     
     // Load real issues
     loadGitHubIssues().then(() => {
         // Remove skeleton cards
-        document.querySelectorAll('.animate-pulse').forEach(skeleton => {
-            skeleton.remove();
-        });
+        if (typeof document !== 'undefined') {
+            document.querySelectorAll('.animate-pulse').forEach(skeleton => {
+                skeleton.remove();
+            });
+        }
         
         // Apply saved card order after GitHub issues are loaded
-        if (window.kanbanTestExports && window.kanbanTestExports.applyCardOrder) {
+        if (typeof window !== 'undefined' && window.kanbanTestExports && window.kanbanTestExports.applyCardOrder) {
             window.kanbanTestExports.applyCardOrder();
         }
     });
@@ -349,7 +376,9 @@ export {
 };
 
 // Keep window.GitHubAPI for backward compatibility (can be removed later)
-window.GitHubAPI = {
+// Ensure global object is available in both browser and test environments
+const globalObject = (typeof window !== 'undefined') ? window : global;
+globalObject.GitHubAPI = {
     // API functions
     createGitHubIssue,
     loadGitHubIssues,

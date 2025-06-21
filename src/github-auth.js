@@ -371,7 +371,9 @@ export {
 };
 
 // Keep window.GitHubAuth for backward compatibility (can be removed later)
-window.GitHubAuth = {
+// Ensure global object is available in both browser and test environments
+const globalObject = (typeof window !== 'undefined') ? window : global;
+globalObject.GitHubAuth = {
     // Configuration
     GITHUB_CONFIG,
     githubAuth,
