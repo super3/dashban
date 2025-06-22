@@ -35,5 +35,4 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           timeout_minutes: "60"
           allowed_tools: |
-            Bash(npm install)
-            Bash(npm run test)
+            Bash
