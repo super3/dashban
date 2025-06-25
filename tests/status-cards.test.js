@@ -47,6 +47,15 @@ function setupMocks() {
   global.setInterval = jest.fn();
 }
 
+function setupGitHubAuth(owner = 'test-owner', repo = 'test-repo') {
+  global.window.GitHubAuth = {
+    GITHUB_CONFIG: {
+      owner: owner,
+      repo: repo
+    }
+  };
+}
+
 function createWorkflowData(overrides = {}) {
   return {
     status: 'success',
@@ -143,6 +152,7 @@ const coverageTestCases = [
     coverage: 'unknown',
     expectedText: 'Unknown',
     expectedColor: 'text-gray-600',
+    expectedIcon: 'fas fa-question-circle',
     description: 'unknown coverage'
   }
 ];
@@ -164,9 +174,9 @@ const svgParsingTestCases = [
     expected: 75
   },
   {
-    description: 'any reasonable number',
+    description: 'number without coverage context returns unknown',
     svg: '<svg><text>some text 92 more text</text></svg>',
-    expected: 92
+    expected: 'unknown'
   }
 ];
 
@@ -206,12 +216,17 @@ describe('Status Cards Functions', () => {
     
     setupStatusCardsDOM();
     setupMocks();
+    // Don't setup GitHubAuth globally - let individual tests configure repository as needed
     statusAPI = loadStatusCardsModule();
   });
 
   afterEach(() => {
     jest.useRealTimers();
     document.body.innerHTML = '';
+    // Clean up GitHubAuth to avoid contamination between tests
+    if (global.window && global.window.GitHubAuth) {
+      delete global.window.GitHubAuth;
+    }
   });
 
   // ============================================================================
@@ -281,6 +296,7 @@ describe('Status Cards Functions', () => {
 
     describe('buildBadgeUrl', () => {
       test('should build workflow badge URL correctly', () => {
+        // Use default config (no GitHubAuth setup means it falls back to defaults)
         const result = statusAPI.buildBadgeUrl('workflow', 'test.yml');
         expect(result).toBe('https://img.shields.io/github/actions/workflow/status/super3/dashban/test.yml');
       });
@@ -299,6 +315,7 @@ describe('Status Cards Functions', () => {
 
     describe('buildGitHubUrl', () => {
       test('should build workflow GitHub URL correctly', () => {
+        // Use default config (no GitHubAuth setup means it falls back to defaults)
         const result = statusAPI.buildGitHubUrl('workflow', 'test.yml');
         expect(result).toBe('https://github.com/super3/dashban/actions/workflows/test.yml');
       });
@@ -686,12 +703,11 @@ describe('Status Cards Functions', () => {
         expect(result).toBe('unknown');
       });
 
-      test('should hit false branch when number is negative via number-only fallback', () => {
-        // The regex (\d+(?:\.\d+)?) only captures digits, so -5 becomes 5
-        // Let's use a number > 100 to ensure it fails the range check
+      test('should return unknown when number has no coverage context', () => {
+        // With our improved parsing logic, numbers without coverage context return unknown
         const svgContent = '<svg>-5</svg>';
         const result = statusAPI.parseCoverageFromSVG(svgContent);
-        expect(result).toBe(5); // The regex extracts 5, which is valid
+        expect(result).toBe('unknown'); // No coverage context, so should be unknown
       });
 
       test('should hit false branch when decimal number exceeds 100 via fallback', () => {
@@ -843,7 +859,7 @@ describe('Status Cards Functions', () => {
   describe('updateCoverageStatusUI', () => {
     test.each(coverageTestCases)(
       'should update coverage with $description',
-      ({ coverage, expectedText, expectedColor }) => {
+      ({ coverage, expectedText, expectedColor, expectedIcon }) => {
         const coverageData = createCoverageData({ coverage });
 
         statusAPI.updateCoverageStatusUI(coverageData);
@@ -851,6 +867,11 @@ describe('Status Cards Functions', () => {
         const statusElement = document.querySelector('[data-coverage-status]');
         expect(statusElement.innerHTML).toContain(expectedText);
         expect(statusElement.innerHTML).toContain(expectedColor);
+        
+        // Check for icon in unknown coverage case
+        if (expectedIcon) {
+          expect(statusElement.innerHTML).toContain(expectedIcon);
+        }
       }
     );
 
@@ -885,6 +906,7 @@ describe('Status Cards Functions', () => {
       
       await statusAPI.fetchWorkflowStatus();
       
+      // With no GitHubAuth setup, it uses default config
       expect(global.GitHubUtils.parseBadgeSVG).toHaveBeenCalledWith(
         'https://img.shields.io/github/actions/workflow/status/super3/dashban/frontend.yml'
       );
@@ -913,6 +935,7 @@ describe('Status Cards Functions', () => {
       
       await statusAPI.fetchCIStatus();
       
+      // With no GitHubAuth setup, it uses default config
       expect(global.GitHubUtils.parseBadgeSVG).toHaveBeenCalledWith(
         expect.stringContaining('https://img.shields.io/github/actions/workflow/status/super3/dashban/test.yml')
       );
@@ -935,6 +958,7 @@ describe('Status Cards Functions', () => {
       
       await statusAPI.fetchCoverageStatus();
       
+      // With no GitHubAuth setup, it uses default config
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining('https://img.shields.io/coveralls/github/super3/dashban/main.svg?t=')
       );
@@ -1007,6 +1031,172 @@ describe('Status Cards Functions', () => {
       expect(() => {
         statusAPI.setupBadgeDebugging();
       }).not.toThrow();
+    });
+  });
+
+  // ============================================================================
+  // REPOSITORY SWITCHING TESTS
+  // ============================================================================
+
+  describe('Repository Switching', () => {
+    test('should use current repository configuration from GitHubAuth', () => {
+      setupStatusCardsDOM();
+      setupMocks();
+      setupGitHubAuth('different-owner', 'different-repo');
+      const statusAPI = loadStatusCardsModule();
+
+      const config = statusAPI.getCurrentRepoConfig();
+      expect(config.OWNER).toBe('different-owner');
+      expect(config.REPO).toBe('different-repo');
+    });
+
+    test('should fall back to default config when GitHubAuth not available', () => {
+      setupStatusCardsDOM();
+      setupMocks();
+      // Don't setup GitHubAuth
+      const statusAPI = loadStatusCardsModule();
+
+      const config = statusAPI.getCurrentRepoConfig();
+      expect(config.OWNER).toBe('super3');
+      expect(config.REPO).toBe('dashban');
+    });
+
+    test('should build URLs with current repository configuration', () => {
+      setupStatusCardsDOM();
+      setupMocks();
+      setupGitHubAuth('user123', 'awesome-project');
+      const statusAPI = loadStatusCardsModule();
+
+      const badgeUrl = statusAPI.buildBadgeUrl('workflow', 'frontend.yml');
+      const gitHubUrl = statusAPI.buildGitHubUrl('workflow', 'frontend.yml');
+
+      expect(badgeUrl).toContain('user123/awesome-project');
+      expect(gitHubUrl).toContain('user123/awesome-project');
+    });
+
+    test('should refresh status cards and show loading state', () => {
+      setupStatusCardsDOM();
+      setupMocks();
+      setupGitHubAuth('new-owner', 'new-repo');
+      const statusAPI = loadStatusCardsModule();
+
+      const frontendStatusEl = document.querySelector('[data-frontend-status]');
+      const ciStatusEl = document.querySelector('[data-ci-status]');
+      const coverageStatusEl = document.querySelector('[data-coverage-status]');
+
+      // Initially empty
+      expect(frontendStatusEl.innerHTML).toBe('');
+      expect(ciStatusEl.innerHTML).toBe('');
+      expect(coverageStatusEl.innerHTML).toBe('');
+
+      // Call refresh function
+      statusAPI.refreshStatusCardsForRepository();
+
+      // Should show loading state
+      expect(frontendStatusEl.innerHTML).toContain('Loading...');
+      expect(ciStatusEl.innerHTML).toContain('Loading...');
+      expect(coverageStatusEl.innerHTML).toContain('Loading...');
+    });
+
+    test('should update badge image src when refreshing for repository', () => {
+      setupStatusCardsDOM();
+      setupMocks();
+      setupGitHubAuth('owner', 'repo');
+      const statusAPI = loadStatusCardsModule();
+
+      const badgeImg = document.querySelector('#github-badge');
+      const originalSrc = badgeImg.src;
+
+      statusAPI.refreshStatusCardsForRepository();
+
+      // Should update src with new URL containing current repo
+      expect(badgeImg.src).not.toBe(originalSrc);
+      expect(badgeImg.src).toContain('owner/repo');
+      expect(badgeImg.src).toContain('?t='); // Cache buster
+    });
+  });
+
+  // ============================================================================
+  // COVERAGE PARSING EDGE CASES
+  // ============================================================================
+
+  describe('Coverage Parsing Edge Cases', () => {
+    test('should return unknown for SVG with only dimension numbers', () => {
+      setupStatusCardsDOM();
+      setupMocks();
+      const statusAPI = loadStatusCardsModule();
+
+      // Simulate an SVG with only width/height numbers but no coverage data
+      const mockSVG = '<svg width="100" height="20"><rect width="100" height="20"/><text x="50" y="15">unknown</text></svg>';
+      const result = statusAPI.parseCoverageFromSVG(mockSVG);
+      
+      expect(result).toBe('unknown');
+    });
+
+    test('should return unknown for non-coverage badge SVG', () => {
+      setupStatusCardsDOM();
+      setupMocks();
+      const statusAPI = loadStatusCardsModule();
+
+      // Simulate an SVG from shields.io for a different type of badge
+      const mockSVG = '<svg><text x="30" y="15">build</text><text x="70" y="15">passing</text></svg>';
+      const result = statusAPI.parseCoverageFromSVG(mockSVG);
+      
+      expect(result).toBe('unknown');
+    });
+
+    test('should parse coverage correctly when coverage context is present', () => {
+      setupStatusCardsDOM();
+      setupMocks();
+      const statusAPI = loadStatusCardsModule();
+
+      // Simulate an SVG with coverage in context
+      const mockSVG = '<svg><text x="30" y="15">coverage</text><text x="70" y="15">85</text></svg>';
+      const result = statusAPI.parseCoverageFromSVG(mockSVG);
+      
+      expect(result).toBe(85);
+    });
+
+    test('should return unknown for error states', () => {
+      setupStatusCardsDOM();
+      setupMocks();
+      const statusAPI = loadStatusCardsModule();
+
+      const errorSVGs = [
+        '<svg><text>invalid</text></svg>',
+        '<svg><text>error</text></svg>',
+        '<svg><text>not found</text></svg>',
+        '<svg><text>unavailable</text></svg>'
+      ];
+
+      errorSVGs.forEach(svg => {
+        const result = statusAPI.parseCoverageFromSVG(svg);
+        expect(result).toBe('unknown');
+      });
+    });
+
+    test('should ignore numbers without coverage context', () => {
+      setupStatusCardsDOM();
+      setupMocks();
+      const statusAPI = loadStatusCardsModule();
+
+      // SVG with numbers but no coverage context (like width/height attributes)
+      const mockSVG = '<svg width="104" height="20"><rect width="104" height="20" fill="#555"/><text x="52" y="15" fill="#fff">repository</text></svg>';
+      const result = statusAPI.parseCoverageFromSVG(mockSVG);
+      
+      expect(result).toBe('unknown');
+    });
+
+    test('should handle shields.io inaccessible repository badge', () => {
+      setupStatusCardsDOM();
+      setupMocks();
+      const statusAPI = loadStatusCardsModule();
+
+      // Typical shields.io response for inaccessible/unknown repository
+      const mockSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="104" height="20"><linearGradient id="a" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><rect rx="3" width="104" height="20" fill="#555"/><text x="37" y="15" fill="#fff">coverage</text><text x="79" y="15" fill="#fff">unknown</text></svg>';
+      const result = statusAPI.parseCoverageFromSVG(mockSVG);
+      
+      expect(result).toBe('unknown');
     });
   });
 

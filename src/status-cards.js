@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================================================
     
     const CONFIG = {
+        // Default values - will be overridden by current repository
         OWNER: 'super3',
         REPO: 'dashban',
         WORKFLOWS: {
@@ -54,6 +55,24 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // ============================================================================
+    // REPOSITORY CONFIGURATION HELPERS
+    // ============================================================================
+    
+    function getCurrentRepoConfig() {
+        // Use current repository from GitHubAuth if available, otherwise fall back to defaults
+        if (window.GitHubAuth?.GITHUB_CONFIG) {
+            return {
+                OWNER: window.GitHubAuth.GITHUB_CONFIG.owner || CONFIG.OWNER,
+                REPO: window.GitHubAuth.GITHUB_CONFIG.repo || CONFIG.REPO
+            };
+        }
+        return {
+            OWNER: CONFIG.OWNER,
+            REPO: CONFIG.REPO
+        };
+    }
+
+    // ============================================================================
     // DEPENDENCY VALIDATION
     // ============================================================================
     
@@ -95,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function buildBadgeUrl(type, workflowFile = null) {
-        const { OWNER, REPO } = CONFIG;
+        const { OWNER, REPO } = getCurrentRepoConfig();
         if (type === 'workflow') {
             return `https://img.shields.io/github/actions/workflow/status/${OWNER}/${REPO}/${workflowFile}`;
         } else if (type === 'coverage') {
@@ -105,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function buildGitHubUrl(type, workflowFile = null) {
-        const { OWNER, REPO } = CONFIG;
+        const { OWNER, REPO } = getCurrentRepoConfig();
         if (type === 'workflow') {
             return `https://github.com/${OWNER}/${REPO}/actions/workflows/${workflowFile}`;
         } else if (type === 'coverage') {
@@ -258,14 +277,18 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!statusElement) return;
         
-        let bgColor, text;
-        
         if (coverageData.coverage === 'unknown') {
-            bgColor = 'text-gray-600';
-            text = 'Unknown';
+            // Use consistent styling with CI unknown status, including question icon
+            statusElement.innerHTML = `
+                <div class="flex items-center space-x-1">
+                    <i class="fas fa-question-circle text-gray-500 text-sm"></i>
+                    <span class="text-sm text-gray-600 font-medium">Unknown</span>
+                </div>
+            `;
         } else {
             const coverage = parseFloat(coverageData.coverage);
-            text = `${coverage}%`;
+            const text = `${coverage}%`;
+            let bgColor;
             
             if (coverage >= 80) {
                 bgColor = 'text-green-600';
@@ -274,9 +297,10 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 bgColor = 'text-red-600';
             }
+            
+            statusElement.innerHTML = `<span class="text-sm ${bgColor} font-medium">${text}</span>`;
         }
         
-        statusElement.innerHTML = `<span class="text-sm ${bgColor} font-medium">${text}</span>`;
         makeElementClickable(statusElement, coverageData.htmlUrl);
     }
 
@@ -285,14 +309,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================================================
     
     function parseCoverageFromSVG(svgText) {
-        // Method 1: Look for percentage patterns in SVG text content
+        // Method 1: Check for error/unknown states FIRST before looking for numbers
+        const lowerText = svgText.toLowerCase();
+        if (lowerText.includes('unknown') || 
+            lowerText.includes('pending') || 
+            lowerText.includes('inaccessible') ||
+            lowerText.includes('invalid') ||
+            lowerText.includes('error') ||
+            lowerText.includes('not found') ||
+            lowerText.includes('unavailable')) {
+            return 'unknown';
+        }
+        
+        // Method 2: Look for percentage patterns in SVG text content
         const percentMatch = svgText.match(/(\d+(?:\.\d+)?)%/);
         if (percentMatch) {
             const percent = parseFloat(percentMatch[1]);
             return percent;
         }
         
-        // Method 2: Look for text elements with percentage (shields.io format)
+        // Method 3: Look for text elements with percentage (shields.io format)
         const textMatch = svgText.match(/>([^<]*\d+(?:\.\d+)?%[^<]*)</);
         if (textMatch) {
             const textContent = textMatch[1];
@@ -303,19 +339,37 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Method 3: Look for common status words
-        const lowerText = svgText.toLowerCase();
-        if (lowerText.includes('unknown') || lowerText.includes('pending') || lowerText.includes('inaccessible')) {
-            return 'unknown';
-        }
-        
-        // Method 4: Fallback - look for any number
-        const numberMatch = svgText.match(/(\d+(?:\.\d+)?)/);
-        if (numberMatch) {
-            const number = parseFloat(numberMatch[1]);
-            // Assume it's a percentage if it's reasonable
-            if (number >= 0 && number <= 100) {
-                return number;
+        // Method 4: Look for shields.io text elements that contain coverage data
+        // Extract all text elements and check if they contain coverage-related numbers
+        const textElements = svgText.match(/<text[^>]*>([^<]+)<\/text>/g);
+        if (textElements) {
+            let foundCoverageKeyword = false;
+            let potentialNumbers = [];
+            
+            // First pass: identify if this is a coverage badge and collect potential numbers
+            for (const textElement of textElements) {
+                const textContent = textElement.match(/<text[^>]*>([^<]+)<\/text>/);
+                if (textContent && textContent[1]) {
+                    const content = textContent[1].trim();
+                    
+                    // Check if this text element indicates coverage
+                    if (content.toLowerCase().includes('coverage') || content.toLowerCase().includes('cov')) {
+                        foundCoverageKeyword = true;
+                    }
+                    
+                    // Collect potential coverage numbers (must be just a number)
+                    if (/^\d+(\.\d+)?$/.test(content)) {
+                        const number = parseFloat(content);
+                        if (number >= 0 && number <= 100) {
+                            potentialNumbers.push(number);
+                        }
+                    }
+                }
+            }
+            
+            // Only return a number if we found both a coverage keyword AND a reasonable number
+            if (foundCoverageKeyword && potentialNumbers.length > 0) {
+                return potentialNumbers[0]; // Return the first valid number we found
             }
         }
         
@@ -342,6 +396,37 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchWorkflowStatus();
         setTimeout(() => fetchCIStatus(), CONFIG.INTERVALS.REFRESH_DELAYS.CI_STATUS);
         setTimeout(() => fetchCoverageStatus(), CONFIG.INTERVALS.REFRESH_DELAYS.COVERAGE);
+    }
+
+    // ============================================================================
+    // REPOSITORY CHANGE HANDLING
+    // ============================================================================
+    
+    function refreshStatusCardsForRepository() {
+        console.log('🔄 Refreshing status cards for repository:', getCurrentRepoConfig());
+        
+        // Clear any existing status to show loading state
+        const statusElements = [
+            document.querySelector(CONFIG.SELECTORS.FRONTEND_STATUS),
+            document.querySelector(CONFIG.SELECTORS.CI_STATUS),
+            document.querySelector(CONFIG.SELECTORS.COVERAGE_STATUS)
+        ];
+        
+        statusElements.forEach(element => {
+            if (element) {
+                element.innerHTML = '<div class="flex items-center space-x-1"><i class="fas fa-spinner fa-spin text-gray-400 text-sm"></i><span class="text-sm text-gray-500 font-medium">Loading...</span></div>';
+            }
+        });
+        
+        // Refresh all statuses with the new repository
+        refreshAllStatuses();
+        
+        // Also update the badge image if it exists
+        const badgeImg = document.querySelector(CONFIG.SELECTORS.BADGE_IMG);
+        if (badgeImg) {
+            const baseUrl = buildBadgeUrl('workflow', CONFIG.WORKFLOWS.FRONTEND);
+            badgeImg.src = baseUrl + '?t=' + Date.now();
+        }
     }
 
     // ============================================================================
@@ -426,6 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Utility functions
         refreshAllStatuses,
+        refreshStatusCardsForRepository,
         parseCoverageFromSVG,
         updateTimestamp,
         setupBadgeDebugging,
@@ -438,6 +524,7 @@ document.addEventListener('DOMContentLoaded', function() {
         buildGitHubUrl,
         makeElementClickable,
         safeQuerySelector,
+        getCurrentRepoConfig,
         
         // Configuration access for testing
         CONFIG,
@@ -456,6 +543,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Export key functions to global scope for use by other modules
     window.StatusCards = {
         refreshAllStatuses: refreshAllStatuses,
+        refreshStatusCardsForRepository: refreshStatusCardsForRepository,
         updateTimestamp: updateTimestamp
     };
 

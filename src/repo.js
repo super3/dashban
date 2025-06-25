@@ -183,6 +183,11 @@ async function switchRepository(owner, repo) {
     updateHeaderRepoName();
     updateRepositoryDropdown();
     
+    // Refresh status cards for new repository
+    if (window.StatusCards?.refreshStatusCardsForRepository) {
+        window.StatusCards.refreshStatusCardsForRepository();
+    }
+    
     // Reload issues from new repository
     if (window.GitHubAPI?.loadGitHubIssues) {
         await window.GitHubAPI.loadGitHubIssues();
