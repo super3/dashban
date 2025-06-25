@@ -488,12 +488,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Add double-click to edit functionality
+    // Add click to open issue modal functionality
+    document.addEventListener('click', function(e) {
+        // Only handle clicks on issue cards with GitHub issue numbers
+        const taskElement = e.target.closest('.bg-white.border');
+        if (taskElement && taskElement.getAttribute('data-issue-number')) {
+            // Prevent event if clicking on interactive elements
+            if (e.target.closest('a, button, .archive-btn') || e.target.tagName === 'A' || e.target.tagName === 'BUTTON') {
+                return;
+            }
+            
+            const issueNumber = taskElement.getAttribute('data-issue-number');
+            if (window.IssueModal && window.IssueModal.openIssueModal) {
+                window.IssueModal.openIssueModal(issueNumber, taskElement);
+            }
+        }
+    });
+
+    // Add double-click to edit functionality (kept for non-GitHub cards)
     document.addEventListener('dblclick', function(e) {
         const taskElement = e.target.closest('.bg-white.border');
-        if (taskElement) {
-            // Add edit functionality here
-            console.log('Edit task:', taskElement);
+        if (taskElement && !taskElement.getAttribute('data-issue-number')) {
+            // Add edit functionality for local tasks here
+            console.log('Edit local task:', taskElement);
         }
     });
 
@@ -571,6 +588,8 @@ document.addEventListener('DOMContentLoaded', function() {
         applyCardOrder();
     }, 100);
     
+    
+
     // Export functions to global scope for access from github.js
     window.updateColumnCounts = updateColumnCounts;
     window.getPriorityColor = getPriorityColor;
