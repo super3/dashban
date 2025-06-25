@@ -59,11 +59,6 @@ function populateIssueModal(issueNumber, taskElement) {
     // Update modal header
     document.getElementById('issue-modal-title').textContent = title;
     document.getElementById('issue-modal-number').textContent = `#${issueNumber}`;
-    document.getElementById('issue-modal-status').textContent = column === 'done' ? 'Closed' : 'Open';
-
-    // Update title section
-    document.getElementById('issue-title-display').textContent = title;
-    document.getElementById('issue-title-edit').value = title;
 
     // Update description section
     document.getElementById('issue-description-display').innerHTML = description;
@@ -143,26 +138,25 @@ function populateIssueModal(issueNumber, taskElement) {
         </div>
     `;
     
-    // Set metadata (placeholder for now)
-    document.getElementById('issue-created-date').textContent = 'Recently';
-    document.getElementById('issue-updated-date').textContent = 'Recently';
-    document.getElementById('issue-author').textContent = 'GitHub User';
+
 }
 
 function resetEditStates() {
-    // Reset title editing
-    document.getElementById('issue-title-display').classList.remove('hidden');
-    document.getElementById('issue-title-edit').classList.add('hidden');
-    document.getElementById('title-edit-actions').classList.add('hidden');
-    
     // Reset description editing
-    document.getElementById('issue-description-display').classList.remove('hidden');
-    document.getElementById('issue-description-edit').classList.add('hidden');
-    document.getElementById('description-edit-actions').classList.add('hidden');
+    const descDisplay = document.getElementById('issue-description-display');
+    const descEdit = document.getElementById('issue-description-edit');
+    const descActions = document.getElementById('description-edit-actions');
+    
+    if (descDisplay) descDisplay.classList.remove('hidden');
+    if (descEdit) descEdit.classList.add('hidden');
+    if (descActions) descActions.classList.add('hidden');
     
     // Reset labels editing
-    document.getElementById('issue-labels-display').classList.remove('hidden');
-    document.getElementById('issue-labels-edit').classList.add('hidden');
+    const labelsDisplay = document.getElementById('issue-labels-display');
+    const labelsEdit = document.getElementById('issue-labels-edit');
+    
+    if (labelsDisplay) labelsDisplay.classList.remove('hidden');
+    if (labelsEdit) labelsEdit.classList.add('hidden');
 }
 
 // Issue Modal Event Handlers
@@ -186,42 +180,7 @@ function setupIssueModalEventHandlers() {
         });
     }
     
-    // Title editing handlers
-    const editTitleBtn = document.getElementById('edit-title-btn');
-    const saveTitleBtn = document.getElementById('save-title-btn');
-    const cancelTitleBtn = document.getElementById('cancel-title-btn');
-    
-    if (editTitleBtn) {
-        editTitleBtn.addEventListener('click', function() {
-            document.getElementById('issue-title-display').classList.add('hidden');
-            document.getElementById('issue-title-edit').classList.remove('hidden');
-            document.getElementById('title-edit-actions').classList.remove('hidden');
-            document.getElementById('issue-title-edit').focus();
-        });
-    }
-    
-    if (saveTitleBtn) {
-        saveTitleBtn.addEventListener('click', function() {
-            const newTitle = document.getElementById('issue-title-edit').value;
-            document.getElementById('issue-title-display').textContent = newTitle;
-            document.getElementById('issue-modal-title').textContent = newTitle;
-            
-            document.getElementById('issue-title-display').classList.remove('hidden');
-            document.getElementById('issue-title-edit').classList.add('hidden');
-            document.getElementById('title-edit-actions').classList.add('hidden');
-            
-            // TODO: Save to GitHub API
-            console.log('Save title to GitHub API:', newTitle);
-        });
-    }
-    
-    if (cancelTitleBtn) {
-        cancelTitleBtn.addEventListener('click', function() {
-            document.getElementById('issue-title-display').classList.remove('hidden');
-            document.getElementById('issue-title-edit').classList.add('hidden');
-            document.getElementById('title-edit-actions').classList.add('hidden');
-        });
-    }
+
     
     // Description editing handlers
     const editDescBtn = document.getElementById('edit-description-btn');
@@ -307,7 +266,6 @@ function setupIssueModalEventHandlers() {
             console.log('Close issue via GitHub API');
             
             // Update UI temporarily
-            document.getElementById('issue-modal-status').textContent = 'Closed';
             document.getElementById('issue-state-badge').className = 'px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800';
             document.getElementById('issue-state-badge').textContent = 'Closed';
             closeIssueBtn.classList.add('hidden');
@@ -321,7 +279,6 @@ function setupIssueModalEventHandlers() {
             console.log('Reopen issue via GitHub API');
             
             // Update UI temporarily
-            document.getElementById('issue-modal-status').textContent = 'Open';
             document.getElementById('issue-state-badge').className = 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';
             document.getElementById('issue-state-badge').textContent = 'Open';
             reopenIssueBtn.classList.add('hidden');
