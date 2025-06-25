@@ -59,6 +59,7 @@ function populateIssueModal(issueNumber, taskElement) {
     // Update modal header
     document.getElementById('issue-modal-title').textContent = title;
     document.getElementById('issue-modal-number').textContent = `#${issueNumber}`;
+    document.getElementById('issue-title-edit').value = title;
 
     // Update description section
     document.getElementById('issue-description-display').innerHTML = description;
@@ -142,6 +143,17 @@ function populateIssueModal(issueNumber, taskElement) {
 }
 
 function resetEditStates() {
+    // Reset title editing
+    const titleDisplay = document.getElementById('issue-modal-title');
+    const titleEdit = document.getElementById('issue-title-edit');
+    const titleActions = document.getElementById('title-edit-actions');
+    const editTitleBtn = document.getElementById('edit-title-btn');
+    
+    if (titleDisplay) titleDisplay.classList.remove('hidden');
+    if (titleEdit) titleEdit.classList.add('hidden');
+    if (titleActions) titleActions.classList.add('hidden');
+    if (editTitleBtn) editTitleBtn.classList.remove('hidden');
+    
     // Reset description editing
     const descDisplay = document.getElementById('issue-description-display');
     const descEdit = document.getElementById('issue-description-edit');
@@ -180,8 +192,48 @@ function setupIssueModalEventHandlers() {
         });
     }
     
-
+    // Title editing handlers
+    const editTitleBtn = document.getElementById('edit-title-btn');
+    const saveTitleBtn = document.getElementById('save-title-btn');
+    const cancelTitleBtn = document.getElementById('cancel-title-btn');
     
+    if (editTitleBtn) {
+        editTitleBtn.addEventListener('click', function() {
+            document.getElementById('issue-modal-title').classList.add('hidden');
+            document.getElementById('issue-modal-number').classList.add('hidden');
+            document.getElementById('issue-title-edit').classList.remove('hidden');
+            document.getElementById('title-edit-actions').classList.remove('hidden');
+            editTitleBtn.classList.add('hidden');
+            document.getElementById('issue-title-edit').focus();
+        });
+    }
+    
+    if (saveTitleBtn) {
+        saveTitleBtn.addEventListener('click', function() {
+            const newTitle = document.getElementById('issue-title-edit').value;
+            document.getElementById('issue-modal-title').textContent = newTitle;
+            
+            document.getElementById('issue-modal-title').classList.remove('hidden');
+            document.getElementById('issue-modal-number').classList.remove('hidden');
+            document.getElementById('issue-title-edit').classList.add('hidden');
+            document.getElementById('title-edit-actions').classList.add('hidden');
+            editTitleBtn.classList.remove('hidden');
+            
+            // TODO: Save to GitHub API
+            console.log('Save title to GitHub API:', newTitle);
+        });
+    }
+    
+    if (cancelTitleBtn) {
+        cancelTitleBtn.addEventListener('click', function() {
+            document.getElementById('issue-modal-title').classList.remove('hidden');
+            document.getElementById('issue-modal-number').classList.remove('hidden');
+            document.getElementById('issue-title-edit').classList.add('hidden');
+            document.getElementById('title-edit-actions').classList.add('hidden');
+            editTitleBtn.classList.remove('hidden');
+        });
+    }
+
     // Description editing handlers
     const editDescBtn = document.getElementById('edit-description-btn');
     const saveDescBtn = document.getElementById('save-description-btn');
