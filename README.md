@@ -26,10 +26,6 @@ npm install && npm test
 
 Open `index.html` in your browser to start using Dashban.
 
-### ⌨️ Keyboard Shortcuts
-- `Ctrl/Cmd + N`: Add new task
-- `Escape`: Close modal
-
 ## 🚀 Frontend Deployment
 
 This project includes a GitHub Actions workflow for automatic deployment to GitHub Pages. To enable deployment:
