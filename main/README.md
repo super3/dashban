@@ -41,14 +41,9 @@ Your Dashban application will then be available at: `https://yourusername.github
 
 To enable GitHub issue creation directly from Dashban:
 
-### 1. Create Personal Access Token
+### Create Personal Access Token
 1. Go to **Settings > Developer settings > Personal access tokens > Fine-grained tokens**
 2. Click **"Generate new token"**
 3. Select your repository as the resource owner
 4. Under permissions, grant **"Issues"** with **Read and Write** access
 5. Generate the token and copy it
-
-### 2. Configure Dashban
-1. Click the **"Connect to GitHub"** button in the header
-2. Paste your Personal Access Token
-3. Update the repository details in `src/github-auth.js` if needed
