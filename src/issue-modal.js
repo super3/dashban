@@ -57,13 +57,20 @@ function populateIssueModal(issueNumber, taskElement) {
     };
 
     // Update modal header
-    document.getElementById('issue-modal-title').textContent = title;
-    document.getElementById('issue-modal-number').textContent = `#${issueNumber}`;
-    document.getElementById('issue-title-edit').value = title;
+    const modalTitle = document.getElementById('issue-modal-title');
+    const modalNumber = document.getElementById('issue-modal-number');
+    const titleEdit = document.getElementById('issue-title-edit');
+    
+    if (modalTitle) modalTitle.textContent = title;
+    if (modalNumber) modalNumber.textContent = `#${issueNumber}`;
+    if (titleEdit) titleEdit.value = title;
 
     // Update description section
-    document.getElementById('issue-description-display').innerHTML = description;
-    document.getElementById('issue-description-edit').value = descriptionElement ? descriptionElement.textContent : '';
+    const descriptionDisplay = document.getElementById('issue-description-display');
+    const descriptionEdit = document.getElementById('issue-description-edit');
+    
+    if (descriptionDisplay) descriptionDisplay.innerHTML = description;
+    if (descriptionEdit) descriptionEdit.value = descriptionElement ? descriptionElement.textContent : '';
 
     // Update priority and category dropdowns
     const prioritySelect = document.getElementById('issue-priority-select');
@@ -81,39 +88,49 @@ function populateIssueModal(issueNumber, taskElement) {
     const stateBadge = document.getElementById('issue-state-badge');
     const columnBadge = document.getElementById('issue-column-badge');
     
-    if (column === 'done') {
-        stateBadge.className = 'px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800';
-        stateBadge.textContent = 'Closed';
-    } else {
-        stateBadge.className = 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';
-        stateBadge.textContent = 'Open';
+    if (stateBadge) {
+        if (column === 'done') {
+            stateBadge.className = 'px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800';
+            stateBadge.textContent = 'Closed';
+        } else {
+            stateBadge.className = 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';
+            stateBadge.textContent = 'Open';
+        }
     }
     
-    columnBadge.textContent = columnNames[column] || column;
+    if (columnBadge) {
+        columnBadge.textContent = columnNames[column] || column;
+    }
     
     // Update action buttons
     const closeBtn = document.getElementById('close-issue-btn');
     const reopenBtn = document.getElementById('reopen-issue-btn');
     const viewBtn = document.getElementById('view-on-github-btn');
     
-    if (column === 'done') {
-        closeBtn.classList.add('hidden');
-        reopenBtn.classList.remove('hidden');
-    } else {
-        closeBtn.classList.remove('hidden');
-        reopenBtn.classList.add('hidden');
+    if (closeBtn && reopenBtn) {
+        if (column === 'done') {
+            closeBtn.classList.add('hidden');
+            reopenBtn.classList.remove('hidden');
+        } else {
+            closeBtn.classList.remove('hidden');
+            reopenBtn.classList.add('hidden');
+        }
     }
     
-    viewBtn.href = githubUrl;
+    if (viewBtn) {
+        viewBtn.href = githubUrl;
+    }
 
     // Clear comments (will be populated with real data later)
     const commentsList = document.getElementById('comments-list');
-    commentsList.innerHTML = `
-        <div class="text-gray-500 text-center py-8">
-            <i class="fas fa-comments text-2xl mb-2"></i>
-            <p>Comments loading... (Feature coming soon)</p>
-        </div>
-    `;
+    if (commentsList) {
+        commentsList.innerHTML = `
+            <div class="text-gray-500 text-center py-8">
+                <i class="fas fa-comments text-2xl mb-2"></i>
+                <p>Comments loading... (Feature coming soon)</p>
+            </div>
+        `;
+    }
     
 
 }
