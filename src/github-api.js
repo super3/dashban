@@ -127,6 +127,45 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
     }
 }
 
+// Update GitHub issue title
+async function updateGitHubIssueTitle(issueNumber, newTitle) {
+    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+        console.log('❌ Not authenticated with GitHub - cannot update issue title');
+        return false;
+    }
+
+    try {
+        // Update the issue title via API
+        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
+            method: 'PATCH',
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: newTitle
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+        }
+
+        const issue = await response.json();
+        console.log(`✅ Successfully updated GitHub issue #${issueNumber} title to: "${newTitle}"`);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Failed to update GitHub issue title:', error);
+        
+        // Show user-friendly error message
+        alert(`Failed to update GitHub issue title: ${error.message}\n\nThe title was updated on the board but not on GitHub.`);
+        return false;
+    }
+}
+
 // Close GitHub issue when moved to Done column
 async function closeGitHubIssue(issueNumber) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
@@ -345,6 +384,7 @@ window.GitHubAPI = {
     loadGitHubIssues,
     archiveGitHubIssue,
     updateGitHubIssueLabels,
+    updateGitHubIssueTitle,
     closeGitHubIssue,
     initializeGitHubIssues
 }; 

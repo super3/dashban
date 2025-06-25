@@ -65,40 +65,16 @@ function populateIssueModal(issueNumber, taskElement) {
     document.getElementById('issue-description-display').innerHTML = description;
     document.getElementById('issue-description-edit').value = descriptionElement ? descriptionElement.textContent : '';
 
-    // Update labels section
-    const labelsDisplay = document.getElementById('issue-labels-display');
-    labelsDisplay.innerHTML = '';
+    // Update priority and category dropdowns
+    const prioritySelect = document.getElementById('issue-priority-select');
+    const categorySelect = document.getElementById('issue-category-select');
     
-    if (priorityElement || categoryElement) {
-        if (priorityElement) {
-            const priority = priorityElement.textContent;
-            const priorityColors = {
-                'High': 'bg-red-100 text-red-800',
-                'Medium': 'bg-yellow-100 text-yellow-800', 
-                'Low': 'bg-green-100 text-green-800'
-            };
-            const colorClass = priorityColors[priority] || 'bg-gray-100 text-gray-800';
-            labelsDisplay.innerHTML += `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colorClass}">${priority}</span>`;
-        }
-        
-        if (categoryElement) {
-            const category = categoryElement.textContent;
-            const categoryColors = {
-                'Frontend': 'bg-indigo-100 text-indigo-800',
-                'Backend': 'bg-blue-100 text-blue-800',
-                'Design': 'bg-purple-100 text-purple-800',
-                'Testing': 'bg-red-100 text-red-800',
-                'Database': 'bg-green-100 text-green-800',
-                'Setup': 'bg-gray-100 text-gray-800',
-                'Bug': 'bg-red-100 text-red-800',
-                'Enhancement': 'bg-purple-100 text-purple-800',
-                'Feature': 'bg-blue-100 text-blue-800'
-            };
-            const colorClass = categoryColors[category] || 'bg-gray-100 text-gray-800';
-            labelsDisplay.innerHTML += `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colorClass}">${category}</span>`;
-        }
-    } else {
-        labelsDisplay.innerHTML = '<div class="text-gray-500 text-sm">No labels assigned</div>';
+    if (prioritySelect) {
+        prioritySelect.value = priorityElement ? priorityElement.textContent : '';
+    }
+    
+    if (categorySelect) {
+        categorySelect.value = categoryElement ? categoryElement.textContent : '';
     }
 
     // Update status section
@@ -145,11 +121,13 @@ function populateIssueModal(issueNumber, taskElement) {
 function resetEditStates() {
     // Reset title editing
     const titleDisplay = document.getElementById('issue-modal-title');
+    const titleNumber = document.getElementById('issue-modal-number');
     const titleEdit = document.getElementById('issue-title-edit');
     const titleActions = document.getElementById('title-edit-actions');
     const editTitleBtn = document.getElementById('edit-title-btn');
     
     if (titleDisplay) titleDisplay.classList.remove('hidden');
+    if (titleNumber) titleNumber.classList.remove('hidden');
     if (titleEdit) titleEdit.classList.add('hidden');
     if (titleActions) titleActions.classList.add('hidden');
     if (editTitleBtn) editTitleBtn.classList.remove('hidden');
@@ -163,12 +141,7 @@ function resetEditStates() {
     if (descEdit) descEdit.classList.add('hidden');
     if (descActions) descActions.classList.add('hidden');
     
-    // Reset labels editing
-    const labelsDisplay = document.getElementById('issue-labels-display');
-    const labelsEdit = document.getElementById('issue-labels-edit');
-    
-    if (labelsDisplay) labelsDisplay.classList.remove('hidden');
-    if (labelsEdit) labelsEdit.classList.add('hidden');
+
 }
 
 // Issue Modal Event Handlers
@@ -209,18 +182,43 @@ function setupIssueModalEventHandlers() {
     }
     
     if (saveTitleBtn) {
-        saveTitleBtn.addEventListener('click', function() {
-            const newTitle = document.getElementById('issue-title-edit').value;
+        saveTitleBtn.addEventListener('click', async function() {
+            const newTitle = document.getElementById('issue-title-edit').value.trim();
+            
+            if (!newTitle) {
+                alert('Title cannot be empty');
+                return;
+            }
+            
+            // Get issue number from the modal
+            const issueNumberElement = document.getElementById('issue-modal-number');
+            const issueNumber = issueNumberElement.textContent.replace('#', '');
+            
+            // Update UI immediately for better UX
             document.getElementById('issue-modal-title').textContent = newTitle;
             
+            // Also update the title in the kanban card if it exists
+            const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
+            if (taskElement) {
+                const titleElement = taskElement.querySelector('.task-title');
+                if (titleElement) {
+                    titleElement.textContent = newTitle;
+                }
+            }
+            
+            // Reset UI state
             document.getElementById('issue-modal-title').classList.remove('hidden');
             document.getElementById('issue-modal-number').classList.remove('hidden');
             document.getElementById('issue-title-edit').classList.add('hidden');
             document.getElementById('title-edit-actions').classList.add('hidden');
             editTitleBtn.classList.remove('hidden');
             
-            // TODO: Save to GitHub API
-            console.log('Save title to GitHub API:', newTitle);
+            // Save to GitHub API
+            if (window.GitHubAPI && window.GitHubAPI.updateGitHubIssueTitle) {
+                await window.GitHubAPI.updateGitHubIssueTitle(issueNumber, newTitle);
+            } else {
+                console.log('GitHub API not available, title updated locally only');
+            }
         });
     }
     
@@ -275,35 +273,49 @@ function setupIssueModalEventHandlers() {
         });
     }
     
-    // Labels editing handlers
-    const editLabelsBtn = document.getElementById('edit-labels-btn');
-    const saveLabelsBtn = document.getElementById('save-labels-btn');
-    const cancelLabelsBtn = document.getElementById('cancel-labels-btn');
+    // Priority and Category change handlers
+    const prioritySelect = document.getElementById('issue-priority-select');
+    const categorySelect = document.getElementById('issue-category-select');
     
-    if (editLabelsBtn) {
-        editLabelsBtn.addEventListener('click', function() {
-            document.getElementById('issue-labels-display').classList.add('hidden');
-            document.getElementById('issue-labels-edit').classList.remove('hidden');
+    if (prioritySelect) {
+        prioritySelect.addEventListener('change', async function() {
+            const newPriority = this.value;
+            const issueNumberElement = document.getElementById('issue-modal-number');
+            const issueNumber = issueNumberElement.textContent.replace('#', '');
             
-            // TODO: Populate available labels
-            console.log('Show labels editing interface');
+            // Update the kanban card priority if it exists
+            const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
+            if (taskElement) {
+                const priorityElement = taskElement.querySelector('.task-priority');
+                if (priorityElement) {
+                    priorityElement.textContent = newPriority;
+                    priorityElement.style.display = newPriority ? 'inline' : 'none';
+                }
+            }
+            
+            // TODO: Save to GitHub API
+            console.log('Update priority to GitHub API:', newPriority);
         });
     }
     
-    if (saveLabelsBtn) {
-        saveLabelsBtn.addEventListener('click', function() {
-            document.getElementById('issue-labels-display').classList.remove('hidden');
-            document.getElementById('issue-labels-edit').classList.add('hidden');
+    if (categorySelect) {
+        categorySelect.addEventListener('change', async function() {
+            const newCategory = this.value;
+            const issueNumberElement = document.getElementById('issue-modal-number');
+            const issueNumber = issueNumberElement.textContent.replace('#', '');
             
-            // TODO: Save labels to GitHub API
-            console.log('Save labels to GitHub API');
-        });
-    }
-    
-    if (cancelLabelsBtn) {
-        cancelLabelsBtn.addEventListener('click', function() {
-            document.getElementById('issue-labels-display').classList.remove('hidden');
-            document.getElementById('issue-labels-edit').classList.add('hidden');
+            // Update the kanban card category if it exists
+            const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
+            if (taskElement) {
+                const categoryElement = taskElement.querySelector('.task-category');
+                if (categoryElement) {
+                    categoryElement.textContent = newCategory;
+                    categoryElement.style.display = newCategory ? 'inline' : 'none';
+                }
+            }
+            
+            // TODO: Save to GitHub API
+            console.log('Update category to GitHub API:', newCategory);
         });
     }
     
