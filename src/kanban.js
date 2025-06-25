@@ -330,6 +330,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Expose updateColumnCounts globally for modal use
+    window.KanbanBoard = window.KanbanBoard || {};
+    window.KanbanBoard.updateColumnCounts = updateColumnCounts;
+
     // Load collapse states from localStorage
     function loadCollapseStates() {
         const saved = localStorage.getItem('columnCollapseStates');

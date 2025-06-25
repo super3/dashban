@@ -217,7 +217,7 @@ function setupIssueModalEventHandlers() {
             // Also update the title in the kanban card if it exists
             const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
             if (taskElement) {
-                const titleElement = taskElement.querySelector('.task-title');
+                const titleElement = taskElement.querySelector('h4');
                 if (titleElement) {
                     titleElement.textContent = newTitle;
                 }
@@ -264,21 +264,42 @@ function setupIssueModalEventHandlers() {
     }
     
     if (saveDescBtn) {
-        saveDescBtn.addEventListener('click', function() {
+        saveDescBtn.addEventListener('click', async function() {
             const newDesc = document.getElementById('issue-description-edit').value;
+            
+            // Get issue number from the modal
+            const issueNumberElement = document.getElementById('issue-modal-number');
+            const issueNumber = issueNumberElement.textContent.replace('#', '');
+            
             // Render markdown if available
+            let renderedDesc;
             if (window.GitHubUI && window.GitHubUI.renderMarkdown) {
-                document.getElementById('issue-description-display').innerHTML = window.GitHubUI.renderMarkdown(newDesc);
+                renderedDesc = window.GitHubUI.renderMarkdown(newDesc);
+                document.getElementById('issue-description-display').innerHTML = renderedDesc;
             } else {
+                renderedDesc = newDesc;
                 document.getElementById('issue-description-display').textContent = newDesc;
+            }
+            
+            // Also update the description in the kanban card if it exists
+            const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
+            if (taskElement) {
+                const descElement = taskElement.querySelector('.markdown-content');
+                if (descElement) {
+                    descElement.innerHTML = renderedDesc;
+                }
             }
             
             document.getElementById('issue-description-display').classList.remove('hidden');
             document.getElementById('issue-description-edit').classList.add('hidden');
             document.getElementById('description-edit-actions').classList.add('hidden');
             
-            // TODO: Save to GitHub API
-            console.log('Save description to GitHub API:', newDesc);
+            // Update GitHub API
+            if (window.GitHubAPI && window.GitHubAPI.updateGitHubIssueDescription) {
+                await window.GitHubAPI.updateGitHubIssueDescription(issueNumber, newDesc);
+            } else {
+                console.log('GitHub API not available, description updated locally only');
+            }
         });
     }
     
@@ -298,20 +319,44 @@ function setupIssueModalEventHandlers() {
         prioritySelect.addEventListener('change', async function() {
             const newPriority = this.value;
             const issueNumberElement = document.getElementById('issue-modal-number');
+            if (!issueNumberElement) return;
+            
             const issueNumber = issueNumberElement.textContent.replace('#', '');
             
             // Update the kanban card priority if it exists
             const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
             if (taskElement) {
-                const priorityElement = taskElement.querySelector('.task-priority');
-                if (priorityElement) {
-                    priorityElement.textContent = newPriority;
-                    priorityElement.style.display = newPriority ? 'inline' : 'none';
+                // Find the current priority badge
+                const labelContainer = taskElement.querySelector('.flex.items-center.space-x-2');
+                if (labelContainer) {
+                    // Remove existing priority badge (look for known priority texts)
+                    const existingPriorityBadge = Array.from(labelContainer.querySelectorAll('span')).find(span => {
+                        const text = span.textContent.toLowerCase();
+                        return ['critical', 'high', 'medium', 'low'].includes(text);
+                    });
+                    
+                    if (existingPriorityBadge) {
+                        existingPriorityBadge.remove();
+                    }
+                    
+                    // Add new priority badge if priority is selected
+                    if (newPriority && window.getPriorityColor) {
+                        const priorityBadge = document.createElement('span');
+                        priorityBadge.className = `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${window.getPriorityColor(newPriority)}`;
+                        priorityBadge.textContent = newPriority;
+                        
+                        // Insert at the beginning of the label container
+                        labelContainer.insertBefore(priorityBadge, labelContainer.firstChild);
+                    }
                 }
             }
             
-            // TODO: Save to GitHub API
-            console.log('Update priority to GitHub API:', newPriority);
+            // Update GitHub issue labels
+            if (window.GitHubAPI && window.GitHubAPI.updateGitHubIssueMetadata) {
+                await window.GitHubAPI.updateGitHubIssueMetadata(issueNumber, 'priority', newPriority);
+            } else {
+                console.log('GitHub API not available, priority updated locally only');
+            }
         });
     }
     
@@ -319,20 +364,53 @@ function setupIssueModalEventHandlers() {
         categorySelect.addEventListener('change', async function() {
             const newCategory = this.value;
             const issueNumberElement = document.getElementById('issue-modal-number');
+            if (!issueNumberElement) return;
+            
             const issueNumber = issueNumberElement.textContent.replace('#', '');
             
             // Update the kanban card category if it exists
             const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
             if (taskElement) {
-                const categoryElement = taskElement.querySelector('.task-category');
-                if (categoryElement) {
-                    categoryElement.textContent = newCategory;
-                    categoryElement.style.display = newCategory ? 'inline' : 'none';
+                // Find the current category badge
+                const labelContainer = taskElement.querySelector('.flex.items-center.space-x-2');
+                if (labelContainer) {
+                    // Remove existing category badge (look for known category texts)
+                    const existingCategoryBadge = Array.from(labelContainer.querySelectorAll('span')).find(span => {
+                        const text = span.textContent.toLowerCase();
+                        return ['frontend', 'backend', 'design', 'testing', 'database', 'setup', 'bug', 'enhancement', 'feature'].includes(text);
+                    });
+                    
+                    if (existingCategoryBadge) {
+                        existingCategoryBadge.remove();
+                    }
+                    
+                    // Add new category badge if category is selected
+                    if (newCategory && window.getCategoryColor) {
+                        const categoryBadge = document.createElement('span');
+                        categoryBadge.className = `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${window.getCategoryColor(newCategory)}`;
+                        categoryBadge.textContent = newCategory;
+                        
+                        // Insert after priority badge or at beginning if no priority
+                        const priorityBadge = Array.from(labelContainer.querySelectorAll('span')).find(span => {
+                            const text = span.textContent.toLowerCase();
+                            return ['critical', 'high', 'medium', 'low'].includes(text);
+                        });
+                        
+                        if (priorityBadge) {
+                            labelContainer.insertBefore(categoryBadge, priorityBadge.nextSibling);
+                        } else {
+                            labelContainer.insertBefore(categoryBadge, labelContainer.firstChild);
+                        }
+                    }
                 }
             }
             
-            // TODO: Save to GitHub API
-            console.log('Update category to GitHub API:', newCategory);
+            // Update GitHub issue labels
+            if (window.GitHubAPI && window.GitHubAPI.updateGitHubIssueMetadata) {
+                await window.GitHubAPI.updateGitHubIssueMetadata(issueNumber, 'category', newCategory);
+            } else {
+                console.log('GitHub API not available, category updated locally only');
+            }
         });
     }
     
@@ -364,7 +442,16 @@ function setupIssueModalEventHandlers() {
                 const doneColumn = document.getElementById('done');
                 if (doneColumn) {
                     doneColumn.appendChild(taskElement);
-                    window.updateColumnCounts();
+                    
+                    // Update column counts using the global function
+                    if (window.KanbanBoard && window.KanbanBoard.updateColumnCounts) {
+                        window.KanbanBoard.updateColumnCounts();
+                    }
+                    
+                    // Add completed section to the card
+                    if (window.GitHubUI && window.GitHubUI.addCompletedSection) {
+                        window.GitHubUI.addCompletedSection(taskElement);
+                    }
                 }
             }
             
@@ -394,13 +481,22 @@ function setupIssueModalEventHandlers() {
             reopenIssueBtn.classList.add('hidden');
             if (closeIssueBtn) closeIssueBtn.classList.remove('hidden');
             
-            // Also move the task back to backlog column in the kanban board (default for reopened issues)
+            // Also move the task back to backlog column in the kanban board
             const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
             if (taskElement) {
                 const backlogColumn = document.getElementById('backlog');
                 if (backlogColumn) {
                     backlogColumn.appendChild(taskElement);
-                    window.updateColumnCounts();
+                    
+                    // Update column counts using the global function
+                    if (window.KanbanBoard && window.KanbanBoard.updateColumnCounts) {
+                        window.KanbanBoard.updateColumnCounts();
+                    }
+                    
+                    // Remove completed section from the card
+                    if (window.GitHubUI && window.GitHubUI.removeCompletedSection) {
+                        window.GitHubUI.removeCompletedSection(taskElement);
+                    }
                 }
             }
             
@@ -427,6 +523,19 @@ function setupIssueModalEventHandlers() {
             }
         });
     }
+}
+
+// Helper functions for styling priority and category badges
+function getPriorityClasses(priority) {
+    const baseClasses = 'task-priority inline-flex items-center px-2 py-1 rounded-full text-xs font-medium';
+    if (!priority || !window.getPriorityColor) return baseClasses;
+    return `${baseClasses} ${window.getPriorityColor(priority)}`;
+}
+
+function getCategoryClasses(category) {
+    const baseClasses = 'task-category inline-flex items-center px-2 py-1 rounded-full text-xs font-medium';
+    if (!category || !window.getCategoryColor) return baseClasses;
+    return `${baseClasses} ${window.getCategoryColor(category)}`;
 }
 
 // Export functions to global scope

@@ -240,6 +240,83 @@ async function reopenGitHubIssue(issueNumber) {
     }
 }
 
+// Update GitHub issue priority or category label
+async function updateGitHubIssueMetadata(issueNumber, type, newValue) {
+    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+        console.log('❌ Not authenticated with GitHub - cannot update issue metadata');
+        return false;
+    }
+
+    try {
+        // First, get current issue to preserve existing labels
+        const getResponse = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}?_t=${Date.now()}`, {
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`
+            }
+        });
+
+        if (!getResponse.ok) {
+            throw new Error(`Failed to fetch issue: ${getResponse.status}`);
+        }
+
+        const issue = await getResponse.json();
+        const currentLabels = issue.labels.map(label => label.name);
+
+        // Define label categories
+        const priorityLabels = ['critical', 'high', 'medium', 'low'];
+        const categoryLabels = ['frontend', 'backend', 'design', 'testing', 'database', 'setup', 'bug', 'enhancement', 'feature'];
+
+        let updatedLabels = [...currentLabels];
+
+        if (type === 'priority') {
+            // Remove existing priority labels
+            updatedLabels = updatedLabels.filter(label => !priorityLabels.includes(label.toLowerCase()));
+            
+            // Add new priority label if not empty
+            if (newValue && newValue.trim() !== '') {
+                updatedLabels.push(newValue.toLowerCase());
+            }
+        } else if (type === 'category') {
+            // Remove existing category labels
+            updatedLabels = updatedLabels.filter(label => !categoryLabels.includes(label.toLowerCase()));
+            
+            // Add new category label if not empty
+            if (newValue && newValue.trim() !== '') {
+                updatedLabels.push(newValue.toLowerCase());
+            }
+        }
+
+        // Update labels via API
+        const updateResponse = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
+            method: 'PUT',
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                labels: updatedLabels
+            })
+        });
+
+        if (!updateResponse.ok) {
+            const errorData = await updateResponse.json();
+            throw new Error(`GitHub API error: ${updateResponse.status} - ${errorData.message || 'Unknown error'}`);
+        }
+
+        console.log(`✅ Successfully updated GitHub issue #${issueNumber} ${type} to: "${newValue}"`);
+        return true;
+        
+    } catch (error) {
+        console.error(`❌ Failed to update GitHub issue ${type}:`, error);
+        
+        // Show user-friendly error message
+        alert(`Failed to update GitHub issue ${type}: ${error.message}\n\nThe ${type} was updated on the board but not on GitHub.`);
+        return false;
+    }
+}
+
 // Create GitHub issue via API
 async function createGitHubIssue(title, description, labels = []) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
@@ -421,6 +498,7 @@ window.GitHubAPI = {
     archiveGitHubIssue,
     updateGitHubIssueLabels,
     updateGitHubIssueTitle,
+    updateGitHubIssueMetadata,
     closeGitHubIssue,
     reopenGitHubIssue,
     initializeGitHubIssues
