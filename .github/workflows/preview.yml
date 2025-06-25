@@ -1,0 +1,68 @@
+name: Preview Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  push:
+    branches: [main]
+
+# Required permissions for the action to work
+permissions:
+  pull-requests: write  # To comment on PRs
+  contents: write       # To push to gh-pages branch
+
+# Recommended concurrency group to avoid conflicts
+concurrency:
+  group: preview-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    # Only run preview deployment if PR is not being closed
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Since Dashban is a static site with no build process,
+      # we can deploy directly from the root directory
+      - name: Deploy Preview Pages
+        uses: rajyan/preview-pages@v1
+        with:
+          source-dir: .                    # Deploy from root directory
+          pr-comment: sticky               # Update same comment instead of creating new ones
+          pr-per-commit: false            # Overwrite per PR instead of keeping per commit
+          branch-per-commit: false        # Overwrite per branch instead of keeping per commit
+
+  cleanup:
+    # Only run cleanup when PR is closed
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Remove preview directory
+        run: |
+          if [ -d "pr-${{ github.event.number }}" ]; then
+            rm -rf pr-${{ github.event.number }}
+            echo "Removed preview directory for PR #${{ github.event.number }}"
+          else
+            echo "No preview directory found for PR #${{ github.event.number }}"
+          fi
+
+      - name: Commit cleanup
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .
+          if ! git diff --cached --quiet; then
+            git commit -m "Clean up preview for PR #${{ github.event.number }}"
+            git push
+            echo "Cleanup committed and pushed"
+          else
+            echo "No changes to commit"
+          fi 
