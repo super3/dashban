@@ -342,28 +342,74 @@ function setupIssueModalEventHandlers() {
     const addCommentBtn = document.getElementById('add-comment-btn');
     
     if (closeIssueBtn) {
-        closeIssueBtn.addEventListener('click', function() {
-            // TODO: Close issue via GitHub API
-            console.log('Close issue via GitHub API');
+        closeIssueBtn.addEventListener('click', async function() {
+            // Get issue number from the modal
+            const issueNumberElement = document.getElementById('issue-modal-number');
+            if (!issueNumberElement) return;
             
-            // Update UI temporarily
-            document.getElementById('issue-state-badge').className = 'px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800';
-            document.getElementById('issue-state-badge').textContent = 'Closed';
+            const issueNumber = issueNumberElement.textContent.replace('#', '');
+            
+            // Update UI immediately for better UX
+            const stateBadge = document.getElementById('issue-state-badge');
+            if (stateBadge) {
+                stateBadge.className = 'px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800';
+                stateBadge.textContent = 'Closed';
+            }
             closeIssueBtn.classList.add('hidden');
-            reopenIssueBtn.classList.remove('hidden');
+            if (reopenIssueBtn) reopenIssueBtn.classList.remove('hidden');
+            
+            // Also move the task to done column in the kanban board
+            const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
+            if (taskElement) {
+                const doneColumn = document.getElementById('done');
+                if (doneColumn) {
+                    doneColumn.appendChild(taskElement);
+                    window.updateColumnCounts();
+                }
+            }
+            
+            // Close issue via GitHub API
+            if (window.GitHubAPI && window.GitHubAPI.closeGitHubIssue) {
+                await window.GitHubAPI.closeGitHubIssue(issueNumber);
+            } else {
+                console.log('GitHub API not available, issue closed locally only');
+            }
         });
     }
     
     if (reopenIssueBtn) {
-        reopenIssueBtn.addEventListener('click', function() {
-            // TODO: Reopen issue via GitHub API
-            console.log('Reopen issue via GitHub API');
+        reopenIssueBtn.addEventListener('click', async function() {
+            // Get issue number from the modal
+            const issueNumberElement = document.getElementById('issue-modal-number');
+            if (!issueNumberElement) return;
             
-            // Update UI temporarily
-            document.getElementById('issue-state-badge').className = 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';
-            document.getElementById('issue-state-badge').textContent = 'Open';
+            const issueNumber = issueNumberElement.textContent.replace('#', '');
+            
+            // Update UI immediately for better UX
+            const stateBadge = document.getElementById('issue-state-badge');
+            if (stateBadge) {
+                stateBadge.className = 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';
+                stateBadge.textContent = 'Open';
+            }
             reopenIssueBtn.classList.add('hidden');
-            closeIssueBtn.classList.remove('hidden');
+            if (closeIssueBtn) closeIssueBtn.classList.remove('hidden');
+            
+            // Also move the task back to backlog column in the kanban board (default for reopened issues)
+            const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
+            if (taskElement) {
+                const backlogColumn = document.getElementById('backlog');
+                if (backlogColumn) {
+                    backlogColumn.appendChild(taskElement);
+                    window.updateColumnCounts();
+                }
+            }
+            
+            // Reopen issue via GitHub API
+            if (window.GitHubAPI && window.GitHubAPI.reopenGitHubIssue) {
+                await window.GitHubAPI.reopenGitHubIssue(issueNumber);
+            } else {
+                console.log('GitHub API not available, issue reopened locally only');
+            }
         });
     }
     

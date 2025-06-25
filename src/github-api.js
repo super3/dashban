@@ -204,6 +204,42 @@ async function closeGitHubIssue(issueNumber) {
     }
 }
 
+// Reopen GitHub issue
+async function reopenGitHubIssue(issueNumber) {
+    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+        console.log('❌ Not authenticated with GitHub - cannot reopen issue');
+        return;
+    }
+
+    try {
+        // Reopen the issue via API
+        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
+            method: 'PATCH',
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                state: 'open'
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+        }
+
+        console.log(`✅ Successfully reopened GitHub issue #${issueNumber}`);
+        
+    } catch (error) {
+        console.error('❌ Failed to reopen GitHub issue:', error);
+        
+        // Show user-friendly error message but don't revert the UI change
+        alert(`Failed to reopen GitHub issue: ${error.message}\n\nThe issue state was changed on the board but wasn't reopened on GitHub.`);
+    }
+}
+
 // Create GitHub issue via API
 async function createGitHubIssue(title, description, labels = []) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
@@ -386,5 +422,6 @@ window.GitHubAPI = {
     updateGitHubIssueLabels,
     updateGitHubIssueTitle,
     closeGitHubIssue,
+    reopenGitHubIssue,
     initializeGitHubIssues
 }; 
