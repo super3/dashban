@@ -739,7 +739,7 @@ describe('Kanban Board Core Functionality', () => {
       taskElement.dispatchEvent(event);
       
       // Should log edit event (placeholder functionality)
-      expect(console.log).toHaveBeenCalledWith('Edit task:', taskElement);
+      expect(console.log).toHaveBeenCalledWith('Edit local task:', taskElement);
     });
   });
 
