@@ -40,8 +40,47 @@ function populateIssueModal(issueNumber, taskElement) {
     const linkElement = taskElement.querySelector('a[href]');
     
     const title = titleElement ? titleElement.textContent : 'Unknown Title';
-    const description = descriptionElement ? descriptionElement.innerHTML : 'No description available';
-    const githubUrl = linkElement ? linkElement.href : '#';
+    
+    // For description, we need to get the raw text content, not the rendered HTML
+    // The kanban card stores rendered markdown, but we need to extract the original text
+    // We'll try to get it from the data attribute if available, otherwise extract from HTML
+    let rawDescription = '';
+    let renderedDescription = 'No description available';
+    
+    if (descriptionElement) {
+        // Try to get raw description from data attribute first
+        rawDescription = taskElement.getAttribute('data-raw-description') || '';
+        
+        if (rawDescription) {
+            // We have raw markdown, render it
+            if (window.GitHubUI && window.GitHubUI.renderMarkdown) {
+                renderedDescription = window.GitHubUI.renderMarkdown(rawDescription);
+            } else {
+                renderedDescription = rawDescription;
+            }
+        } else {
+            // Fallback: extract text content from the rendered element
+            rawDescription = descriptionElement.textContent || '';
+            renderedDescription = descriptionElement.innerHTML || 'No description available';
+        }
+    }
+    
+    // Populate modal content
+    document.getElementById('issue-modal-number').textContent = `#${issueNumber}`;
+    document.getElementById('issue-modal-title').textContent = title;
+    document.getElementById('issue-description-display').innerHTML = renderedDescription;
+    
+    // Store raw description for editing
+    document.getElementById('issue-description-edit').value = rawDescription;
+    
+    // Extract GitHub URL
+    if (linkElement) {
+        const githubUrl = linkElement.href;
+        document.getElementById('view-on-github-btn').href = githubUrl;
+    }
+    
+    // Clear comments and load them from GitHub
+    loadAndDisplayComments(issueNumber);
     
     // Extract labels from task element
     const priorityElement = taskElement.querySelector('[class*="bg-red-100"], [class*="bg-yellow-100"], [class*="bg-green-100"]');
@@ -56,21 +95,9 @@ function populateIssueModal(issueNumber, taskElement) {
         'done': 'Done'
     };
 
-    // Update modal header
-    const modalTitle = document.getElementById('issue-modal-title');
-    const modalNumber = document.getElementById('issue-modal-number');
+    // Update title editing field
     const titleEdit = document.getElementById('issue-title-edit');
-    
-    if (modalTitle) modalTitle.textContent = title;
-    if (modalNumber) modalNumber.textContent = `#${issueNumber}`;
     if (titleEdit) titleEdit.value = title;
-
-    // Update description section
-    const descriptionDisplay = document.getElementById('issue-description-display');
-    const descriptionEdit = document.getElementById('issue-description-edit');
-    
-    if (descriptionDisplay) descriptionDisplay.innerHTML = description;
-    if (descriptionEdit) descriptionEdit.value = descriptionElement ? descriptionElement.textContent : '';
 
     // Update priority and category dropdowns
     const prioritySelect = document.getElementById('issue-priority-select');
@@ -105,7 +132,6 @@ function populateIssueModal(issueNumber, taskElement) {
     // Update action buttons
     const closeBtn = document.getElementById('close-issue-btn');
     const reopenBtn = document.getElementById('reopen-issue-btn');
-    const viewBtn = document.getElementById('view-on-github-btn');
     
     if (closeBtn && reopenBtn) {
         if (column === 'done') {
@@ -116,23 +142,6 @@ function populateIssueModal(issueNumber, taskElement) {
             reopenBtn.classList.add('hidden');
         }
     }
-    
-    if (viewBtn) {
-        viewBtn.href = githubUrl;
-    }
-
-    // Clear comments (will be populated with real data later)
-    const commentsList = document.getElementById('comments-list');
-    if (commentsList) {
-        commentsList.innerHTML = `
-            <div class="text-gray-500 text-center py-8">
-                <i class="fas fa-comments text-2xl mb-2"></i>
-                <p>Comments loading... (Feature coming soon)</p>
-            </div>
-        `;
-    }
-    
-
 }
 
 function resetEditStates() {
@@ -278,27 +287,42 @@ function setupIssueModalEventHandlers() {
                 document.getElementById('issue-description-display').innerHTML = renderedDesc;
             } else {
                 renderedDesc = newDesc;
-                document.getElementById('issue-description-display').textContent = newDesc;
+                document.getElementById('issue-description-display').textContent = renderedDesc;
             }
             
-            // Also update the description in the kanban card if it exists
-            const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
-            if (taskElement) {
-                const descElement = taskElement.querySelector('.markdown-content');
-                if (descElement) {
-                    descElement.innerHTML = renderedDesc;
-                }
-            }
-            
+            // Exit edit mode
             document.getElementById('issue-description-display').classList.remove('hidden');
             document.getElementById('issue-description-edit').classList.add('hidden');
             document.getElementById('description-edit-actions').classList.add('hidden');
             
-            // Update GitHub API
-            if (window.GitHubAPI && window.GitHubAPI.updateGitHubIssueDescription) {
-                await window.GitHubAPI.updateGitHubIssueDescription(issueNumber, newDesc);
+            // Update the kanban card description if it exists
+            const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
+            if (taskElement) {
+                const descElement = taskElement.querySelector('.markdown-content');
+                if (descElement) {
+                    if (window.GitHubUI && window.GitHubUI.renderMarkdown) {
+                        descElement.innerHTML = window.GitHubUI.renderMarkdown(newDesc);
+                    } else {
+                        descElement.textContent = newDesc;
+                    }
+                }
+                
+                // Update the stored raw description for future edits
+                taskElement.setAttribute('data-raw-description', newDesc);
+            }
+            
+            // Update via GitHub API if this is a GitHub issue
+            if (taskElement && taskElement.hasAttribute('data-github-issue')) {
+                try {
+                    const success = await window.GitHubAPI.updateGitHubIssueDescription(issueNumber, newDesc);
+                    if (success) {
+                        console.log(`✅ Successfully updated GitHub issue #${issueNumber} description locally and on GitHub`);
+                    }
+                } catch (error) {
+                    console.error('❌ Failed to update GitHub issue description:', error);
+                }
             } else {
-                console.log('GitHub API not available, description updated locally only');
+                console.log(`Updated local task description: "${newDesc}"`);
             }
         });
     }
@@ -510,16 +534,40 @@ function setupIssueModalEventHandlers() {
     }
     
     if (addCommentBtn) {
-        addCommentBtn.addEventListener('click', function() {
+        addCommentBtn.addEventListener('click', async function() {
             const commentText = document.getElementById('new-comment-text').value.trim();
-            if (commentText) {
-                // TODO: Add comment via GitHub API
-                console.log('Add comment via GitHub API:', commentText);
+            if (!commentText) {
+                alert('Please enter a comment');
+                return;
+            }
+
+            // Get issue number from the modal
+            const issueNumberElement = document.getElementById('issue-modal-number');
+            if (!issueNumberElement) return;
+            
+            const issueNumber = issueNumberElement.textContent.replace('#', '');
+            
+            // Disable button during API call
+            addCommentBtn.disabled = true;
+            addCommentBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Adding...';
+            
+            try {
+                // Create comment via GitHub API
+                const comment = await window.GitHubAPI.createGitHubIssueComment(issueNumber, commentText);
                 
-                // Clear the textarea
-                document.getElementById('new-comment-text').value = '';
-                
-                // TODO: Refresh comments list
+                if (comment) {
+                    // Clear the text area
+                    document.getElementById('new-comment-text').value = '';
+                    
+                    // Refresh comments list to show the new comment
+                    await loadAndDisplayComments(issueNumber);
+                }
+            } catch (error) {
+                console.error('Failed to add comment:', error);
+            } finally {
+                // Re-enable button
+                addCommentBtn.disabled = false;
+                addCommentBtn.innerHTML = '<i class="fas fa-comment mr-1"></i>Add Comment';
             }
         });
     }
@@ -536,6 +584,106 @@ function getCategoryClasses(category) {
     const baseClasses = 'task-category inline-flex items-center px-2 py-1 rounded-full text-xs font-medium';
     if (!category || !window.getCategoryColor) return baseClasses;
     return `${baseClasses} ${window.getCategoryColor(category)}`;
+}
+
+// Load and display GitHub issue comments
+async function loadAndDisplayComments(issueNumber) {
+    const commentsList = document.getElementById('comments-list');
+    if (!commentsList) return;
+    
+    // Show loading state
+    commentsList.innerHTML = `
+        <div class="text-gray-500 text-center py-8">
+            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+            <p>Loading comments...</p>
+        </div>
+    `;
+    
+    try {
+        // Fetch comments from GitHub API
+        const comments = await window.GitHubAPI.getGitHubIssueComments(issueNumber);
+        
+        if (comments.length === 0) {
+            // No comments
+            commentsList.innerHTML = `
+                <div class="text-gray-500 text-center py-8">
+                    <i class="fas fa-comments text-2xl mb-2"></i>
+                    <p>No comments yet. Be the first to comment!</p>
+                </div>
+            `;
+        } else {
+            // Display comments
+            commentsList.innerHTML = comments.map(comment => createCommentElement(comment)).join('');
+        }
+    } catch (error) {
+        // Error loading comments
+        commentsList.innerHTML = `
+            <div class="text-red-500 text-center py-8">
+                <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                <p>Failed to load comments</p>
+                <button class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline" onclick="loadAndDisplayComments('${issueNumber}')">
+                    Try again
+                </button>
+            </div>
+        `;
+        console.error('Failed to load comments:', error);
+    }
+}
+
+// Create HTML element for a single comment
+function createCommentElement(comment) {
+    const createdAt = new Date(comment.created_at);
+    const timeAgo = getTimeAgo(createdAt);
+    
+    // Render markdown content if available
+    let renderedBody = comment.body;
+    if (window.GitHubUI && window.GitHubUI.renderMarkdown) {
+        renderedBody = window.GitHubUI.renderMarkdown(comment.body);
+    }
+    
+    return `
+        <div class="border border-gray-200 rounded-lg p-4" data-comment-id="${comment.id}">
+            <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                    ${comment.user.avatar_url ? 
+                        `<img src="${comment.user.avatar_url}" alt="${comment.user.login}" class="w-8 h-8 rounded-full">` :
+                        `<i class="fas fa-user text-gray-600 text-sm"></i>`
+                    }
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <span class="font-medium text-gray-900">${comment.user.login}</span>
+                        <span class="text-sm text-gray-500">${timeAgo}</span>
+                    </div>
+                    <div class="prose prose-sm max-w-none text-gray-700">
+                        ${renderedBody}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Helper function to get time ago string
+function getTimeAgo(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffSeconds < 60) {
+        return 'just now';
+    } else if (diffMinutes < 60) {
+        return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+    } else if (diffHours < 24) {
+        return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+    } else if (diffDays < 7) {
+        return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+    } else {
+        return date.toLocaleDateString();
+    }
 }
 
 // Export functions to global scope

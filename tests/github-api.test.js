@@ -913,6 +913,230 @@ describe('GitHub API', () => {
 
             expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to close GitHub issue'));
         });
+
+        test('updateGitHubIssueDescription should update issue description', async () => {
+            const mockResponse = {
+                ok: true,
+                json: async () => ({ body: 'Updated description' })
+            };
+
+            mockFetch.mockResolvedValueOnce(mockResponse);
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            // Create a mock task element
+            const mockTask = document.createElement('div');
+            mockTask.setAttribute('data-issue-number', '123');
+            document.body.appendChild(mockTask);
+
+            const result = await window.GitHubAPI.updateGitHubIssueDescription('123', 'Updated description');
+
+            expect(result).toBe(true);
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://api.github.com/repos/super3/dashban/issues/123',
+                expect.objectContaining({
+                    method: 'PATCH',
+                    headers: expect.objectContaining({
+                        'Authorization': 'token test-token'
+                    }),
+                    body: JSON.stringify({ body: 'Updated description' })
+                })
+            );
+
+            // Check that the data attribute was updated
+            expect(mockTask.getAttribute('data-raw-description')).toBe('Updated description');
+
+            // Clean up
+            document.body.removeChild(mockTask);
+        });
+
+        test('updateGitHubIssueDescription should handle unauthenticated state', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = false;
+
+            const result = await window.GitHubAPI.updateGitHubIssueDescription('123', 'New description');
+
+            expect(result).toBe(false);
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        test('updateGitHubIssueDescription should handle no access token', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = null;
+
+            const result = await window.GitHubAPI.updateGitHubIssueDescription('123', 'New description');
+
+            expect(result).toBe(false);
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        test('updateGitHubIssueDescription should handle API errors', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                json: async () => ({ message: 'Forbidden' })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueDescription('123', 'New description');
+
+            expect(result).toBe(false);
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to update GitHub issue description'));
+        });
+
+        test('updateGitHubIssueDescription should handle network errors', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.updateGitHubIssueDescription('123', 'Updated description');
+
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to update GitHub issue description'));
+        });
+
+        test('getGitHubIssueComments should fetch comments successfully', async () => {
+            const mockComments = [
+                { id: 1, body: 'First comment', user: { login: 'user1' } },
+                { id: 2, body: 'Second comment', user: { login: 'user2' } }
+            ];
+            const mockResponse = {
+                ok: true,
+                json: async () => mockComments
+            };
+
+            mockFetch.mockResolvedValueOnce(mockResponse);
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.getGitHubIssueComments('123');
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/issues/123/comments'),
+                expect.objectContaining({
+                    method: 'GET',
+                    headers: expect.objectContaining({
+                        'Authorization': 'token test-token'
+                    })
+                })
+            );
+            expect(result).toEqual(mockComments);
+        });
+
+        test('getGitHubIssueComments should return empty array when not authenticated', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = false;
+            window.GitHubAuth.githubAuth.accessToken = null;
+
+            const result = await window.GitHubAPI.getGitHubIssueComments('123');
+
+            expect(result).toEqual([]);
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        test('getGitHubIssueComments should handle API errors', async () => {
+            const mockResponse = {
+                ok: false,
+                status: 404,
+                json: async () => ({ message: 'Not Found' })
+            };
+
+            mockFetch.mockResolvedValueOnce(mockResponse);
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.getGitHubIssueComments('123');
+
+            expect(result).toEqual([]);
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to fetch GitHub issue comments'));
+        });
+
+        test('getGitHubIssueComments should handle network errors', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.getGitHubIssueComments('123');
+
+            expect(result).toEqual([]);
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to fetch GitHub issue comments'));
+        });
+
+        test('createGitHubIssueComment should create comment successfully', async () => {
+            const mockComment = {
+                id: 123,
+                body: 'New comment',
+                user: { login: 'testuser' }
+            };
+            const mockResponse = {
+                ok: true,
+                json: async () => mockComment
+            };
+
+            mockFetch.mockResolvedValueOnce(mockResponse);
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.createGitHubIssueComment('123', 'New comment');
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/issues/123/comments'),
+                expect.objectContaining({
+                    method: 'POST',
+                    headers: expect.objectContaining({
+                        'Authorization': 'token test-token',
+                        'Content-Type': 'application/json'
+                    }),
+                    body: JSON.stringify({ body: 'New comment' })
+                })
+            );
+            expect(result).toEqual(mockComment);
+        });
+
+        test('createGitHubIssueComment should return null when not authenticated', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = false;
+            window.GitHubAuth.githubAuth.accessToken = null;
+
+            const result = await window.GitHubAPI.createGitHubIssueComment('123', 'New comment');
+
+            expect(result).toBeNull();
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        test('createGitHubIssueComment should handle API errors', async () => {
+            const mockResponse = {
+                ok: false,
+                status: 422,
+                json: async () => ({ message: 'Validation Failed' })
+            };
+
+            mockFetch.mockResolvedValueOnce(mockResponse);
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.createGitHubIssueComment('123', 'New comment');
+
+            expect(result).toBeNull();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to create GitHub issue comment'));
+        });
+
+        test('createGitHubIssueComment should handle network errors', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.createGitHubIssueComment('123', 'New comment');
+
+            expect(result).toBeNull();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to create GitHub issue comment'));
+        });
     });
 
     describe('Initialization', () => {

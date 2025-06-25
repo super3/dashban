@@ -194,6 +194,9 @@ function createGitHubIssueElement(issue, isCompleted = false) {
     taskDiv.setAttribute('data-github-issue', issue.number);
     taskDiv.setAttribute('data-issue-number', issue.number);
     taskDiv.setAttribute('data-issue-id', issue.id);
+    
+    // Store the raw description for editing purposes
+    taskDiv.setAttribute('data-raw-description', issue.body || '');
 
     // Extract priority from labels (default to null if not found)
     const priority = extractPriorityFromLabels(issue.labels || []);

@@ -166,6 +166,52 @@ async function updateGitHubIssueTitle(issueNumber, newTitle) {
     }
 }
 
+// Update GitHub issue description
+async function updateGitHubIssueDescription(issueNumber, newDescription) {
+    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+        console.log('❌ Not authenticated with GitHub - cannot update issue description');
+        return false;
+    }
+
+    try {
+        // Update the issue description via API
+        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
+            method: 'PATCH',
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                body: newDescription
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+        }
+
+        const issue = await response.json();
+        console.log(`✅ Successfully updated GitHub issue #${issueNumber} description`);
+        
+        // Update the stored raw description in the task element for future edits
+        const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
+        if (taskElement) {
+            taskElement.setAttribute('data-raw-description', newDescription);
+        }
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Failed to update GitHub issue description:', error);
+        
+        // Show user-friendly error message
+        alert(`Failed to update GitHub issue description: ${error.message}\n\nThe description was updated on the board but not on GitHub.`);
+        return false;
+    }
+}
+
 // Close GitHub issue when moved to Done column
 async function closeGitHubIssue(issueNumber) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
@@ -490,6 +536,78 @@ function initializeGitHubIssues() {
     });
 }
 
+// Get GitHub issue comments
+async function getGitHubIssueComments(issueNumber) {
+    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+        console.log('❌ Not authenticated with GitHub - cannot fetch comments');
+        return [];
+    }
+
+    try {
+        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/comments`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+        }
+
+        const comments = await response.json();
+        console.log(`✅ Successfully fetched ${comments.length} comments for issue #${issueNumber}`);
+        return comments;
+
+    } catch (error) {
+        console.error(`❌ Failed to fetch GitHub issue comments:`, error);
+        
+        // Show user-friendly error message
+        alert(`Failed to fetch GitHub issue comments: ${error.message}`);
+        return [];
+    }
+}
+
+// Create GitHub issue comment
+async function createGitHubIssueComment(issueNumber, commentBody) {
+    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+        console.log('❌ Not authenticated with GitHub - cannot create comment');
+        return null;
+    }
+
+    try {
+        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/comments`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                body: commentBody
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+        }
+
+        const comment = await response.json();
+        console.log(`✅ Successfully created comment on issue #${issueNumber}`);
+        return comment;
+
+    } catch (error) {
+        console.error(`❌ Failed to create GitHub issue comment:`, error);
+        
+        // Show user-friendly error message
+        alert(`Failed to create GitHub issue comment: ${error.message}`);
+        return null;
+    }
+}
+
 // Export API functions
 window.GitHubAPI = {
     // API functions
@@ -498,8 +616,11 @@ window.GitHubAPI = {
     archiveGitHubIssue,
     updateGitHubIssueLabels,
     updateGitHubIssueTitle,
+    updateGitHubIssueDescription,
     updateGitHubIssueMetadata,
     closeGitHubIssue,
     reopenGitHubIssue,
-    initializeGitHubIssues
+    initializeGitHubIssues,
+    getGitHubIssueComments,
+    createGitHubIssueComment
 }; 
