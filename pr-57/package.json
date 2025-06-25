@@ -1,0 +1,43 @@
+{
+  "name": "dashban",
+  "version": "0.1.0",
+  "description": "A modern, responsive Kanban board application with GitHub Actions integration",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:silent-coverage": "jest --silent --coverage"
+  },
+  "keywords": [
+    "kanban",
+    "dashboard",
+    "github-actions",
+    "project-management"
+  ],
+  "author": "Shawn Wilkinson",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!node_modules/**"
+    ],
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ]
+  },
+  "dependencies": {
+    "dompurify": "^3.2.6",
+    "markdown-it": "^14.1.0"
+  }
+}
