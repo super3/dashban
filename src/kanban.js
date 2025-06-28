@@ -9,26 +9,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Card order persistence functions
     function saveCardOrder() {
         const cardOrder = {};
-        const columns = ['info', 'backlog', 'inprogress', 'review', 'done'];
+        const columns = ['backlog', 'todo', 'inprogress', 'review', 'done'];
         
         columns.forEach(columnId => {
             const column = document.getElementById(columnId);
             if (column) {
                 const cards = column.querySelectorAll('.bg-white.border:not(.animate-pulse)');
                 cardOrder[columnId] = Array.from(cards).map((card, index) => {
-                    // For info column cards, create stable IDs based on content/structure
-                    if (columnId === 'info') {
-                        // Check if this is a status card (has data-frontend-status or similar)
-                        if (card.querySelector('[data-frontend-status], [data-ci-status], [data-coverage-status]')) {
-                            return 'status-card';
-                        }
-                        // Check if this is an about card (contains "About" in title)
-                        const title = card.querySelector('h4');
-                        if (title && title.textContent.includes('About')) {
-                            return 'about-card';
-                        }
-                        // For other info cards, use index-based ID
-                        return `info-card-${index}`;
+                    // For special cards (status/about), create stable IDs based on content/structure
+                    // Check if this is a status card (has data-frontend-status or similar)
+                    if (card.querySelector('[data-frontend-status], [data-ci-status], [data-coverage-status]')) {
+                        return 'status-card';
+                    }
+                    // Check if this is an about card (contains "About" in title)
+                    const title = card.querySelector('h4');
+                    if (title && title.textContent.includes('About')) {
+                        return 'about-card';
                     }
                     
                     // For other columns, use GitHub issue number if available, otherwise generate/use task ID
@@ -61,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const savedOrder = loadCardOrder();
         if (!savedOrder) return;
         
-        const columns = ['info', 'backlog', 'inprogress', 'review', 'done'];
+        const columns = ['backlog', 'todo', 'inprogress', 'review', 'done'];
         
         columns.forEach(columnId => {
             const column = document.getElementById(columnId);
@@ -75,23 +71,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 Array.from(cards).forEach((card, index) => {
                     let id;
                     
-                    if (columnId === 'info') {
-                        // Use the same logic as saveCardOrder for info column
-                        if (card.querySelector('[data-frontend-status], [data-ci-status], [data-coverage-status]')) {
-                            id = 'status-card';
-                        } else {
-                            const title = card.querySelector('h4');
-                            if (title && title.textContent.includes('About')) {
-                                id = 'about-card';
-                            } else {
-                                id = `info-card-${index}`;
-                            }
-                        }
+                    // Check for special cards first (status/about)
+                    if (card.querySelector('[data-frontend-status], [data-ci-status], [data-coverage-status]')) {
+                        id = 'status-card';
                     } else {
-                        // For other columns, use existing attributes
-                        id = card.getAttribute('data-issue-number') || 
-                             card.getAttribute('data-task-id') || 
-                             card.getAttribute('data-card-id');
+                        const title = card.querySelector('h4');
+                        if (title && title.textContent.includes('About')) {
+                            id = 'about-card';
+                        } else {
+                            // For other cards, use existing attributes
+                            id = card.getAttribute('data-issue-number') || 
+                                 card.getAttribute('data-task-id') || 
+                                 card.getAttribute('data-card-id');
+                        }
                     }
                     
                     if (id) {
@@ -121,8 +113,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // If we've reordered the info column and status cards exist, trigger a refresh
-        if (savedOrder.info && window.StatusCards && window.StatusCards.refreshAllStatuses) {
+        // If status cards exist anywhere, trigger a refresh
+        if (window.StatusCards && window.StatusCards.refreshAllStatuses) {
             setTimeout(() => {
                 window.StatusCards.refreshAllStatuses();
             }, 100);
@@ -130,11 +122,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Initialize sortable lists for each column
-    const columns = ['info', 'backlog', 'inprogress', 'review', 'done'];
+    const columns = ['backlog', 'todo', 'inprogress', 'review', 'done'];
     
     columns.forEach(columnId => {
-        // Info column has its own group to prevent dragging to other columns
-        const group = columnId === 'info' ? 'info-cards' : 'kanban-tasks';
+        // All columns share the same group to allow dragging between them
+        const group = 'kanban-tasks';
         
         new Sortable(document.getElementById(columnId), {
             group: group,

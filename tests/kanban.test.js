@@ -14,26 +14,6 @@ function setupDOM() {
     
     <!-- Kanban Board -->
     <div class="kanban-board">
-      <!-- Info Column -->
-      <div class="flex-1 column-expanded" data-column="info">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div class="px-4 py-3 border-b border-gray-200 column-header">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-2">
-                <div class="w-3 h-3 bg-blue-400 rounded-full"></div>
-                <h3 class="font-semibold text-gray-900 column-title">Info</h3>
-                <span class="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
-              </div>
-              <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="info">
-                <i class="fas fa-chevron-left"></i>
-              </button>
-            </div>
-          </div>
-          <div id="info" class="p-4 space-y-3 min-h-[64px] column-content">
-          </div>
-        </div>
-      </div>
-      
       <!-- Backlog Column -->
       <div class="flex-1 column-expanded" data-column="backlog">
         <div class="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -50,6 +30,26 @@ function setupDOM() {
             </div>
           </div>
           <div id="backlog" class="p-4 space-y-3 min-h-[64px] column-content">
+          </div>
+        </div>
+      </div>
+      
+      <!-- Todo Column -->
+      <div class="flex-1 column-expanded" data-column="todo">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="px-4 py-3 border-b border-gray-200 column-header">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 bg-purple-400 rounded-full"></div>
+                <h3 class="font-semibold text-gray-900 column-title">Todo</h3>
+                <span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full font-medium">0</span>
+              </div>
+              <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="todo">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+            </div>
+          </div>
+          <div id="todo" class="p-4 space-y-3 min-h-[64px] column-content">
           </div>
         </div>
       </div>
@@ -275,7 +275,7 @@ describe('Kanban Board Core Functionality', () => {
 
   describe('initialization', () => {
     test('should initialize SortableJS for all columns', () => {
-      expect(global.Sortable).toHaveBeenCalledTimes(5); // 5 columns: info, backlog, inprogress, review, done
+      expect(global.Sortable).toHaveBeenCalledTimes(5); // 5 columns: backlog, todo, inprogress, review, done
     });
 
     test('should set up modal elements', () => {
@@ -1335,9 +1335,9 @@ describe('Card Order Persistence', () => {
             <div id="inprogress">
                 <div class="bg-white border" data-issue-number="789">Card 4</div>
             </div>
+            <div id="todo"></div>
             <div id="review"></div>
             <div id="done"></div>
-            <div id="info"></div>
         `;
     });
 
@@ -1352,16 +1352,16 @@ describe('Card Order Persistence', () => {
         expect(cardOrder.inprogress).toEqual(['789']);
         expect(cardOrder.review).toEqual([]);
         expect(cardOrder.done).toEqual([]);
-        expect(cardOrder.info).toEqual([]);
+        expect(cardOrder.todo).toEqual([]);
     });
 
     test('loadCardOrder should return saved order from localStorage', () => {
         const testOrder = {
             backlog: ['123', '456'],
+            todo: [],
             inprogress: ['789'],
             review: [],
-            done: [],
-            info: []
+            done: []
         };
         
         localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
@@ -1518,10 +1518,11 @@ describe('Card Order Persistence', () => {
         expect(cardOrder.backlog[3]).toMatch(/^card-\d+-[a-z0-9]+$/);
     });
 
-    test('saveCardOrder should handle info column cards with special IDs', () => {
-        // Clear and set up info column with status card and about card
+    test('saveCardOrder should handle todo column cards with special IDs', () => {
+        // Clear and set up todo column with status card and about card
         document.body.innerHTML = `
-            <div id="info">
+            <div id="backlog"></div>
+            <div id="todo">
                 <div class="bg-white border">
                     <h4>Status</h4>
                     <div data-frontend-status>Frontend Status</div>
@@ -1532,11 +1533,10 @@ describe('Card Order Persistence', () => {
                     <p>This is about the project</p>
                 </div>
                 <div class="bg-white border">
-                    <h4>Other Info</h4>
-                    <p>Some other info</p>
+                    <h4>Other Todo</h4>
+                    <p>Some other todo</p>
                 </div>
             </div>
-            <div id="backlog"></div>
             <div id="inprogress"></div>
             <div id="review"></div>
             <div id="done"></div>
@@ -1547,13 +1547,17 @@ describe('Card Order Persistence', () => {
         const saved = localStorageMock.getItem('cardOrder');
         const cardOrder = JSON.parse(saved);
         
-        expect(cardOrder.info).toEqual(['status-card', 'about-card', 'info-card-2']);
+        expect(cardOrder.todo).toHaveLength(3);
+        expect(cardOrder.todo[0]).toBe('status-card');
+        expect(cardOrder.todo[1]).toBe('about-card');
+        expect(cardOrder.todo[2]).toMatch(/^card-/);
     });
 
-    test('applyCardOrder should handle info column cards correctly', () => {
-        // Set up info column 
+    test('applyCardOrder should handle todo column cards correctly', () => {
+        // Set up todo column 
         document.body.innerHTML = `
-            <div id="info">
+            <div id="backlog"></div>
+            <div id="todo">
                 <div class="bg-white border">
                     <h4>About This Project</h4>
                     <p>This is about the project</p>
@@ -1564,7 +1568,6 @@ describe('Card Order Persistence', () => {
                     <div data-ci-status>CI Status</div>
                 </div>
             </div>
-            <div id="backlog"></div>
             <div id="inprogress"></div>
             <div id="review"></div>
             <div id="done"></div>
@@ -1572,8 +1575,8 @@ describe('Card Order Persistence', () => {
         
         // Save order where status card comes first
         const testOrder = {
-            info: ['status-card', 'about-card'],
             backlog: [],
+            todo: ['status-card', 'about-card'],
             inprogress: [],
             review: [],
             done: []
@@ -1583,8 +1586,8 @@ describe('Card Order Persistence', () => {
         
         kanbanTestExports.applyCardOrder();
         
-        const infoColumn = document.getElementById('info');
-        const cards = infoColumn.querySelectorAll('.bg-white.border');
+        const todoColumn = document.getElementById('todo');
+        const cards = todoColumn.querySelectorAll('.bg-white.border');
         
         // Status card should be first, about card second
         expect(cards[0].querySelector('[data-frontend-status]')).toBeTruthy();

@@ -693,4 +693,22 @@ window.IssueModal = {
     populateIssueModal,
     resetEditStates,
     setupIssueModalEventHandlers
-}; 
+};
+
+// Export helper functions for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        getPriorityClasses,
+        getCategoryClasses,
+        loadAndDisplayComments,
+        createCommentElement,
+        getTimeAgo
+    };
+} else {
+    // Make functions available globally for testing
+    window.getPriorityClasses = getPriorityClasses;
+    window.getCategoryClasses = getCategoryClasses;
+    window.loadAndDisplayComments = loadAndDisplayComments;
+    window.createCommentElement = createCommentElement;
+    window.getTimeAgo = getTimeAgo;
+} 
