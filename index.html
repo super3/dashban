@@ -224,7 +224,7 @@
                             <div class="flex items-center space-x-2">
                                 <div class="w-3 h-3 bg-purple-400 rounded-full"></div>
                                 <h3 class="font-semibold text-gray-900 column-title">Todo</h3>
-                                <span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full font-medium">2</span>
+                                <span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full font-medium">1</span>
                             </div>
                             <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="todo">
                                 <i class="fas fa-chevron-left"></i>
@@ -232,63 +232,6 @@
                         </div>
                     </div>
                     <div id="todo" class="p-4 space-y-3 min-h-[64px] column-content">
-                        <!-- Project Status Card -->
-                        <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
-                            <div class="flex items-start justify-between mb-3">
-                                <div>
-                                    <h4 class="font-medium text-gray-900 mb-1">Status</h4>
-                                </div>
-                                <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">CODE</span>
-                            </div>
-                            
-                            <!-- Horizontal Separator -->
-                            <div class="border-b border-gray-200 mb-3"></div>
-                            
-                            <!-- Frontend Status -->
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center space-x-2">
-                                    <i class="fas fa-globe text-indigo-500"></i>
-                                    <span class="text-sm text-gray-700">Frontend</span>
-                                </div>
-                                <div data-frontend-status class="flex items-center space-x-1">
-                                    <i class="fas fa-check-circle text-green-500 text-sm"></i>
-                                    <span class="text-sm text-green-600 font-medium">Deployed</span>
-                                </div>
-                            </div>
-                            
-                            <!-- GitHub Testing Status -->
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center space-x-2">
-                                    <i class="fab fa-github text-gray-700"></i>
-                                    <span class="text-sm text-gray-700">CI Tests</span>
-                                </div>
-                                <div data-ci-status class="flex items-center space-x-1">
-                                    <i class="fas fa-check-circle text-green-500 text-sm"></i>
-                                    <span class="text-sm text-green-600 font-medium">Passing</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Code Coverage Status -->
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="flex items-center space-x-2">
-                                    <i class="fas fa-shield-alt text-gray-700"></i>
-                                    <span class="text-sm text-gray-700">Coverage</span>
-                                </div>
-                                <div data-coverage-status class="flex items-center space-x-1">
-                                    <span class="text-sm text-green-600 font-medium">99%</span>
-                                </div>
-                            </div>
-                            
-
-                            
-                            <div class="flex items-center justify-between pt-2 border-t border-gray-100">
-                                <div data-frontend-time class="flex items-center space-x-2">
-                                    <i class="fas fa-sync text-gray-400 text-xs"></i>
-                                    <span class="text-xs text-gray-500">Updated <1m ago</span>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- About Card -->
                         <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
                             <div class="flex items-start justify-between mb-3">
@@ -373,7 +316,7 @@
                             <div class="flex items-center space-x-2">
                                 <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
                                 <h3 class="font-semibold text-gray-900 column-title">Review</h3>
-                                <span class="bg-yellow-100 text-yellow-600 text-xs px-2 py-1 rounded-full font-medium">1</span>
+                                <span class="bg-yellow-100 text-yellow-600 text-xs px-2 py-1 rounded-full font-medium">2</span>
                             </div>
                             <button class="text-gray-400 hover:text-gray-600 column-collapse-btn" data-column="review">
                                 <i class="fas fa-chevron-left"></i>
@@ -381,6 +324,62 @@
                         </div>
                     </div>
                     <div id="review" class="p-4 space-y-3 min-h-[64px] column-content">
+                        <!-- Project Status Card -->
+                        <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 mb-1">Status</h4>
+                                </div>
+                                <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">CODE</span>
+                            </div>
+                            
+                            <!-- Horizontal Separator -->
+                            <div class="border-b border-gray-200 mb-3"></div>
+                            
+                            <!-- Frontend Status -->
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-globe text-indigo-500"></i>
+                                    <span class="text-sm text-gray-700">Frontend</span>
+                                </div>
+                                <div data-frontend-status class="flex items-center space-x-1">
+                                    <i class="fas fa-check-circle text-green-500 text-sm"></i>
+                                    <span class="text-sm text-green-600 font-medium">Deployed</span>
+                                </div>
+                            </div>
+                            
+                            <!-- GitHub Testing Status -->
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fab fa-github text-gray-700"></i>
+                                    <span class="text-sm text-gray-700">CI Tests</span>
+                                </div>
+                                <div data-ci-status class="flex items-center space-x-1">
+                                    <i class="fas fa-check-circle text-green-500 text-sm"></i>
+                                    <span class="text-sm text-green-600 font-medium">Passing</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Code Coverage Status -->
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-shield-alt text-gray-700"></i>
+                                    <span class="text-sm text-gray-700">Coverage</span>
+                                </div>
+                                <div data-coverage-status class="flex items-center space-x-1">
+                                    <span class="text-sm text-green-600 font-medium">99%</span>
+                                </div>
+                            </div>
+                            
+
+                            
+                            <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                                <div data-frontend-time class="flex items-center space-x-2">
+                                    <i class="fas fa-sync text-gray-400 text-xs"></i>
+                                    <span class="text-xs text-gray-500">Updated <1m ago</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

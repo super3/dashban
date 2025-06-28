@@ -324,6 +324,12 @@ function addReviewIndicator(taskElement) {
         return;
     }
     
+    // Skip adding indicator for Status card and About card
+    const titleElement = taskElement.querySelector('h4');
+    if (titleElement && (titleElement.textContent === 'Status' || titleElement.textContent === 'About')) {
+        return;
+    }
+    
     // Create the review indicator HTML
     const reviewIndicator = document.createElement('div');
     reviewIndicator.className = 'review-indicator mt-3';
