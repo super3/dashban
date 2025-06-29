@@ -372,8 +372,8 @@ document.addEventListener('DOMContentLoaded', function() {
         style.textContent = '.column-collapsed { transition: none !important; }';
         document.head.appendChild(style);
         
-        // Collapse the review column by default
-        collapseColumn('review');
+        // Collapse the done column by default
+        collapseColumn('done');
         
         // Re-enable transitions after a brief delay
         setTimeout(() => {
