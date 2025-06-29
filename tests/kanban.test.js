@@ -617,6 +617,13 @@ describe('Kanban Board Core Functionality', () => {
     });
 
     test('should save and load collapse states', () => {
+      // First ensure all columns are expanded (reset from any previous state)
+      api.expandColumn('backlog');
+      api.expandColumn('todo');
+      api.expandColumn('inprogress');
+      api.expandColumn('review');
+      api.expandColumn('done');
+      
       // Collapse some columns
       api.collapseColumn('backlog');
       api.collapseColumn('review');
@@ -1047,10 +1054,10 @@ describe('Kanban Board Core Functionality', () => {
       // Call loadCollapseStates
       api.loadCollapseStates();
       
-      // Should clear invalid data and apply default collapse to review column
+      // Should clear invalid data and apply default collapse to done column
       expect(localStorageMock.getItem('columnCollapseStates')).toBeNull();
-      const reviewColumnEl = document.querySelector('[data-column="review"]');
-      expect(reviewColumnEl.classList.contains('column-collapsed')).toBe(true);
+      const doneColumnEl = document.querySelector('[data-column="done"]');
+      expect(doneColumnEl.classList.contains('column-collapsed')).toBe(true);
       
       // Restore jest
       global.jest = originalJest;
@@ -1093,9 +1100,9 @@ describe('Kanban Board Core Functionality', () => {
       // Call loadCollapseStates
       api.loadCollapseStates();
       
-      // Should apply default collapse state to review column
-      const reviewColumnEl = document.querySelector('[data-column="review"]');
-      expect(reviewColumnEl.classList.contains('column-collapsed')).toBe(true);
+      // Should apply default collapse state to done column
+      const doneColumnEl = document.querySelector('[data-column="done"]');
+      expect(doneColumnEl.classList.contains('column-collapsed')).toBe(true);
     });
 
     test('should not log errors in test environment', () => {
@@ -1263,9 +1270,9 @@ describe('Kanban Board Core Functionality', () => {
       // Call applyDefaultCollapseStates directly
       api.applyDefaultCollapseStates();
       
-      // Check that the review column is collapsed
-      const reviewColumnEl = document.querySelector('[data-column="review"]');
-      expect(reviewColumnEl.classList.contains('column-collapsed')).toBe(true);
+      // Check that the done column is collapsed
+      const doneColumnEl = document.querySelector('[data-column="done"]');
+      expect(doneColumnEl.classList.contains('column-collapsed')).toBe(true);
     });
 
     test('should cover archive functionality lines', () => {
