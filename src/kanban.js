@@ -171,10 +171,55 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.GitHub.updateCardIndicators(draggedElement, newColumnId);
                 }
                 
+                // Handle About card archiving when moved to/from done column
+                if (evt.from.id !== evt.to.id) {
+                    const titleElement = draggedElement.querySelector('h4');
+                    if (titleElement && titleElement.textContent.includes('About')) {
+                        if (newColumnId === 'done') {
+                            addArchiveButtonToAboutCard(draggedElement);
+                        } else {
+                            removeArchiveButtonFromAboutCard(draggedElement);
+                        }
+                    }
+                }
 
             }
         });
     });
+
+    // Function to add archive button to About card when in done column
+    function addArchiveButtonToAboutCard(cardElement) {
+        // Check if archive button already exists
+        if (cardElement.querySelector('.archive-btn')) {
+            return;
+        }
+        
+        // Create archive button
+        const archiveButton = document.createElement('button');
+        archiveButton.className = 'archive-btn text-red-600 hover:text-red-800 text-sm font-medium px-2 py-1 rounded border border-red-300 hover:bg-red-50 transition-colors duration-200';
+        archiveButton.textContent = 'Archive';
+        archiveButton.setAttribute('data-card-type', 'about');
+        
+        // Add button to the card (find a good place to insert it)
+        const cardContent = cardElement.querySelector('.mb-3:last-child') || cardElement.querySelector('div:last-child');
+        if (cardContent) {
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'mt-3 pt-3 border-t border-gray-200 flex justify-end';
+            buttonContainer.appendChild(archiveButton);
+            cardElement.appendChild(buttonContainer);
+        }
+    }
+
+    // Function to remove archive button from About card when moved away from done column
+    function removeArchiveButtonFromAboutCard(cardElement) {
+        const archiveButton = cardElement.querySelector('.archive-btn[data-card-type="about"]');
+        if (archiveButton) {
+            const buttonContainer = archiveButton.closest('div');
+            if (buttonContainer) {
+                buttonContainer.remove();
+            }
+        }
+    }
 
     // Modal and form elements
     const addTaskBtn = document.getElementById('add-task-btn');
@@ -485,14 +530,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Add archive functionality for GitHub issues
+    // Add archive functionality for GitHub issues and other cards
     document.addEventListener('click', function(e) {
         if (e.target.closest('.archive-btn')) {
             const archiveBtn = e.target.closest('.archive-btn');
             const issueNumber = archiveBtn.getAttribute('data-issue-number');
+            const cardType = archiveBtn.getAttribute('data-card-type');
             const taskElement = archiveBtn.closest('.bg-white.border');
             
-            window.GitHub.archiveGitHubIssue(issueNumber, taskElement);
+            if (issueNumber) {
+                // This is a GitHub issue
+                window.GitHub.archiveGitHubIssue(issueNumber, taskElement);
+            } else if (cardType === 'about') {
+                // This is the About card - simply remove it from the board
+                taskElement.remove();
+                window.updateColumnCounts();
+                console.log('📦 About card archived');
+            }
         }
     });
 
