@@ -229,6 +229,10 @@ beforeAll(() => {
   // Mock GitHub module to avoid dependency issues in kanban tests
   global.window = global.window || {};
   global.window.GitHub = {
+    GITHUB_CONFIG: {
+      owner: 'super3',
+      repo: 'dashban'
+    },
     githubAuth: {
       isAuthenticated: false,
       accessToken: null,
@@ -237,6 +241,13 @@ beforeAll(() => {
     createGitHubIssue: jest.fn(),
     createGitHubIssueElement: jest.fn(),
     archiveGitHubIssue: jest.fn()
+  };
+  
+  global.window.GitHubAuth = {
+    GITHUB_CONFIG: {
+      owner: 'super3',
+      repo: 'dashban'
+    }
   };
   
   global.window.updateColumnCounts = jest.fn();
@@ -631,7 +642,7 @@ describe('Kanban Board Core Functionality', () => {
       // Save states
       api.saveCollapseStates();
       
-      const saved = localStorageMock.getItem('columnCollapseStates');
+      const saved = localStorageMock.getItem('columnCollapseStates_super3_dashban');
       expect(saved).toBeTruthy();
       
       const parsed = JSON.parse(saved);
@@ -655,7 +666,7 @@ describe('Kanban Board Core Functionality', () => {
     });
 
     test('should handle invalid JSON in localStorage', () => {
-      localStorageMock.setItem('columnCollapseStates', 'invalid json');
+      localStorageMock.setItem('columnCollapseStates_super3_dashban', 'invalid json');
 
       expect(() => {
         api.loadCollapseStates();
@@ -1019,7 +1030,7 @@ describe('Kanban Board Core Functionality', () => {
       delete global.jest;
       
       // Store invalid JSON
-      localStorageMock.setItem('columnCollapseStates', 'invalid json {');
+      localStorageMock.setItem('columnCollapseStates_super3_dashban', 'invalid json {');
       
       // Create the required DOM structure for applyDefaultCollapseStates to work
       const reviewColumn = document.querySelector('[data-column="review"]');
@@ -1055,7 +1066,7 @@ describe('Kanban Board Core Functionality', () => {
       api.loadCollapseStates();
       
       // Should clear invalid data and apply default collapse to done column
-      expect(localStorageMock.getItem('columnCollapseStates')).toBeNull();
+      expect(localStorageMock.getItem('columnCollapseStates_super3_dashban')).toBeNull();
       const doneColumnEl = document.querySelector('[data-column="done"]');
       expect(doneColumnEl.classList.contains('column-collapsed')).toBe(true);
       
@@ -1109,7 +1120,7 @@ describe('Kanban Board Core Functionality', () => {
       console.error = jest.fn();
       
       // Store invalid JSON
-      localStorageMock.setItem('columnCollapseStates', 'invalid json {');
+      localStorageMock.setItem('columnCollapseStates_super3_dashban', 'invalid json {');
       
       // Call loadCollapseStates
       api.loadCollapseStates();
@@ -1351,7 +1362,7 @@ describe('Card Order Persistence', () => {
     test('saveCardOrder should save card order to localStorage', () => {
         kanbanTestExports.saveCardOrder();
         
-        const saved = localStorageMock.getItem('cardOrder');
+        const saved = localStorageMock.getItem('cardOrder_super3_dashban');
         expect(saved).toBeTruthy();
         
         const cardOrder = JSON.parse(saved);
@@ -1371,7 +1382,7 @@ describe('Card Order Persistence', () => {
             done: []
         };
         
-        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        localStorageMock.setItem('cardOrder_super3_dashban', JSON.stringify(testOrder));
         
         const loaded = kanbanTestExports.loadCardOrder();
         expect(loaded).toEqual(testOrder);
@@ -1383,7 +1394,7 @@ describe('Card Order Persistence', () => {
     });
 
     test('loadCardOrder should handle invalid JSON gracefully', () => {
-        localStorageMock.setItem('cardOrder', 'invalid json');
+        localStorageMock.setItem('cardOrder_super3_dashban', 'invalid json');
         
         const loaded = kanbanTestExports.loadCardOrder();
         expect(loaded).toBeNull();
@@ -1399,7 +1410,7 @@ describe('Card Order Persistence', () => {
             info: []
         };
         
-        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        localStorageMock.setItem('cardOrder_super3_dashban', JSON.stringify(testOrder));
         
         kanbanTestExports.applyCardOrder();
         
@@ -1421,7 +1432,7 @@ describe('Card Order Persistence', () => {
             info: []
         };
         
-        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        localStorageMock.setItem('cardOrder_super3_dashban', JSON.stringify(testOrder));
         
         expect(() => kanbanTestExports.applyCardOrder()).not.toThrow();
         
@@ -1449,7 +1460,7 @@ describe('Card Order Persistence', () => {
             info: []
         };
         
-        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        localStorageMock.setItem('cardOrder_super3_dashban', JSON.stringify(testOrder));
         
         kanbanTestExports.applyCardOrder();
         
@@ -1493,7 +1504,7 @@ describe('Card Order Persistence', () => {
             info: []
         };
         
-        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        localStorageMock.setItem('cardOrder_super3_dashban', JSON.stringify(testOrder));
         
         kanbanTestExports.applyCardOrder();
         
@@ -1515,7 +1526,7 @@ describe('Card Order Persistence', () => {
         
         kanbanTestExports.saveCardOrder();
         
-        const saved = localStorageMock.getItem('cardOrder');
+        const saved = localStorageMock.getItem('cardOrder_super3_dashban');
         const cardOrder = JSON.parse(saved);
         
         // Should have 4 cards in backlog (3 original + 1 new)
@@ -1551,7 +1562,7 @@ describe('Card Order Persistence', () => {
         
         kanbanTestExports.saveCardOrder();
         
-        const saved = localStorageMock.getItem('cardOrder');
+        const saved = localStorageMock.getItem('cardOrder_super3_dashban');
         const cardOrder = JSON.parse(saved);
         
         expect(cardOrder.todo).toHaveLength(3);
@@ -1589,7 +1600,7 @@ describe('Card Order Persistence', () => {
             done: []
         };
         
-        localStorageMock.setItem('cardOrder', JSON.stringify(testOrder));
+        localStorageMock.setItem('cardOrder_super3_dashban', JSON.stringify(testOrder));
         
         kanbanTestExports.applyCardOrder();
         

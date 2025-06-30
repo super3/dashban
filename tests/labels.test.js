@@ -85,7 +85,7 @@ describe('GitHub Labels Management', () => {
             const result = await loadRequiredLabels();
 
             expect(Array.isArray(result)).toBe(true);
-            expect(result).toHaveLength(14);
+            expect(result).toHaveLength(15);
             
             // Check that all required properties exist
             result.forEach(label => {
@@ -99,6 +99,7 @@ describe('GitHub Labels Management', () => {
 
             // Check for specific labels
             const labelNames = result.map(label => label.name);
+            expect(labelNames).toContain('todo');
             expect(labelNames).toContain('in progress');
             expect(labelNames).toContain('review');
             expect(labelNames).toContain('done');
@@ -203,11 +204,11 @@ describe('GitHub Labels Management', () => {
 
             const result = await findMissingLabels();
 
-            expect(result.total).toBe(14);
+            expect(result.total).toBe(15);
             expect(result.existing).toBe(3);
-            expect(result.missingCount).toBe(11);
+            expect(result.missingCount).toBe(12);
             expect(Array.isArray(result.missing)).toBe(true);
-            expect(result.missing).toHaveLength(11);
+            expect(result.missing).toHaveLength(12);
             
             // Check that missing labels don't include the existing ones
             const missingNames = result.missing.map(label => label.name.toLowerCase());
@@ -217,8 +218,9 @@ describe('GitHub Labels Management', () => {
         });
 
         test('should handle case where all labels exist', async () => {
-            // Mock all 14 required labels as existing
+            // Mock all 15 required labels as existing
             const allLabels = [
+                { name: 'todo' },
                 { name: 'in progress' },
                 { name: 'review' },
                 { name: 'done' },
@@ -242,8 +244,8 @@ describe('GitHub Labels Management', () => {
 
             const result = await findMissingLabels();
 
-            expect(result.total).toBe(14);
-            expect(result.existing).toBe(14);
+            expect(result.total).toBe(15);
+            expect(result.existing).toBe(15);
             expect(result.missingCount).toBe(0);
             expect(result.missing).toHaveLength(0);
         });
@@ -256,10 +258,10 @@ describe('GitHub Labels Management', () => {
 
             const result = await findMissingLabels();
 
-            expect(result.total).toBe(14);
+            expect(result.total).toBe(15);
             expect(result.existing).toBe(0);
-            expect(result.missingCount).toBe(14);
-            expect(result.missing).toHaveLength(14);
+            expect(result.missingCount).toBe(15);
+            expect(result.missing).toHaveLength(15);
         });
 
         test('should handle case insensitive label matching', async () => {
@@ -275,7 +277,7 @@ describe('GitHub Labels Management', () => {
             const result = await findMissingLabels();
 
             expect(result.existing).toBe(3);
-            expect(result.missingCount).toBe(11);
+            expect(result.missingCount).toBe(12);
         });
     });
 
@@ -387,7 +389,7 @@ describe('GitHub Labels Management', () => {
             mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => [
-                    { name: 'in progress' }, { name: 'review' }, { name: 'done' }, { name: 'archive' },
+                    { name: 'todo' }, { name: 'in progress' }, { name: 'review' }, { name: 'done' }, { name: 'archive' },
                     { name: 'high' }, { name: 'medium' }, { name: 'low' }, { name: 'frontend' },
                     { name: 'backend' }, { name: 'design' }, { name: 'testing' }, { name: 'database' },
                     { name: 'setup' }, { name: 'bug' }

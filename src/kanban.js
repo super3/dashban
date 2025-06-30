@@ -37,7 +37,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         try {
-            localStorage.setItem('cardOrder', JSON.stringify(cardOrder));
+            // Get repository context for storage key
+            const config = window.GitHubAuth?.GITHUB_CONFIG || window.GitHub?.GITHUB_CONFIG || { owner: 'super3', repo: 'dashban' };
+            const storageKey = `cardOrder_${config.owner}_${config.repo}`;
+            localStorage.setItem(storageKey, JSON.stringify(cardOrder));
         } catch (error) {
             console.warn('Failed to save card order to localStorage:', error);
         }
@@ -45,7 +48,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function loadCardOrder() {
         try {
-            const saved = localStorage.getItem('cardOrder');
+            // Get repository context for storage key
+            const config = window.GitHubAuth?.GITHUB_CONFIG || window.GitHub?.GITHUB_CONFIG || { owner: 'super3', repo: 'dashban' };
+            const storageKey = `cardOrder_${config.owner}_${config.repo}`;
+            const saved = localStorage.getItem(storageKey);
             return saved ? JSON.parse(saved) : null;
         } catch (error) {
             console.warn('Failed to load card order from localStorage:', error);
@@ -328,7 +334,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load collapse states from localStorage
     function loadCollapseStates() {
-        const saved = localStorage.getItem('columnCollapseStates');
+        // Get repository context for storage key
+        const config = window.GitHubAuth?.GITHUB_CONFIG || window.GitHub?.GITHUB_CONFIG || { owner: 'super3', repo: 'dashban' };
+        const storageKey = `columnCollapseStates_${config.owner}_${config.repo}`;
+        const saved = localStorage.getItem(storageKey);
         if (saved) {
             try {
                 const states = JSON.parse(saved);
@@ -355,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Error loading collapse states:', e);
                 }
                 // Clear invalid data
-                localStorage.removeItem('columnCollapseStates');
+                localStorage.removeItem(storageKey);
                 // Fall through to default state
                 applyDefaultCollapseStates();
             }
@@ -388,7 +397,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const columnWrapper = document.querySelector(`[data-column="${columnId}"]`);
             states[columnId] = columnWrapper ? columnWrapper.classList.contains('column-collapsed') : false;
         });
-        localStorage.setItem('columnCollapseStates', JSON.stringify(states));
+        // Get repository context for storage key
+        const config = window.GitHubAuth?.GITHUB_CONFIG || window.GitHub?.GITHUB_CONFIG || { owner: 'super3', repo: 'dashban' };
+        const storageKey = `columnCollapseStates_${config.owner}_${config.repo}`;
+        localStorage.setItem(storageKey, JSON.stringify(states));
     }
 
     // Collapse a column

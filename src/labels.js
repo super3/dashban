@@ -4,6 +4,11 @@
 // Required labels data (embedded to avoid CORS issues with file:// protocol)
 const REQUIRED_LABELS = [
   {
+    "name": "todo",
+    "description": "Issues planned to be worked on",
+    "color": "6366F1"
+  },
+  {
     "name": "in progress",
     "description": "Issues currently being worked on",
     "color": "3B82F6"

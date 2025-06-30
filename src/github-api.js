@@ -78,7 +78,7 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
         const currentLabels = issue.labels.map(label => label.name);
 
         // Remove existing status labels
-        const statusLabels = ['in progress', 'inprogress', 'review', 'in review', 'done', 'completed'];
+        const statusLabels = ['todo', 'in progress', 'inprogress', 'review', 'in review', 'done', 'completed'];
         const filteredLabels = currentLabels.filter(label => 
             !statusLabels.includes(label.toLowerCase())
         );
@@ -86,6 +86,7 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
         // Map columns to labels
         const columnLabelMap = {
             'backlog': null, // No specific label for backlog
+            'todo': 'todo',
             'inprogress': 'in progress',
             'review': 'review',
             'done': 'done'
@@ -463,7 +464,9 @@ async function loadGitHubIssues() {
             
             // Check for status labels that indicate column
             const statusLabels = issue.labels.map(label => label.name.toLowerCase());
-            if (statusLabels.includes('in progress') || statusLabels.includes('inprogress')) {
+            if (statusLabels.includes('todo')) {
+                targetColumn = 'todo';
+            } else if (statusLabels.includes('in progress') || statusLabels.includes('inprogress')) {
                 targetColumn = 'inprogress';
             } else if (statusLabels.includes('review') || statusLabels.includes('in review')) {
                 targetColumn = 'review';
