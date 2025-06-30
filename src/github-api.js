@@ -445,7 +445,7 @@ async function loadGitHubIssues() {
         
         
         // Clear existing issue cards (but keep manually created tasks)
-        const columns = ['backlog', 'inprogress', 'review', 'done'];
+        const columns = ['backlog', 'todo', 'inprogress', 'review', 'done'];
         columns.forEach(columnId => {
             const column = document.getElementById(columnId);
             if (column) {
