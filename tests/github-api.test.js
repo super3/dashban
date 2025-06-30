@@ -239,8 +239,8 @@ describe('GitHub API', () => {
             expect(mockFetch).toHaveBeenCalled();
             const firstCall = mockFetch.mock.calls[0];
             expect(firstCall[0]).toMatch(/https:\/\/api\.github\.com\/repos\/super3\/dashban\/issues\?state=open/);
-            // The loadGitHubIssues function calls fetch with just the URL, no options object
-            expect(firstCall.length).toBe(1);
+            // The loadGitHubIssues function calls fetch with URL and fetchOptions object
+            expect(firstCall.length).toBe(2);
         });
 
         test('loadGitHubIssues should fetch both open and closed issues', async () => {

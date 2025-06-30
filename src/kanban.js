@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Check if this is an about card (contains "About" in title)
                     const title = card.querySelector('h4');
                     if (title && title.textContent.includes('About')) {
-                        return 'about-card';
+                        return card.getAttribute('data-card-id') || 'about-card';
                     }
                     
                     // For other columns, use GitHub issue number if available, otherwise generate/use task ID
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             // Get repository context for storage key
-            const config = window.GitHubAuth?.GITHUB_CONFIG || window.GitHub?.GITHUB_CONFIG || { owner: 'super3', repo: 'dashban' };
+            const config = getCurrentRepoContext();
             const storageKey = `cardOrder_${config.owner}_${config.repo}`;
             localStorage.setItem(storageKey, JSON.stringify(cardOrder));
         } catch (error) {
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadCardOrder() {
         try {
             // Get repository context for storage key
-            const config = window.GitHubAuth?.GITHUB_CONFIG || window.GitHub?.GITHUB_CONFIG || { owner: 'super3', repo: 'dashban' };
+            const config = getCurrentRepoContext();
             const storageKey = `cardOrder_${config.owner}_${config.repo}`;
             const saved = localStorage.getItem(storageKey);
             return saved ? JSON.parse(saved) : null;
@@ -65,6 +65,39 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const columns = ['backlog', 'todo', 'inprogress', 'review', 'done'];
         
+        // Create a global map of all cards across all columns for cross-column moves
+        const globalCardMap = new Map();
+        
+        // Find all cards in all columns and map them by their identifiers
+        columns.forEach(columnId => {
+            const column = document.getElementById(columnId);
+            if (column) {
+                const cards = column.querySelectorAll('.bg-white.border:not(.animate-pulse)');
+                Array.from(cards).forEach(card => {
+                    let id;
+                    
+                    // Check for special cards first (status/about)
+                    if (card.querySelector('[data-frontend-status], [data-ci-status], [data-coverage-status]')) {
+                        id = 'status-card';
+                    } else {
+                        const title = card.querySelector('h4');
+                        if (title && title.textContent.includes('About')) {
+                            id = card.getAttribute('data-card-id') || 'about-card';
+                        } else {
+                            // For other cards, use existing attributes
+                            id = card.getAttribute('data-issue-number') || 
+                                 card.getAttribute('data-task-id') || 
+                                 card.getAttribute('data-card-id');
+                        }
+                    }
+                    
+                    if (id) {
+                        globalCardMap.set(id, card);
+                    }
+                });
+            }
+        });
+        
         columns.forEach(columnId => {
             const column = document.getElementById(columnId);
             const savedColumnOrder = savedOrder[columnId];
@@ -73,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const cards = column.querySelectorAll('.bg-white.border:not(.animate-pulse)');
                 const cardMap = new Map();
                 
-                // Create a map of card identifiers to card elements
+                // Create a map of card identifiers to card elements in this column
                 Array.from(cards).forEach((card, index) => {
                     let id;
                     
@@ -83,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         const title = card.querySelector('h4');
                         if (title && title.textContent.includes('About')) {
-                            id = 'about-card';
+                            id = card.getAttribute('data-card-id') || 'about-card';
                         } else {
                             // For other cards, use existing attributes
                             id = card.getAttribute('data-issue-number') || 
@@ -100,7 +133,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Reorder cards according to saved order
                 const fragment = document.createDocumentFragment();
                 savedColumnOrder.forEach(cardId => {
-                    const card = cardMap.get(cardId);
+                    // First try to find the card in this column
+                    let card = cardMap.get(cardId);
+                    
+                    // If not found in this column, look in other columns (for cross-column moves like About card)
+                    if (!card) {
+                        card = globalCardMap.get(cardId);
+                    }
+                    
                     if (card) {
                         fragment.appendChild(card);
                         cardMap.delete(cardId);
@@ -194,30 +234,241 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Create archive button
-        const archiveButton = document.createElement('button');
-        archiveButton.className = 'archive-btn text-red-600 hover:text-red-800 text-sm font-medium px-2 py-1 rounded border border-red-300 hover:bg-red-50 transition-colors duration-200';
-        archiveButton.textContent = 'Archive';
-        archiveButton.setAttribute('data-card-type', 'about');
+        // Create the completed section HTML (same style as GitHub issues)
+        const completedSection = document.createElement('div');
+        completedSection.className = 'completed-section border-t border-gray-200 mt-3 pt-1 -mb-2';
+        completedSection.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-check-circle text-green-500 text-xs"></i>
+                    <span class="text-xs text-green-600">Completed</span>
+                </div>
+                <button class="archive-btn text-gray-400 hover:text-gray-600 p-1 transition-colors" 
+                        title="Archive card" 
+                        data-card-type="about">
+                    <i class="fas fa-archive text-xs"></i>
+                </button>
+            </div>
+        `;
         
-        // Add button to the card (find a good place to insert it)
-        const cardContent = cardElement.querySelector('.mb-3:last-child') || cardElement.querySelector('div:last-child');
-        if (cardContent) {
-            const buttonContainer = document.createElement('div');
-            buttonContainer.className = 'mt-3 pt-3 border-t border-gray-200 flex justify-end';
-            buttonContainer.appendChild(archiveButton);
-            cardElement.appendChild(buttonContainer);
-        }
+        // Add to the end of the card
+        cardElement.appendChild(completedSection);
     }
 
     // Function to remove archive button from About card when moved away from done column
     function removeArchiveButtonFromAboutCard(cardElement) {
-        const archiveButton = cardElement.querySelector('.archive-btn[data-card-type="about"]');
-        if (archiveButton) {
-            const buttonContainer = archiveButton.closest('div');
-            if (buttonContainer) {
-                buttonContainer.remove();
+        const completedSection = cardElement.querySelector('.completed-section');
+        if (completedSection) {
+            // Check if this is the About card's completed section
+            const archiveButton = completedSection.querySelector('.archive-btn[data-card-type="about"]');
+            if (archiveButton) {
+                completedSection.remove();
             }
+        }
+    }
+    
+    // Function to check if About card is in done column and add archive button
+    function checkAboutCardInDoneColumn() {
+        const doneColumn = document.getElementById('done');
+        if (doneColumn) {
+            const cards = doneColumn.querySelectorAll('.bg-white.border');
+            cards.forEach(card => {
+                const titleElement = card.querySelector('h4');
+                if (titleElement && titleElement.textContent.includes('About')) {
+                    // Check if it has the data-card-id attribute (it should)
+                    if (card.getAttribute('data-card-id') === 'about-card' || !card.getAttribute('data-issue-number')) {
+                        addArchiveButtonToAboutCard(card);
+                    }
+                }
+            });
+        }
+    }
+
+    // Get current repository context
+    function getCurrentRepoContext() {
+        let context = null;
+        let source = 'unknown';
+        
+        // Try to get from RepoManager first (most reliable)
+        if (window.RepoManager?.repoState?.currentRepo) {
+            context = window.RepoManager.repoState.currentRepo;
+            source = 'RepoManager';
+        }
+        // Try to get from localStorage directly
+        else {
+            try {
+                const current = localStorage.getItem('dashban_current_repo');
+                if (current) {
+                    context = JSON.parse(current);
+                    source = 'localStorage';
+                }
+            } catch (error) {
+                console.warn('Failed to load current repo from localStorage:', error);
+            }
+        }
+        
+        // Fallback to GitHub config
+        if (!context && window.GitHubAuth?.GITHUB_CONFIG) {
+            context = window.GitHubAuth.GITHUB_CONFIG;
+            source = 'GitHubAuth';
+        }
+        
+        // Final fallback
+        if (!context) {
+            context = { owner: 'super3', repo: 'dashban' };
+            source = 'default';
+        }
+        
+        console.log(`📦 Repository context from ${source}:`, context);
+        return context;
+    }
+
+    // Save About card archived status to localStorage
+    function saveAboutCardArchivedStatus(isArchived) {
+        try {
+            // Get repository context for storage key
+            const config = getCurrentRepoContext();
+            const storageKey = `aboutCardArchived_${config.owner}_${config.repo}`;
+            localStorage.setItem(storageKey, JSON.stringify(isArchived));
+            console.log(`📦 Saved About card archived status for ${config.owner}/${config.repo}: ${isArchived}`);
+        } catch (error) {
+            console.warn('Failed to save About card archived status to localStorage:', error);
+        }
+    }
+
+    // Load About card archived status from localStorage
+    function loadAboutCardArchivedStatus() {
+        try {
+            // Get repository context for storage key
+            const config = getCurrentRepoContext();
+            const storageKey = `aboutCardArchived_${config.owner}_${config.repo}`;
+            const saved = localStorage.getItem(storageKey);
+            const result = saved ? JSON.parse(saved) : false;
+            console.log(`📦 Loaded About card archived status for ${config.owner}/${config.repo}: ${result}`);
+            return result;
+        } catch (error) {
+            console.warn('Failed to load About card archived status from localStorage:', error);
+            return false;
+        }
+    }
+
+    // Hide About card if it was archived
+    function hideAboutCardIfArchived() {
+        const isArchived = loadAboutCardArchivedStatus();
+        console.log('📦 Checking if About card should be hidden. Archived status:', isArchived);
+        
+        if (isArchived) {
+            const aboutCard = document.querySelector('[data-card-id="about-card"]');
+            if (aboutCard) {
+                aboutCard.remove();
+                window.updateColumnCounts();
+                console.log('📦 About card hidden (was previously archived)');
+            } else {
+                console.log('📦 About card was marked as archived but not found in DOM');
+            }
+        } else {
+            console.log('📦 About card should be visible');
+            // If not archived and About card doesn't exist, ensure it exists
+            ensureAboutCardExists();
+        }
+    }
+
+    // Ensure About card exists if it should be visible
+    function ensureAboutCardExists() {
+        const aboutCard = document.querySelector('[data-card-id="about-card"]');
+        if (!aboutCard) {
+            console.log('📦 About card missing but should be visible - creating it');
+            // Create About card and add it to todo column (it will be moved by applyCardOrder if needed)
+            const todoColumn = document.getElementById('todo');
+            if (todoColumn) {
+                const newAboutCard = createAboutCardElement();
+                todoColumn.appendChild(newAboutCard);
+                window.updateColumnCounts();
+                console.log('📦 About card recreated in Todo column');
+            }
+        }
+    }
+
+    // Create About card element
+    function createAboutCardElement() {
+        const aboutCard = document.createElement('div');
+        aboutCard.className = 'bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200';
+        aboutCard.setAttribute('data-card-id', 'about-card');
+        aboutCard.innerHTML = `
+            <div class="flex items-start justify-between mb-3">
+                <div>
+                    <h4 class="font-medium text-gray-900 mb-1">About</h4>
+                </div>
+                <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">INFO</span>
+            </div>
+            
+            <!-- Horizontal Separator -->
+            <div class="border-b border-gray-200 mb-3"></div>
+            
+            <!-- Project Description -->
+            <div class="mb-3">
+                <p class="text-sm text-gray-700">
+                    <strong>Dashban</strong> combines kanban project management with a realtime status dashboards in one clean interface.
+                </p>
+            </div>
+            
+            <!-- Features List -->
+            <div class="mb-3">
+                <ul class="text-sm text-gray-600 space-y-1">
+                    <li class="flex items-center space-x-2">
+                        <i class="fas fa-check text-green-500 text-xs"></i>
+                        <span>Drag & drop task management</span>
+                    </li>
+                    <li class="flex items-center space-x-2">
+                        <i class="fas fa-check text-green-500 text-xs"></i>
+                        <span>Code and deployment monitoring</span>
+                    </li>
+                    <li class="flex items-center space-x-2">
+                        <i class="fas fa-check text-green-500 text-xs"></i>
+                        <span>Open-source (MIT License)</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Buttons Row -->
+            <div class="flex space-x-2">
+                <!-- Fork Button -->
+                <a href="https://github.com/super3/dashban" target="_blank" class="flex items-center justify-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex-1">
+                    <i class="fab fa-github"></i>
+                    <span>Fork</span>
+                </a>
+                
+                <!-- Give Feedback Button -->
+                <a href="https://github.com/super3/dashban/issues/new?template=feedback.md&title=[Feedback]%20" target="_blank" class="flex items-center justify-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex-1">
+                    <i class="fas fa-comment"></i>
+                    <span>Feedback</span>
+                </a>
+            </div>
+        `;
+        return aboutCard;
+    }
+
+    // Restore About card (unarchive)
+    function restoreAboutCard() {
+        // Clear the archived status
+        saveAboutCardArchivedStatus(false);
+        
+        // Check if About card already exists
+        const existingAboutCard = document.querySelector('[data-card-id="about-card"]');
+        if (existingAboutCard) {
+            console.log('📦 About card is already visible');
+            return;
+        }
+        
+        // Create About card element using the common function
+        const aboutCard = createAboutCardElement();
+        
+        // Add to todo column by default
+        const todoColumn = document.getElementById('todo');
+        if (todoColumn) {
+            todoColumn.appendChild(aboutCard);
+            window.updateColumnCounts();
+            console.log('📦 About card restored to Todo column');
         }
     }
 
@@ -380,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load collapse states from localStorage
     function loadCollapseStates() {
         // Get repository context for storage key
-        const config = window.GitHubAuth?.GITHUB_CONFIG || window.GitHub?.GITHUB_CONFIG || { owner: 'super3', repo: 'dashban' };
+        const config = getCurrentRepoContext();
         const storageKey = `columnCollapseStates_${config.owner}_${config.repo}`;
         const saved = localStorage.getItem(storageKey);
         if (saved) {
@@ -395,6 +646,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 Object.entries(states).forEach(([columnId, isCollapsed]) => {
                     if (isCollapsed) {
                         collapseColumn(columnId);
+                    } else {
+                        expandColumn(columnId);
                     }
                 });
                 
@@ -443,7 +696,7 @@ document.addEventListener('DOMContentLoaded', function() {
             states[columnId] = columnWrapper ? columnWrapper.classList.contains('column-collapsed') : false;
         });
         // Get repository context for storage key
-        const config = window.GitHubAuth?.GITHUB_CONFIG || window.GitHub?.GITHUB_CONFIG || { owner: 'super3', repo: 'dashban' };
+        const config = getCurrentRepoContext();
         const storageKey = `columnCollapseStates_${config.owner}_${config.repo}`;
         localStorage.setItem(storageKey, JSON.stringify(states));
     }
@@ -542,7 +795,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // This is a GitHub issue
                 window.GitHub.archiveGitHubIssue(issueNumber, taskElement);
             } else if (cardType === 'about') {
-                // This is the About card - simply remove it from the board
+                // This is the About card - save archived status and remove from the board
+                saveAboutCardArchivedStatus(true);
                 taskElement.remove();
                 window.updateColumnCounts();
                 console.log('📦 About card archived');
@@ -648,6 +902,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Apply saved card order after GitHub issues are loaded
         applyCardOrder();
+        
+        // Check if About card is in done column and add archive button if needed
+        checkAboutCardInDoneColumn();
+        
+        // Hide About card if it was previously archived (after repository context is available)
+        hideAboutCardIfArchived();
     }, 100);
     
     
@@ -656,6 +916,33 @@ document.addEventListener('DOMContentLoaded', function() {
     window.updateColumnCounts = updateColumnCounts;
     window.getPriorityColor = getPriorityColor;
     window.getCategoryColor = getCategoryColor;
+    
+    // Export About card restore function globally for easy access
+    window.restoreAboutCard = restoreAboutCard;
+    
+    // Debug function to check About card status for all repositories
+    window.debugAboutCardStatus = function() {
+        console.log('=== About Card Debug Info ===');
+        console.log('Current repository context:', getCurrentRepoContext());
+        
+        // Check all stored About card statuses
+        const keys = Object.keys(localStorage).filter(key => key.startsWith('aboutCardArchived_'));
+        console.log('Stored About card statuses:');
+        keys.forEach(key => {
+            const value = localStorage.getItem(key);
+            console.log(`  ${key}: ${value}`);
+        });
+        
+        // Check current repository status
+        const currentStatus = loadAboutCardArchivedStatus();
+        console.log('Current repository About card archived status:', currentStatus);
+        
+        // Check if About card exists in DOM
+        const aboutCard = document.querySelector('[data-card-id="about-card"]');
+        console.log('About card in DOM:', aboutCard ? 'Found' : 'Not found');
+        
+        console.log('=== End Debug Info ===');
+    };
     
     
 
@@ -680,7 +967,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Card order persistence functions
         saveCardOrder,
         loadCardOrder,
-        applyCardOrder
+        applyCardOrder,
+        // About card functions
+        checkAboutCardInDoneColumn,
+        saveAboutCardArchivedStatus,
+        loadAboutCardArchivedStatus,
+        hideAboutCardIfArchived,
+        restoreAboutCard,
+        getCurrentRepoContext,
+        ensureAboutCardExists,
+        createAboutCardElement
     };
 
     // Attach to global for browser/Node access

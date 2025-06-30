@@ -192,6 +192,31 @@
         </div>
     </header>
 
+    <!-- Rate Limit Banner (hidden by default) -->
+    <div id="rate-limit-banner" class="hidden bg-amber-50 border-l-4 border-amber-400 p-4">
+        <div class="max-w-none mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-amber-400 text-lg"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-amber-700">
+                            <span class="font-medium">GitHub API Rate Limit Reached</span>
+                            <span id="rate-limit-message"></span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="rate-limit-details" class="text-xs text-amber-600 hidden sm:block"></div>
+                    <button id="dismiss-rate-limit-banner" class="flex-shrink-0 text-amber-400 hover:text-amber-600 transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
     <main class="max-w-none mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Kanban Board -->
@@ -233,7 +258,7 @@
                     </div>
                     <div id="todo" class="p-4 space-y-3 min-h-[64px] column-content">
                         <!-- About Card -->
-                        <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200">
+                        <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-move hover:shadow-md transition-shadow duration-200" data-card-id="about-card">
                             <div class="flex items-start justify-between mb-3">
                                 <div>
                                     <h4 class="font-medium text-gray-900 mb-1">About</h4>
@@ -723,6 +748,7 @@
         </div>
     </div>
 
+    <script defer src="src/rate-limit.js"></script>
     <script defer src="src/kanban.js"></script>
     <script defer src="src/issue-modal.js"></script>
     <!-- GitHub modules - must be loaded in order -->

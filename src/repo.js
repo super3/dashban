@@ -198,6 +198,28 @@ async function switchRepository(owner, repo) {
     if (repoInfo) {
         updateUIForAccessLevel(repoInfo.accessLevel, repoInfo.canModify);
     }
+    
+    // Reload column collapse states for the new repository
+    if (window.kanbanTestExports?.loadCollapseStates) {
+        window.kanbanTestExports.loadCollapseStates();
+    }
+    
+    // Apply saved card order for the new repository
+    if (window.kanbanTestExports?.applyCardOrder) {
+        window.kanbanTestExports.applyCardOrder();
+    }
+    
+    // Hide About card if it was archived for this repository (after applying card order)
+    if (window.kanbanTestExports?.hideAboutCardIfArchived) {
+        window.kanbanTestExports.hideAboutCardIfArchived();
+    }
+    
+    // Check if About card is in done column after repository switch
+    setTimeout(() => {
+        if (window.kanbanTestExports?.checkAboutCardInDoneColumn) {
+            window.kanbanTestExports.checkAboutCardInDoneColumn();
+        }
+    }, 150);
 }
 
 // UI Functions

@@ -420,12 +420,30 @@ async function loadGitHubIssues() {
         
         // Fetch both open and closed issues with cache-busting
         const timestamp = Date.now();
+        const fetchOptions = {
+            headers: window.GitHubAuth?.githubAuth?.accessToken ? {
+                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
+                'Accept': 'application/vnd.github.v3+json'
+            } : {}
+        };
+        
         const [openResponse, closedResponse] = await Promise.all([
-            fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=open&_t=${timestamp}`),
-            fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=closed&_t=${timestamp}`)
+            window.RateLimit?.rateLimitedFetch ? 
+                window.RateLimit.rateLimitedFetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=open&_t=${timestamp}`, fetchOptions) :
+                fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=open&_t=${timestamp}`, fetchOptions),
+            window.RateLimit?.rateLimitedFetch ?
+                window.RateLimit.rateLimitedFetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=closed&_t=${timestamp}`, fetchOptions) :
+                fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=closed&_t=${timestamp}`, fetchOptions)
         ]);
         
         if (!openResponse.ok || !closedResponse.ok) {
+            // Check for rate limiting
+            if (openResponse.status === 403 || closedResponse.status === 403) {
+                if (window.RateLimit?.handleApiResponse) {
+                    window.RateLimit.handleApiResponse(openResponse.ok ? closedResponse : openResponse);
+                }
+                throw new Error(`GitHub API rate limit exceeded`);
+            }
             throw new Error(`GitHub API error: ${openResponse.status} or ${closedResponse.status}`);
         }
         
@@ -504,6 +522,13 @@ async function loadGitHubIssues() {
         // Only log errors in non-test environments to avoid console noise during tests
         if (!isTestEnvironment()) {
             console.error('❌ Failed to load GitHub issues:', error);
+            
+            // Handle rate limiting gracefully
+            if (error.message.includes('Rate limit') || error.message.includes('rate limit')) {
+                console.log('📊 GitHub API rate limited - banner should be visible');
+                // Don't show additional alert - rate limit banner handles this
+                return;
+            }
         }
         // Don't show alert for loading issues - just log the error
     }
