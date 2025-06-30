@@ -1327,4 +1327,480 @@ describe('GitHub API', () => {
             console.error = originalConsoleError;
         });
     });
+
+    describe('updateGitHubIssueTitle', () => {
+        test('updateGitHubIssueTitle should update issue title successfully', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ number: 123, title: 'Updated title' })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueTitle('123', 'Updated title');
+
+            expect(result).toBe(true);
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/issues/123'),
+                expect.objectContaining({
+                    method: 'PATCH',
+                    body: JSON.stringify({ title: 'Updated title' })
+                })
+            );
+        });
+
+        test('updateGitHubIssueTitle should return false when not authenticated', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = false;
+
+            const result = await window.GitHubAPI.updateGitHubIssueTitle('123', 'Updated title');
+
+            expect(result).toBe(false);
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        test('updateGitHubIssueTitle should handle API errors', async () => {
+            // Mock console.error to prevent Jest from reporting it as a failure
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                json: async () => ({ message: 'Forbidden' })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueTitle('123', 'Updated title');
+
+            expect(result).toBe(false);
+            expect(mockAlert).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to update GitHub issue title')
+            );
+
+            // Restore console.error
+            console.error = originalConsoleError;
+        });
+
+        test('updateGitHubIssueTitle should handle network errors', async () => {
+            // Mock console.error to prevent Jest from reporting it as a failure
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueTitle('123', 'Updated title');
+
+            expect(result).toBe(false);
+            expect(mockAlert).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to update GitHub issue title')
+            );
+
+            // Restore console.error
+            console.error = originalConsoleError;
+        });
+    });
+
+    describe('reopenGitHubIssue', () => {
+        test('reopenGitHubIssue should reopen issue successfully', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ number: 123, state: 'open' })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.reopenGitHubIssue('123');
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/issues/123'),
+                expect.objectContaining({
+                    method: 'PATCH',
+                    body: JSON.stringify({ state: 'open' })
+                })
+            );
+        });
+
+        test('reopenGitHubIssue should return early when not authenticated', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = false;
+
+            await window.GitHubAPI.reopenGitHubIssue('123');
+
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        test('reopenGitHubIssue should handle API errors', async () => {
+            // Mock console.error to prevent Jest from reporting it as a failure
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                json: async () => ({ message: 'Forbidden' })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.reopenGitHubIssue('123');
+
+            expect(mockAlert).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to reopen GitHub issue')
+            );
+
+            // Restore console.error
+            console.error = originalConsoleError;
+        });
+
+        test('reopenGitHubIssue should handle network errors', async () => {
+            // Mock console.error to prevent Jest from reporting it as a failure
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.reopenGitHubIssue('123');
+
+            expect(mockAlert).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to reopen GitHub issue')
+            );
+
+            // Restore console.error
+            console.error = originalConsoleError;
+        });
+    });
+
+    describe('loadGitHubIssues - additional branch coverage', () => {
+        test('loadGitHubIssues should handle issues with todo labels', async () => {
+            const mockIssues = [{
+                number: 1,
+                title: 'Test issue',
+                body: 'Test description',
+                labels: [{ name: 'todo' }],
+                user: { login: 'testuser', avatar_url: 'test.jpg' }
+            }];
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockIssues
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            // Mock GitHubUI functions
+            window.GitHubUI = {
+                createGitHubIssueElement: jest.fn(() => document.createElement('div')),
+                applyReviewIndicatorsToColumn: jest.fn(),
+                applyCompletedSectionsToColumn: jest.fn()
+            };
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            expect(window.GitHubUI.createGitHubIssueElement).toHaveBeenCalledWith(mockIssues[0], false);
+        });
+
+        test('loadGitHubIssues should handle issues with review labels', async () => {
+            const mockIssues = [{
+                number: 1,
+                title: 'Test issue',
+                body: 'Test description', 
+                labels: [{ name: 'review' }],
+                user: { login: 'testuser', avatar_url: 'test.jpg' }
+            }];
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockIssues
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            // Mock GitHubUI functions
+            window.GitHubUI = {
+                createGitHubIssueElement: jest.fn(() => document.createElement('div')),
+                applyReviewIndicatorsToColumn: jest.fn(),
+                applyCompletedSectionsToColumn: jest.fn()
+            };
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            expect(window.GitHubUI.createGitHubIssueElement).toHaveBeenCalledWith(mockIssues[0], false);
+        });
+
+        test('loadGitHubIssues should handle issues with done labels', async () => {
+            const mockIssues = [{
+                number: 1,
+                title: 'Test issue',
+                body: 'Test description',
+                labels: [{ name: 'done' }],
+                user: { login: 'testuser', avatar_url: 'test.jpg' }
+            }];
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockIssues
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            // Mock GitHubUI functions
+            window.GitHubUI = {
+                createGitHubIssueElement: jest.fn(() => document.createElement('div')),
+                applyReviewIndicatorsToColumn: jest.fn(),
+                applyCompletedSectionsToColumn: jest.fn()
+            };
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            expect(window.GitHubUI.createGitHubIssueElement).toHaveBeenCalledWith(mockIssues[0], false);
+        });
+
+
+        test('loadGitHubIssues should handle 403 rate limit response', async () => {
+            window.RateLimit = {
+                handleApiResponse: jest.fn()
+            };
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 403
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            expect(window.RateLimit.handleApiResponse).toHaveBeenCalled();
+        });
+    });
+
+    describe('updateGitHubIssueMetadata', () => {
+        test('updateGitHubIssueMetadata should update priority successfully', async () => {
+            // Mock GET response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ 
+                    labels: [
+                        { name: 'bug' }, 
+                        { name: 'high' },
+                        { name: 'frontend' }
+                    ] 
+                })
+            });
+
+            // Mock PUT response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [{ name: 'bug' }, { name: 'frontend' }, { name: 'critical' }] })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'priority', 'critical');
+
+            expect(result).toBe(true);
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/labels'),
+                expect.objectContaining({
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        labels: ['bug', 'frontend', 'critical']
+                    })
+                })
+            );
+        });
+
+        test('updateGitHubIssueMetadata should update category successfully', async () => {
+            // Mock GET response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ 
+                    labels: [
+                        { name: 'high' }, 
+                        { name: 'frontend' },
+                        { name: 'todo' }
+                    ] 
+                })
+            });
+
+            // Mock PUT response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [{ name: 'high' }, { name: 'todo' }, { name: 'backend' }] })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'category', 'backend');
+
+            expect(result).toBe(true);
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/labels'),
+                expect.objectContaining({
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        labels: ['high', 'todo', 'backend']
+                    })
+                })
+            );
+        });
+
+        test('updateGitHubIssueMetadata should handle empty priority/category', async () => {
+            // Mock GET response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ 
+                    labels: [
+                        { name: 'high' }, 
+                        { name: 'frontend' }
+                    ] 
+                })
+            });
+
+            // Mock PUT response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [{ name: 'high' }] })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'category', '');
+
+            expect(result).toBe(true);
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/labels'),
+                expect.objectContaining({
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        labels: ['high']
+                    })
+                })
+            );
+        });
+
+        test('updateGitHubIssueMetadata should return false when not authenticated', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = false;
+
+            const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'priority', 'high');
+
+            expect(result).toBe(false);
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        test('updateGitHubIssueMetadata should handle GET API errors', async () => {
+            // Mock console.error to prevent Jest from reporting it as a failure
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 404
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'priority', 'high');
+
+            expect(result).toBe(false);
+            expect(mockAlert).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to update GitHub issue priority')
+            );
+
+            // Restore console.error
+            console.error = originalConsoleError;
+        });
+
+        test('updateGitHubIssueMetadata should handle PUT API errors', async () => {
+            // Mock console.error to prevent Jest from reporting it as a failure
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            // Mock GET response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [] })
+            });
+
+            // Mock PUT error response
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                json: async () => ({ message: 'Forbidden' })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'category', 'backend');
+
+            expect(result).toBe(false);
+            expect(mockAlert).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to update GitHub issue category')
+            );
+
+            // Restore console.error
+            console.error = originalConsoleError;
+        });
+
+        test('updateGitHubIssueMetadata should handle network errors', async () => {
+            // Mock console.error to prevent Jest from reporting it as a failure
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'priority', 'high');
+
+            expect(result).toBe(false);
+            expect(mockAlert).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to update GitHub issue priority')
+            );
+
+            // Restore console.error
+            console.error = originalConsoleError;
+        });
+    });
+
 }); 
