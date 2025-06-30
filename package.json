@@ -4,7 +4,8 @@
   "description": "A modern, responsive Kanban board application with GitHub Actions integration",
   "scripts": {
     "test": "jest",
-    "test:watch": "jest --watch",
+    "test:watch": "jest --watch --silent",
+    "test:watch-coverage": "jest --watchAll --silent --coverage",
     "test:coverage": "jest --coverage",
     "test:silent-coverage": "jest --silent --coverage"
   },
@@ -29,12 +30,15 @@
       "<rootDir>/tests/setup.js"
     ],
     "collectCoverageFrom": [
-      "src/**/*.js",
-      "!node_modules/**"
+      "<rootDir>/src/**/*.js",
+      "!<rootDir>/node_modules/**",
+      "!<rootDir>/coverage/**"
     ],
     "testMatch": [
       "<rootDir>/tests/**/*.test.js"
-    ]
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"]
   },
   "dependencies": {
     "dompurify": "^3.2.6",
