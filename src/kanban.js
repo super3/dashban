@@ -976,7 +976,9 @@ document.addEventListener('DOMContentLoaded', function() {
         restoreAboutCard,
         getCurrentRepoContext,
         ensureAboutCardExists,
-        createAboutCardElement
+        createAboutCardElement,
+        addArchiveButtonToAboutCard,
+        removeArchiveButtonFromAboutCard
     };
 
     // Attach to global for browser/Node access
