@@ -194,6 +194,7 @@ function createGitHubIssueElement(issue, isCompleted = false) {
     taskDiv.setAttribute('data-github-issue', issue.number);
     taskDiv.setAttribute('data-issue-number', issue.number);
     taskDiv.setAttribute('data-issue-id', issue.id);
+    taskDiv.setAttribute('data-issue-state', issue.state || 'open');
     
     // Store the raw description for editing purposes
     taskDiv.setAttribute('data-raw-description', issue.body || '');

@@ -635,6 +635,56 @@ This is another paragraph.
             expect(element.innerHTML).toContain('bg-gray-200');
         });
 
+        test('createGitHubIssueElement should set data-issue-state attribute for open issues', () => {
+            const issue = {
+                id: 1,
+                number: 123,
+                title: 'Test Issue',
+                body: 'Test description',
+                html_url: 'https://github.com/test/repo/issues/123',
+                labels: [],
+                user: { login: 'testuser', avatar_url: 'https://github.com/testuser.png' },
+                state: 'open'
+            };
+
+            const element = window.GitHubUI.createGitHubIssueElement(issue);
+            
+            expect(element.getAttribute('data-issue-state')).toBe('open');
+        });
+
+        test('createGitHubIssueElement should set data-issue-state attribute for closed issues', () => {
+            const issue = {
+                id: 1,
+                number: 123,
+                title: 'Test Issue',
+                body: 'Test description',
+                html_url: 'https://github.com/test/repo/issues/123',
+                labels: [],
+                user: { login: 'testuser', avatar_url: 'https://github.com/testuser.png' },
+                state: 'closed'
+            };
+
+            const element = window.GitHubUI.createGitHubIssueElement(issue);
+            
+            expect(element.getAttribute('data-issue-state')).toBe('closed');
+        });
+
+        test('createGitHubIssueElement should default to open state when no state provided', () => {
+            const issue = {
+                id: 1,
+                number: 123,
+                title: 'Test Issue',
+                body: 'Test description',
+                html_url: 'https://github.com/test/repo/issues/123',
+                labels: [],
+                user: { login: 'testuser', avatar_url: 'https://github.com/testuser.png' }
+            };
+
+            const element = window.GitHubUI.createGitHubIssueElement(issue);
+            
+            expect(element.getAttribute('data-issue-state')).toBe('open');
+        });
+
         test('createGitHubIssueElement should handle issue without priority or category', () => {
             const issue = {
                 id: 1,

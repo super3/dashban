@@ -557,6 +557,11 @@ function initializeGitHubIssues() {
             skeleton.remove();
         });
         
+        // Clean up closed issues from localStorage before applying saved order
+        if (window.CardPersistence && window.CardPersistence.cleanupClosedIssuesFromStorage) {
+            window.CardPersistence.cleanupClosedIssuesFromStorage();
+        }
+
         // Apply saved card order after GitHub issues are loaded
         if (window.kanbanTestExports && window.kanbanTestExports.applyCardOrder) {
             window.kanbanTestExports.applyCardOrder();

@@ -184,6 +184,19 @@
                     }
                     
                     if (card) {
+                        // Skip moving GitHub issues that should be in done column based on their state
+                        const issueNumber = card.getAttribute('data-issue-number');
+                        if (issueNumber && columnId !== 'done') {
+                            // Check if this is a closed GitHub issue that should stay in done
+                            const issueState = card.getAttribute('data-issue-state');
+                            const isClosedIssue = issueState === 'closed';
+                            
+                            if (isClosedIssue) {
+                                // Don't move closed issues out of done column
+                                return;
+                            }
+                        }
+                        
                         fragment.appendChild(card);
                         cardMap.delete(cardId);
                     }
@@ -354,6 +367,49 @@
         console.log('💾 Card Persistence module initialized');
     }
 
+    function cleanupClosedIssuesFromStorage() {
+        try {
+            // Get repository context for storage key
+            const config = getCurrentRepoContext();
+            const storageKey = `cardOrder_${config.owner}_${config.repo}`;
+            const savedOrder = localStorage.getItem(storageKey);
+            
+            if (!savedOrder) {
+                return;
+            }
+            
+            const cardOrder = JSON.parse(savedOrder);
+            let hasChanges = false;
+            
+            // Remove closed GitHub issues from all columns in localStorage
+            Object.keys(cardOrder).forEach(columnId => {
+                if (columnId !== 'done') {
+                    const originalLength = cardOrder[columnId].length;
+                    cardOrder[columnId] = cardOrder[columnId].filter(cardId => {
+                        // Find the card element to check if it's a closed GitHub issue
+                        const cardElement = document.querySelector(`[data-issue-number="${cardId}"]`);
+                        if (cardElement) {
+                            const issueState = cardElement.getAttribute('data-issue-state');
+                            const isClosedIssue = issueState === 'closed';
+                            if (isClosedIssue) {
+                                hasChanges = true;
+                                return false; // Remove from this column
+                            }
+                        }
+                        return true; // Keep in this column
+                    });
+                }
+            });
+            
+            // Save updated order if there were changes
+            if (hasChanges) {
+                localStorage.setItem(storageKey, JSON.stringify(cardOrder));
+            }
+        } catch (error) {
+            console.warn('Failed to cleanup closed issues from localStorage:', error);
+        }
+    }
+
     // Export functions for use by kanban.js
     const CardPersistence = {
         initialize,
@@ -369,7 +425,8 @@
         expandColumn,
         toggleColumn,
         // Utility functions
-        getCurrentRepoContext
+        getCurrentRepoContext,
+        cleanupClosedIssuesFromStorage
     };
 
     // Export for browser usage
