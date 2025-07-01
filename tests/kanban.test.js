@@ -1689,7 +1689,7 @@ describe('Uncovered Lines Tests', () => {
         global.window.CardPersistence = prevCardPersistence;
     });
 
-    test('should trigger StatusCards refresh timeout (lines 164-165)', () => {
+    test('should trigger StatusCards refresh timeout (lines 164-165)', (done) => {
         // This test verifies the StatusCards refresh logic
         // The actual lines are inside applyCardOrder function
         // Since we can't easily trigger that specific branch, we'll test the pattern
@@ -1704,14 +1704,20 @@ describe('Uncovered Lines Tests', () => {
         if (window.StatusCards && window.StatusCards.refreshAllStatuses) {
             setTimeout(() => {
                 window.StatusCards.refreshAllStatuses();
+                
+                // Verify it was called and clean up
+                expect(mockRefreshAllStatuses).toHaveBeenCalledTimes(1);
+                delete global.window.StatusCards;
+                done();
             }, 100);
+        } else {
+            // If StatusCards is not available, still clean up and complete test
+            delete global.window.StatusCards;
+            done();
         }
         
         // Verify the mock would be called after timeout
         expect(mockRefreshAllStatuses).not.toHaveBeenCalled();
-        
-        // Clean up
-        delete global.window.StatusCards;
         
         // The coverage for these lines may still show as uncovered because
         // they're inside the applyCardOrder function which has complex setup requirements
@@ -1911,7 +1917,7 @@ describe('Uncovered Lines Tests', () => {
         expect(console.log).toHaveBeenCalledWith('📦 About card is already visible');
     });
 
-    test('should update label warning on modal show (lines 496-497)', () => {
+    test('should update label warning on modal show (lines 496-497)', (done) => {
         // Similar to StatusCards, this is inside an event handler with a timeout
         // We'll test the pattern to ensure coverage
         
@@ -1924,14 +1930,20 @@ describe('Uncovered Lines Tests', () => {
         if (window.GitHubLabels && window.GitHubLabels.updateLabelWarning) {
             setTimeout(() => {
                 window.GitHubLabels.updateLabelWarning();
+                
+                // Verify it was called and clean up
+                expect(mockUpdateLabelWarning).toHaveBeenCalledTimes(1);
+                delete global.window.GitHubLabels;
+                done();
             }, 100);
+        } else {
+            // If GitHubLabels is not available, still clean up and complete test
+            delete global.window.GitHubLabels;
+            done();
         }
         
         // The mock won't be called immediately due to setTimeout
         expect(mockUpdateLabelWarning).not.toHaveBeenCalled();
-        
-        // Clean up
-        delete global.window.GitHubLabels;
     });
 
     test('should log error in non-jest environment (line 662)', () => {
@@ -2195,5 +2207,194 @@ describe('Uncovered Lines Tests', () => {
             global.localStorage.getItem = originalGetItem;
             global.localStorage.setItem = originalSetItem;
         }
+    });
+
+    test('should warn when CardPersistence module not loaded for loadCardOrder (lines 522-523)', () => {
+        setupDOM();
+        
+        // Save original CardPersistence
+        const originalCardPersistence = global.window.CardPersistence;
+        
+        // Remove CardPersistence module
+        global.window.CardPersistence = null;
+        
+        // Re-require kanban.js to pick up the null CardPersistence
+        delete require.cache[require.resolve('../src/kanban.js')];
+        require('../src/kanban.js');
+        const testApi = global.kanbanTestExports;
+        
+        // Test loadCardOrder fallback
+        const result = testApi.loadCardOrder();
+        
+        expect(console.warn).toHaveBeenCalledWith('CardPersistence module not loaded');
+        expect(result).toBeNull();
+        
+        // Restore CardPersistence
+        global.window.CardPersistence = originalCardPersistence;
+    });
+
+    test('should warn when CardPersistence module not loaded for applyCardOrder (line 530)', () => {
+        setupDOM();
+        
+        // Save original CardPersistence
+        const originalCardPersistence = global.window.CardPersistence;
+        
+        // Remove CardPersistence module
+        global.window.CardPersistence = null;
+        
+        // Re-require kanban.js to pick up the null CardPersistence
+        delete require.cache[require.resolve('../src/kanban.js')];
+        require('../src/kanban.js');
+        const testApi = global.kanbanTestExports;
+        
+        // Test applyCardOrder fallback
+        testApi.applyCardOrder();
+        
+        expect(console.warn).toHaveBeenCalledWith('CardPersistence module not loaded');
+        
+        // Restore CardPersistence
+        global.window.CardPersistence = originalCardPersistence;
+    });
+
+    test('should handle SortableJS not found error (lines 5-6)', () => {
+        // Save original Sortable
+        const originalSortable = global.Sortable;
+        const originalConsoleError = console.error;
+        
+        // Mock console.error
+        console.error = jest.fn();
+        
+        // Remove Sortable to trigger the error
+        global.Sortable = undefined;
+        
+        // Mock DOMContentLoaded event to trigger the kanban.js initialization
+        delete require.cache[require.resolve('../src/kanban.js')];
+        
+        // Load kanban.js which should trigger the error
+        require('../src/kanban.js');
+        
+        // Manually trigger DOMContentLoaded
+        const event = new Event('DOMContentLoaded');
+        document.dispatchEvent(event);
+        
+        // Should have logged the error
+        expect(console.error).toHaveBeenCalledWith('❌ SortableJS not found. Make sure SortableJS is loaded.');
+        
+        // Restore original values
+        global.Sortable = originalSortable;
+        console.error = originalConsoleError;
+    });
+
+    test('should handle About card archive button click (lines 318-325)', () => {
+        setupDOM();
+        
+        // Mock AboutCard module
+        const mockSaveAboutCardArchivedStatus = jest.fn();
+        global.window.AboutCard = {
+            saveAboutCardArchivedStatus: mockSaveAboutCardArchivedStatus
+        };
+        
+        // Mock updateColumnCounts
+        const mockUpdateColumnCounts = jest.fn();
+        global.window.updateColumnCounts = mockUpdateColumnCounts;
+        
+        // Mock console.log
+        const originalConsoleLog = console.log;
+        console.log = jest.fn();
+        
+        // Create About card with archive button
+        const aboutCard = document.createElement('div');
+        aboutCard.className = 'bg-white border';
+        aboutCard.innerHTML = `
+            <div>
+                <h4>About This Project</h4>
+                <p>Project description</p>
+            </div>
+            <button class="archive-btn" data-card-type="about">
+                <i class="fas fa-archive"></i>
+            </button>
+        `;
+        document.body.appendChild(aboutCard);
+        
+        // Get the archive button and simulate click
+        const archiveBtn = aboutCard.querySelector('.archive-btn');
+        
+        // Simulate the click event (which triggers the archive handler)
+        const clickEvent = new MouseEvent('click', { bubbles: true });
+        archiveBtn.dispatchEvent(clickEvent);
+        
+        // Verify AboutCard.saveAboutCardArchivedStatus was called with true
+        expect(mockSaveAboutCardArchivedStatus).toHaveBeenCalledWith(true);
+        
+        // Verify updateColumnCounts was called
+        expect(mockUpdateColumnCounts).toHaveBeenCalled();
+        
+        // Verify console.log was called
+        expect(console.log).toHaveBeenCalledWith('📦 About card archived');
+        
+        // Verify the card was removed from DOM
+        expect(document.body.contains(aboutCard)).toBe(false);
+        
+        // Clean up
+        console.log = originalConsoleLog;
+        delete global.window.AboutCard;
+        global.window.updateColumnCounts = jest.fn(); // Reset to default mock
+    });
+
+    test('should handle label warning timeout when GitHubLabels is available (lines 110-111)', (done) => {
+        // Save original state
+        const originalGitHubLabels = global.window.GitHubLabels;
+        const originalStatusCards = global.window.StatusCards;
+        
+        // Mock GitHubLabels module with fresh mock
+        const mockUpdateLabelWarning = jest.fn();
+        global.window.GitHubLabels = {
+            updateLabelWarning: mockUpdateLabelWarning
+        };
+
+        // Mock StatusCards to prevent interference
+        global.window.StatusCards = {
+            refreshAllStatuses: jest.fn()
+        };
+
+        // Get the kanban API
+        const api = global.kanbanTestExports;
+        
+        // Ensure the button is enabled
+        if (api.addTaskBtn) {
+            api.addTaskBtn.disabled = false;
+        }
+
+        // Reset the modal to hidden state in case previous tests left it open
+        api.addTaskModal.classList.add('hidden');
+
+        // Verify initial state
+        expect(api.addTaskModal.classList.contains('hidden')).toBe(true);
+
+        // Click the add task button to trigger the event listener with timeout (lines 110-111)
+        api.addTaskBtn.click();
+
+        // Verify modal is shown
+        expect(api.addTaskModal.classList.contains('hidden')).toBe(false);
+
+        // Wait for the timeout to complete (100ms + buffer)
+        setTimeout(() => {
+            try {
+                // Verify updateLabelWarning was called after timeout  
+                expect(mockUpdateLabelWarning).toHaveBeenCalledTimes(1);
+                
+                // Clean up - hide modal and restore original state
+                api.addTaskModal.classList.add('hidden');
+                global.window.GitHubLabels = originalGitHubLabels;
+                global.window.StatusCards = originalStatusCards;
+                done();
+            } catch (error) {
+                // Clean up on error
+                api.addTaskModal.classList.add('hidden');
+                global.window.GitHubLabels = originalGitHubLabels;
+                global.window.StatusCards = originalStatusCards;
+                done(error);
+            }
+        }, 150);
     });
 });
