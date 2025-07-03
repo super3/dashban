@@ -392,6 +392,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getCategoryColor(category) {
+        // Handle null/undefined categories
+        if (!category) {
+            return '';
+        }
+        
         const categoryColors = {
             'Frontend': 'bg-indigo-100 text-indigo-800',
             'Backend': 'bg-blue-100 text-blue-800',

@@ -266,7 +266,7 @@ function extractPriorityFromLabels(labels) {
 function extractCategoryFromLabels(labels) {
     // Handle null or undefined labels
     if (!labels || !Array.isArray(labels)) {
-        return 'Setup'; // default for GitHub issues
+        return null; // no default tag for issues with no labels
     }
     
     const categoryLabel = labels.find(label => {
@@ -288,7 +288,7 @@ function extractCategoryFromLabels(labels) {
         if (name.includes('feature')) return 'Feature';
     }
     
-    return 'Setup'; // default for GitHub issues
+    return null; // no default tag for issues with no matching labels
 }
 
 function createSkeletonCard() {
