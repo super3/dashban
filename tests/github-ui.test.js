@@ -106,18 +106,18 @@ describe('GitHub UI', () => {
             expect(window.GitHubUI.extractCategoryFromLabels(setupLabels)).toBe('Setup');
             
             // Test substring matching for labels not in predefined list but containing keywords
-            // These will return 'Setup' as default since they're not in the predefined list
-            expect(window.GitHubUI.extractCategoryFromLabels([{ name: 'ui' }])).toBe('Setup');
-            expect(window.GitHubUI.extractCategoryFromLabels([{ name: 'api' }])).toBe('Setup');
-            expect(window.GitHubUI.extractCategoryFromLabels([{ name: 'test' }])).toBe('Setup');
-            expect(window.GitHubUI.extractCategoryFromLabels([{ name: 'db' }])).toBe('Setup');
-            expect(window.GitHubUI.extractCategoryFromLabels([{ name: 'config' }])).toBe('Setup');
+            // These will return null since they're not in the predefined list
+            expect(window.GitHubUI.extractCategoryFromLabels([{ name: 'ui' }])).toBeNull();
+            expect(window.GitHubUI.extractCategoryFromLabels([{ name: 'api' }])).toBeNull();
+            expect(window.GitHubUI.extractCategoryFromLabels([{ name: 'test' }])).toBeNull();
+            expect(window.GitHubUI.extractCategoryFromLabels([{ name: 'db' }])).toBeNull();
+            expect(window.GitHubUI.extractCategoryFromLabels([{ name: 'config' }])).toBeNull();
         });
 
-        test('extractCategoryFromLabels should return default for unknown categories', () => {
+        test('extractCategoryFromLabels should return null for unknown categories', () => {
             const labels = [{ name: 'unknown' }, { name: 'random' }];
             const category = window.GitHubUI.extractCategoryFromLabels(labels);
-            expect(category).toBe('Setup');
+            expect(category).toBeNull();
         });
 
         test('extractPriorityFromLabels should handle null labels', () => {
@@ -127,9 +127,9 @@ describe('GitHub UI', () => {
         });
 
         test('extractCategoryFromLabels should handle null labels', () => {
-            expect(window.GitHubUI.extractCategoryFromLabels(null)).toBe('Setup');
-            expect(window.GitHubUI.extractCategoryFromLabels(undefined)).toBe('Setup');
-            expect(window.GitHubUI.extractCategoryFromLabels([])).toBe('Setup');
+            expect(window.GitHubUI.extractCategoryFromLabels(null)).toBeNull();
+            expect(window.GitHubUI.extractCategoryFromLabels(undefined)).toBeNull();
+            expect(window.GitHubUI.extractCategoryFromLabels([])).toBeNull();
         });
 
         test('extractPriorityFromLabels should handle malformed label objects', () => {
@@ -151,7 +151,7 @@ describe('GitHub UI', () => {
                 null,
                 undefined
             ];
-            expect(window.GitHubUI.extractCategoryFromLabels(malformedLabels)).toBe('Setup');
+            expect(window.GitHubUI.extractCategoryFromLabels(malformedLabels)).toBeNull();
         });
     });
 
