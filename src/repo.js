@@ -287,7 +287,7 @@ function toggleRepositoryDropdown() {
     
     // Repository list
     const repoList = document.createElement('div');
-    repoList.className = 'max-h-48 overflow-y-auto';
+    repoList.className = 'max-h-64 overflow-y-auto';
     repoList.id = 'repo-list';
     
     // Add repositories
