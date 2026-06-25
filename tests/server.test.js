@@ -25,7 +25,7 @@ describe('Dashban server', () => {
             process.env = { ...ORIGINAL };
         });
 
-        test('returns safe defaults when no env vars are set', async () => {
+        test('falls back to the hardcoded publishable key and default repo when no env vars are set', async () => {
             delete process.env.CLERK_PUBLISHABLE_KEY;
             delete process.env.GITHUB_REPO;
 
@@ -33,7 +33,7 @@ describe('Dashban server', () => {
 
             expect(res.status).toBe(200);
             expect(res.body).toEqual({
-                clerkPublishableKey: null,
+                clerkPublishableKey: 'pk_test_YWJsZS1hbGJhY29yZS01Ny5jbGVyay5hY2NvdW50cy5kZXYk',
                 githubRepo: 'super3/dashban'
             });
         });

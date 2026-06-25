@@ -22,9 +22,15 @@ app.get('/api/health', (req, res) => {
 
 // Public, browser-safe configuration the frontend reads at startup (e.g. to
 // initialize Clerk). Only non-secret values belong here.
+//
+// The Clerk publishable key is browser-safe (it ships to every visitor anyway),
+// so it is hardcoded as the default. An env override is only needed to point at
+// a different Clerk instance, e.g. a production `pk_live_` key. The SECRET key,
+// by contrast, must always come from the environment.
 app.get('/api/config', (req, res) => {
     res.json({
-        clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || null,
+        clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY ||
+            'pk_test_YWJsZS1hbGJhY29yZS01Ny5jbGVyay5hY2NvdW50cy5kZXYk',
         githubRepo: process.env.GITHUB_REPO || 'super3/dashban'
     });
 });
