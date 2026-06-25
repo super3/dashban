@@ -106,6 +106,26 @@ module.exports = [
         }
     },
     {
+        // Node backend (Express server).
+        files: ['server.js'],
+        languageOptions: {
+            ecmaVersion: 2022,
+            sourceType: 'commonjs',
+            globals: {
+                require: 'readonly',
+                module: 'writable',
+                process: 'readonly',
+                console: 'readonly',
+                __dirname: 'readonly',
+                Buffer: 'readonly',
+                URL: 'readonly',
+                fetch: 'readonly',
+                setTimeout: 'readonly',
+                clearTimeout: 'readonly'
+            }
+        }
+    },
+    {
         // Generated/coverage output and dependencies are not linted.
         ignores: ['coverage/**', 'node_modules/**']
     }

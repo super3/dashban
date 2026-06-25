@@ -1,6 +1,11 @@
 # Dependencies
 node_modules/
 
+# Environment variables (never commit real secrets; see .env.example)
+.env
+.env.local
+.env.*.local
+
 # Test coverage reports
 coverage/
 

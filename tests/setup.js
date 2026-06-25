@@ -24,12 +24,14 @@ global.Image = class {
 // Mock fetch for testing API calls
 global.fetch = jest.fn();
 
-// Mock canvas context
-global.HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
-  drawImage: jest.fn(),
-  getImageData: jest.fn(),
-  canvas: { width: 100, height: 20 }
-}));
+// Mock canvas context (only in DOM environments; node-env tests have no HTMLCanvasElement)
+if (typeof global.HTMLCanvasElement !== 'undefined') {
+  global.HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+    drawImage: jest.fn(),
+    getImageData: jest.fn(),
+    canvas: { width: 100, height: 20 }
+  }));
+}
 
 // Mock DOMParser
 global.DOMParser = class {
