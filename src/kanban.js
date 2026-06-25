@@ -26,53 +26,23 @@ document.addEventListener('DOMContentLoaded', function() {
             dragClass: 'sortable-drag',
             onEnd: function(evt) {
                 updateColumnCounts();
-                
+
                 // Save card order after any drag operation
                 if (window.CardPersistence && window.CardPersistence.saveCardOrder) {
                     window.CardPersistence.saveCardOrder();
                 }
-                
-                // Check if a GitHub issue was moved between columns
-                const draggedElement = evt.item;
-                const issueNumber = draggedElement.getAttribute('data-issue-number');
-                const newColumnId = evt.to.id;
-                
-                if (issueNumber && evt.from.id !== evt.to.id) {
-                    // This is a GitHub issue that was moved to a different column
-                    console.log(`🏷️ GitHub issue #${issueNumber} moved from ${evt.from.id} to ${newColumnId}`);
-                    
-                    // Update GitHub issue labels if GitHub integration is available
-                    if (window.GitHub && window.GitHub.updateGitHubIssueLabels) {
-                        window.GitHub.updateGitHubIssueLabels(issueNumber, newColumnId);
-                    }
-                    
-                    // Close GitHub issue if moved to Done column
-                    if (newColumnId === 'done' && window.GitHub && window.GitHub.closeGitHubIssue) {
-                        window.GitHub.closeGitHubIssue(issueNumber);
-                    }
-                }
-                
-                // Update card indicators for any task moved between columns (both GitHub and local tasks)
-                if (evt.from.id !== evt.to.id && window.GitHub && window.GitHub.updateCardIndicators) {
-                    window.GitHub.updateCardIndicators(draggedElement, newColumnId);
-                }
-                
-                // Handle About card archiving when moved to/from done column
-                if (evt.from.id !== evt.to.id) {
-                    const titleElement = draggedElement.querySelector('h4');
-                    if (titleElement && titleElement.textContent.includes('About')) {
-                        if (newColumnId === 'done') {
-                            if (window.AboutCard && window.AboutCard.addArchiveButtonToAboutCard) {
-                                window.AboutCard.addArchiveButtonToAboutCard(draggedElement);
-                            }
-                        } else {
-                            if (window.AboutCard && window.AboutCard.removeArchiveButtonFromAboutCard) {
-                                window.AboutCard.removeArchiveButtonFromAboutCard(draggedElement);
-                            }
-                        }
-                    }
-                }
 
+                // Broadcast the move and let interested modules react (GitHub label
+                // sync, the About card's archive button, ...) instead of reaching
+                // into each of them directly from here.
+                const draggedElement = evt.item;
+                window.EventBus.emit('card:moved', {
+                    element: draggedElement,
+                    issueNumber: draggedElement.getAttribute('data-issue-number'),
+                    fromColumnId: evt.from.id,
+                    toColumnId: evt.to.id,
+                    movedBetweenColumns: evt.from.id !== evt.to.id
+                });
             }
         });
     });
@@ -544,10 +514,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Attach to global for browser/Node access
+    /* istanbul ignore else: globalThis is always defined in supported runtimes */
     if (typeof globalThis !== 'undefined') {
         globalThis.kanbanTestExports = testAPI;
     }
 
+    /* istanbul ignore else: the browser-only path (no CommonJS module) is unreachable under Jest */
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = testAPI;
     }

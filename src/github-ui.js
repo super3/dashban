@@ -187,6 +187,17 @@ function renderMarkdown(text) {
     return html;
 }
 
+// Escape user-controlled text before interpolating it into an innerHTML string.
+// Prevents stored XSS via attacker-controlled GitHub fields (title, login, URLs).
+function escapeHtml(value) {
+    return String(value === null || value === undefined ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function createGitHubIssueElement(issue, isCompleted = false) {
     const taskDiv = document.createElement('div');
     taskDiv.className = 'bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-move';
@@ -208,8 +219,8 @@ function createGitHubIssueElement(issue, isCompleted = false) {
 
     taskDiv.innerHTML = `
         <div class="flex items-center justify-between mb-2">
-            <h4 class="font-medium text-gray-900 text-sm">${issue.title}</h4>
-            <a href="${issue.html_url}" target="_blank" class="text-gray-500 hover:text-gray-700 text-sm font-medium">
+            <h4 class="font-medium text-gray-900 text-sm">${escapeHtml(issue.title)}</h4>
+            <a href="${escapeHtml(issue.html_url)}" target="_blank" class="text-gray-500 hover:text-gray-700 text-sm font-medium">
                 #${issue.number}
             </a>
         </div>
@@ -217,10 +228,10 @@ function createGitHubIssueElement(issue, isCompleted = false) {
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2">
                 ${priority ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${window.getPriorityColor(priority)}">${priority}</span>` : ''}
-                ${category ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${window.getCategoryColor(category)}">${category}</span>` : ''}
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${window.getCategoryColor(category)}">${category}</span>
             </div>
             ${issue.user ? 
-                `<img src="${issue.user.avatar_url}" alt="${issue.user.login}" class="w-6 h-6 rounded-full">` :
+                `<img src="${escapeHtml(issue.user.avatar_url)}" alt="${escapeHtml(issue.user.login)}" class="w-6 h-6 rounded-full">` :
                 `<div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
                     <i class="fas fa-user text-gray-400 text-xs"></i>
                 </div>`
@@ -285,6 +296,7 @@ function extractCategoryFromLabels(labels) {
         if (name.includes('setup') || name.includes('config')) return 'Setup';
         if (name.includes('bug')) return 'Bug';
         if (name.includes('enhancement')) return 'Enhancement';
+        /* istanbul ignore else: 'feature' is the only filtered label reaching this point, so the else is unreachable */
         if (name.includes('feature')) return 'Feature';
     }
     
@@ -452,6 +464,9 @@ window.GitHubUI = {
     extractCategoryFromLabels,
     createSkeletonCard,
     
+    // Security helpers
+    escapeHtml,
+
     // Card indicator functions
     updateCardIndicators,
     applyReviewIndicatorsToColumn,

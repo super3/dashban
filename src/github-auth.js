@@ -95,6 +95,7 @@ async function validateAndSetToken(token) {
         return true;
     } catch (error) {
         // Only log errors in non-test environments
+        /* istanbul ignore next: this console logging only runs outside the Jest test environment */
         if (typeof jest === 'undefined') {
             console.error('❌ Token validation failed:', error);
         }

@@ -129,8 +129,8 @@ function showBanner(rateLimitInfo) {
     
     // Determine message based on authentication status
     const isAuthenticated = window.GitHubAuth?.githubAuth?.isAuthenticated;
-    let bannerMessage = '';
-    
+    let bannerMessage;
+
     if (isAuthenticated) {
         bannerMessage = ` - Resets in ${timeUntilReset} minutes at ${resetDate.toLocaleTimeString()}.`;
     } else {

@@ -730,6 +730,41 @@ This is another paragraph.
                 window.GitHubUI.createGitHubIssueElement(issueWithNullLabels);
             }).not.toThrow();
         });
+
+        test('createGitHubIssueElement should neutralize XSS payloads in title, url, login and avatar', () => {
+            const issue = {
+                id: 1,
+                number: 7,
+                title: '<img src=x onerror=alert(1)>',
+                body: 'desc',
+                html_url: 'https://github.com/"><script>alert(1)</script>',
+                labels: [],
+                user: {
+                    login: '"><svg/onload=alert(1)>',
+                    avatar_url: 'https://x/"onmouseover="alert(1)'
+                }
+            };
+
+            const el = window.GitHubUI.createGitHubIssueElement(issue);
+
+            // No attacker-controlled element is ever created from the payloads
+            expect(el.querySelector('script')).toBeNull();
+            expect(el.querySelector('svg')).toBeNull();
+            expect(el.querySelector('h4 img')).toBeNull();
+            // The title is rendered as inert text, not parsed as HTML
+            expect(el.querySelector('h4').textContent).toBe('<img src=x onerror=alert(1)>');
+            // URL / login / avatar survive as single plain attribute values (no breakout)
+            expect(el.querySelector('a').getAttribute('href')).toBe(issue.html_url);
+            expect(el.querySelector('img').getAttribute('alt')).toBe(issue.user.login);
+            expect(el.querySelector('img').getAttribute('src')).toBe(issue.user.avatar_url);
+        });
+
+        test('escapeHtml escapes all special characters and coerces null/undefined to empty', () => {
+            expect(window.GitHubUI.escapeHtml(`<>&"'`)).toBe('&lt;&gt;&amp;&quot;&#39;');
+            expect(window.GitHubUI.escapeHtml(null)).toBe('');
+            expect(window.GitHubUI.escapeHtml(undefined)).toBe('');
+            expect(window.GitHubUI.escapeHtml(42)).toBe('42');
+        });
     });
 
     describe('Card Indicators', () => {

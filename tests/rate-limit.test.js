@@ -863,4 +863,88 @@ describe('Rate Limit Management', () => {
             expect(window.RateLimit.state).toBeDefined();
         });
     });
+
+    describe('branch coverage for missing optional elements', () => {
+        // Covers line 176 else-path: showLowRemainingWarning runs with banner,
+        // message and details present but NO <i> icon inside the banner, so the
+        // icon-update is skipped while the rest of the warning still applies.
+        test('should show low-remaining warning when banner has no icon element', () => {
+            // Remove the default banner and build one with message/details but no <i>.
+            document.getElementById('rate-limit-banner').remove();
+            const banner = document.createElement('div');
+            banner.id = 'rate-limit-banner';
+            banner.className = 'hidden bg-amber-50 border-l-4 border-amber-400 p-4';
+            banner.innerHTML = `
+                <span id="rate-limit-message"></span>
+                <span id="rate-limit-details"></span>
+            `;
+            container.appendChild(banner);
+            expect(banner.querySelector('i')).toBeNull();
+
+            const mockResponse = {
+                status: 200,
+                headers: {
+                    get: jest.fn().mockImplementation(header => {
+                        switch (header) {
+                            case 'x-ratelimit-remaining': return '5';
+                            case 'x-ratelimit-limit': return '5000';
+                            case 'x-ratelimit-reset': return '1600';
+                            default: return null;
+                        }
+                    })
+                }
+            };
+
+            expect(() => RateLimit.handleApiResponse(mockResponse)).not.toThrow();
+
+            // Warning still applied to the banner even though no icon was present.
+            expect(banner.classList.contains('hidden')).toBe(false);
+            expect(banner.className).toContain('bg-yellow-50');
+            expect(document.getElementById('rate-limit-message').textContent).toContain('Only 5 requests remaining');
+        });
+
+        // Covers line 202 else-path: hideBanner runs with the banner present but
+        // NO <i> icon inside it, so the icon reset is skipped without throwing.
+        test('should hide banner when banner has no icon element', () => {
+            document.getElementById('rate-limit-banner').remove();
+            const banner = document.createElement('div');
+            banner.id = 'rate-limit-banner';
+            banner.className = 'bg-yellow-50 border-l-4 border-yellow-400 p-4';
+            container.appendChild(banner);
+            expect(banner.querySelector('i')).toBeNull();
+
+            expect(() => RateLimit.hideBanner()).not.toThrow();
+
+            // Banner hidden and reset to the amber error style despite missing icon.
+            expect(banner.classList.contains('hidden')).toBe(true);
+            expect(banner.className).toContain('bg-amber-50');
+        });
+
+        // Covers line 217 else-path: initializeRateLimitManager runs while the
+        // dismiss button is absent, so no click handler is attached. Re-require
+        // the module fresh against a DOM that has no dismiss button (DOM ready,
+        // so init runs synchronously at load).
+        test('should initialize without dismiss button present', () => {
+            // Build a DOM with the banner but no dismiss button.
+            document.body.innerHTML = '';
+            const noDismiss = document.createElement('div');
+            noDismiss.innerHTML = `
+                <div id="rate-limit-banner" class="hidden bg-amber-50 border-l-4 border-amber-400 p-4">
+                    <i class="fas fa-exclamation-triangle text-amber-400 text-lg"></i>
+                    <span id="rate-limit-message"></span>
+                    <span id="rate-limit-details"></span>
+                </div>
+            `;
+            document.body.appendChild(noDismiss);
+            expect(document.getElementById('dismiss-rate-limit-banner')).toBeNull();
+
+            global.console.log = jest.fn();
+
+            jest.resetModules();
+            expect(() => require('../src/rate-limit.js')).not.toThrow();
+
+            // Initialization completed (logged) even though no dismiss button existed.
+            expect(global.console.log).toHaveBeenCalledWith('📊 Rate limit manager initialized');
+        });
+    });
 });

@@ -514,11 +514,11 @@ function parseGitHubUrl(input) {
     // Parse GitHub URL patterns first
     const githubPatterns = [
         // https://github.com/owner/repo
-        /^https?:\/\/github\.com\/([^\/]+)\/([^\/\?]+?)(?:\.git)?(?:[\/?].*)?$/,
+        /^https?:\/\/github\.com\/([^/]+)\/([^/?]+?)(?:\.git)?(?:[/?].*)?$/,
         // git@github.com:owner/repo.git
-        /^git@github\.com:([^\/]+)\/([^\/\?]+?)(?:\.git)?$/,
+        /^git@github\.com:([^/]+)\/([^/?]+?)(?:\.git)?$/,
         // github.com/owner/repo
-        /^(?:www\.)?github\.com\/([^\/]+)\/([^\/\?]+?)(?:\.git)?(?:[\/?].*)?$/
+        /^(?:www\.)?github\.com\/([^/]+)\/([^/?]+?)(?:\.git)?(?:[/?].*)?$/
     ];
     
     for (const pattern of githubPatterns) {
@@ -618,6 +618,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Export for Node.js (for testing)
+/* istanbul ignore else: the browser-only path (no CommonJS module) is unreachable under Jest */
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = RepoManager;
 } 

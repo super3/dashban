@@ -48,6 +48,26 @@
         return context;
     }
 
+    // Derive a stable identifier for a card element. Status and About cards get
+    // structural ids; everything else uses its issue/task/card id. When nothing
+    // matches, the optional generateFallback() produces a fresh id.
+    function getCardId(card, generateFallback) {
+        // Status card (has one of the status data attributes)
+        if (card.querySelector('[data-frontend-status], [data-ci-status], [data-coverage-status]')) {
+            return 'status-card';
+        }
+        // About card (contains "About" in its title)
+        const title = card.querySelector('h4');
+        if (title && title.textContent.includes('About')) {
+            return card.getAttribute('data-card-id') || 'about-card';
+        }
+        // GitHub issue number if available, otherwise a task/card id
+        return card.getAttribute('data-issue-number') ||
+               card.getAttribute('data-task-id') ||
+               card.getAttribute('data-card-id') ||
+               (generateFallback ? generateFallback() : null);
+    }
+
     // Card order persistence functions
     function saveCardOrder() {
         const cardOrder = {};
@@ -57,24 +77,8 @@
             const column = document.getElementById(columnId);
             if (column) {
                 const cards = column.querySelectorAll('.bg-white.border:not(.animate-pulse)');
-                cardOrder[columnId] = Array.from(cards).map((card, index) => {
-                    // For special cards (status/about), create stable IDs based on content/structure
-                    // Check if this is a status card (has data-frontend-status or similar)
-                    if (card.querySelector('[data-frontend-status], [data-ci-status], [data-coverage-status]')) {
-                        return 'status-card';
-                    }
-                    // Check if this is an about card (contains "About" in title)
-                    const title = card.querySelector('h4');
-                    if (title && title.textContent.includes('About')) {
-                        return card.getAttribute('data-card-id') || 'about-card';
-                    }
-                    
-                    // For other columns, use GitHub issue number if available, otherwise generate/use task ID
-                    return card.getAttribute('data-issue-number') || 
-                           card.getAttribute('data-task-id') || 
-                           card.getAttribute('data-card-id') || 
-                           `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                });
+                cardOrder[columnId] = Array.from(cards).map((card) =>
+                    getCardId(card, () => `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`));
             }
         });
         
@@ -116,23 +120,7 @@
             if (column) {
                 const cards = column.querySelectorAll('.bg-white.border:not(.animate-pulse)');
                 Array.from(cards).forEach(card => {
-                    let id;
-                    
-                    // Check for special cards first (status/about)
-                    if (card.querySelector('[data-frontend-status], [data-ci-status], [data-coverage-status]')) {
-                        id = 'status-card';
-                    } else {
-                        const title = card.querySelector('h4');
-                        if (title && title.textContent.includes('About')) {
-                            id = card.getAttribute('data-card-id') || 'about-card';
-                        } else {
-                            // For other cards, use existing attributes
-                            id = card.getAttribute('data-issue-number') || 
-                                 card.getAttribute('data-task-id') || 
-                                 card.getAttribute('data-card-id');
-                        }
-                    }
-                    
+                    const id = getCardId(card);
                     if (id) {
                         globalCardMap.set(id, card);
                     }
@@ -149,24 +137,8 @@
                 const cardMap = new Map();
                 
                 // Create a map of card identifiers to card elements in this column
-                Array.from(cards).forEach((card, index) => {
-                    let id;
-                    
-                    // Check for special cards first (status/about)
-                    if (card.querySelector('[data-frontend-status], [data-ci-status], [data-coverage-status]')) {
-                        id = 'status-card';
-                    } else {
-                        const title = card.querySelector('h4');
-                        if (title && title.textContent.includes('About')) {
-                            id = card.getAttribute('data-card-id') || 'about-card';
-                        } else {
-                            // For other cards, use existing attributes
-                            id = card.getAttribute('data-issue-number') || 
-                                 card.getAttribute('data-task-id') || 
-                                 card.getAttribute('data-card-id');
-                        }
-                    }
-                    
+                Array.from(cards).forEach((card) => {
+                    const id = getCardId(card);
                     if (id) {
                         cardMap.set(id, card);
                     }
