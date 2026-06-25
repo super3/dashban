@@ -775,6 +775,31 @@ describe('GitHub API', () => {
             expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to update GitHub issue labels'));
         });
 
+        test('updateGitHubIssueLabels uses a toast (not alert) when Notifications is available and returns false on failure', async () => {
+            window.Notifications = { showError: jest.fn() };
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueLabels('123', 'inprogress');
+
+            expect(window.Notifications.showError).toHaveBeenCalledWith(expect.stringContaining('Failed to update GitHub issue labels'));
+            expect(mockAlert).not.toHaveBeenCalled();
+            expect(result).toBe(false);
+            delete window.Notifications;
+        });
+
+        test('updateGitHubIssueLabels returns true on success', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ labels: [] }) });
+            mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueLabels('123', 'review');
+
+            expect(result).toBe(true);
+        });
+
         test('updateGitHubIssueLabels should filter existing status labels and add new ones', async () => {
             // Mock GET response with existing labels including status labels
             mockFetch.mockResolvedValueOnce({

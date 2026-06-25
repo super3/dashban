@@ -275,9 +275,34 @@
         console.log('📦 About Card module initialized');
     }
 
+    // React to board card moves: add/remove the About card's archive button
+    // when it is dragged to or away from the Done column. Subscribing here keeps
+    // this concern inside the About card module instead of in kanban's drag handler.
+    function handleCardMoved(payload) {
+        if (!payload || !payload.movedBetweenColumns) {
+            return;
+        }
+        const element = payload.element;
+        const titleElement = element && element.querySelector('h4');
+        if (titleElement && titleElement.textContent.includes('About')) {
+            if (payload.toColumnId === 'done') {
+                addArchiveButtonToAboutCard(element);
+            } else {
+                removeArchiveButtonFromAboutCard(element);
+            }
+        }
+    }
+
+    // Guarded so the module still loads when the EventBus has not been included
+    // (e.g. an isolated unit test that only exercises the helper functions).
+    if (window.EventBus) {
+        window.EventBus.on('card:moved', handleCardMoved);
+    }
+
     // Export functions for use by kanban.js
     const AboutCard = {
         initialize,
+        handleCardMoved,
         addArchiveButtonToAboutCard,
         removeArchiveButtonFromAboutCard,
         checkAboutCardInDoneColumn,

@@ -630,6 +630,17 @@ async function loadAndDisplayComments(issueNumber) {
     }
 }
 
+// Escape user-controlled text before interpolating it into an innerHTML string.
+// Prevents stored XSS via attacker-controlled GitHub fields (comment author, URLs).
+function escapeHtml(value) {
+    return String(value === null || value === undefined ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Create HTML element for a single comment
 function createCommentElement(comment) {
     const createdAt = new Date(comment.created_at);
@@ -642,17 +653,17 @@ function createCommentElement(comment) {
     }
     
     return `
-        <div class="border border-gray-200 rounded-lg p-4" data-comment-id="${comment.id}">
+        <div class="border border-gray-200 rounded-lg p-4" data-comment-id="${escapeHtml(comment.id)}">
             <div class="flex items-start space-x-3">
                 <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                    ${comment.user.avatar_url ? 
-                        `<img src="${comment.user.avatar_url}" alt="${comment.user.login}" class="w-8 h-8 rounded-full">` :
+                    ${comment.user.avatar_url ?
+                        `<img src="${escapeHtml(comment.user.avatar_url)}" alt="${escapeHtml(comment.user.login)}" class="w-8 h-8 rounded-full">` :
                         `<i class="fas fa-user text-gray-600 text-sm"></i>`
                     }
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center space-x-2 mb-2">
-                        <span class="font-medium text-gray-900">${comment.user.login}</span>
+                        <span class="font-medium text-gray-900">${escapeHtml(comment.user.login)}</span>
                         <span class="text-sm text-gray-500">${timeAgo}</span>
                     </div>
                     <div class="prose prose-sm max-w-none text-gray-700">

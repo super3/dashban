@@ -207,6 +207,58 @@ describe('About Card Module', () => {
         });
     });
 
+    describe('handleCardMoved (board event subscriber)', () => {
+        function aboutEl() {
+            const el = document.createElement('div');
+            el.className = 'bg-white border';
+            el.innerHTML = '<h4>About This Project</h4>';
+            return el;
+        }
+
+        test('ignores a missing payload and same-column moves', () => {
+            expect(() => AboutCard.handleCardMoved(undefined)).not.toThrow();
+            expect(() => AboutCard.handleCardMoved({ movedBetweenColumns: false })).not.toThrow();
+        });
+
+        test('adds the archive button when the About card moves to done', () => {
+            const el = aboutEl();
+            AboutCard.handleCardMoved({ element: el, toColumnId: 'done', movedBetweenColumns: true });
+            expect(el.querySelector('.archive-btn')).toBeTruthy();
+        });
+
+        test('removes the archive button when the About card moves out of done', () => {
+            const el = aboutEl();
+            AboutCard.addArchiveButtonToAboutCard(el);
+            AboutCard.handleCardMoved({ element: el, toColumnId: 'todo', movedBetweenColumns: true });
+            expect(el.querySelector('.archive-btn')).toBeFalsy();
+        });
+
+        test('does nothing for a non-About card', () => {
+            const el = document.createElement('div');
+            el.innerHTML = '<h4>Some Other Card</h4>';
+            AboutCard.handleCardMoved({ element: el, toColumnId: 'done', movedBetweenColumns: true });
+            expect(el.querySelector('.archive-btn')).toBeFalsy();
+        });
+
+        test('does nothing when the moved card has no title element', () => {
+            const el = document.createElement('div'); // no <h4>
+            expect(() => AboutCard.handleCardMoved({ element: el, toColumnId: 'done', movedBetweenColumns: true })).not.toThrow();
+            expect(el.querySelector('.archive-btn')).toBeFalsy();
+        });
+
+        test('subscribes to card:moved when an EventBus is available at load', () => {
+            const on = jest.fn();
+            global.window.EventBus = { on };
+
+            jest.resetModules();
+            delete require.cache[require.resolve('../src/about-card.js')];
+            require('../src/about-card.js');
+
+            expect(on).toHaveBeenCalledWith('card:moved', expect.any(Function));
+            delete global.window.EventBus;
+        });
+    });
+
     describe('checkAboutCardInDoneColumn', () => {
         test('should add archive button to About card in done column', () => {
             const doneColumn = document.getElementById('done');

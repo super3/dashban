@@ -1195,6 +1195,37 @@ describe('Issue Modal', () => {
         expect(result).toContain('<p>Rendered markdown</p>');
         expect(window.GitHubUI.renderMarkdown).toHaveBeenCalledWith('**Bold text**');
       });
+
+      test('should escape XSS in comment author login and avatar url', () => {
+        const comment = {
+          id: 1,
+          body: 'Test comment',
+          user: {
+            login: '<img src=x onerror=alert(1)>',
+            avatar_url: 'https://x/"onerror="alert(1)'
+          },
+          created_at: '2023-01-01T12:00:00Z'
+        };
+
+        const result = window.createCommentElement(comment);
+
+        expect(result).not.toContain('<img src=x onerror=alert(1)>');
+        expect(result).toContain('&lt;img src=x onerror=alert(1)&gt;');
+        expect(result).toContain('&quot;onerror=&quot;alert(1)');
+      });
+
+      test('should coerce a null comment id to an empty escaped value', () => {
+        const comment = {
+          id: null,
+          body: 'Test comment',
+          user: { login: 'testuser' },
+          created_at: '2023-01-01T12:00:00Z'
+        };
+
+        const result = window.createCommentElement(comment);
+
+        expect(result).toContain('data-comment-id=""');
+      });
     });
 
     describe('getTimeAgo', () => {

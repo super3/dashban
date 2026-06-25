@@ -274,6 +274,11 @@ beforeEach(() => {
   console.warn = jest.fn();
   console.log = jest.fn();
   
+  // Load the EventBus first so kanban's drag handler can broadcast 'card:moved'
+  delete require.cache[require.resolve('../src/event-bus.js')];
+  require('../src/event-bus.js');
+  window.EventBus.clear();
+
   // Load the about-card module first
   delete require.cache[require.resolve('../src/about-card.js')];
   require('../src/about-card.js');
@@ -975,112 +980,107 @@ describe('Kanban Board Core Functionality', () => {
   });
 
   describe('sortable onEnd functionality', () => {
-    test('should handle drag end events and call updateColumnCounts', () => {
-      // Mock a sortable end event
+    // The drag handler now broadcasts a 'card:moved' event; the GitHub side
+    // effects live in board-sync.js and the About card archive logic in
+    // about-card.js. These tests assert the broadcast payload.
+    function getOnEnd() {
+      return global.Sortable.mock.calls[1][1].onEnd; // backlog column registration
+    }
+
+    test('broadcasts card:moved with move details when an issue is dragged between columns', () => {
+      const moved = jest.fn();
+      window.EventBus.on('card:moved', moved);
+
       const draggedElement = document.createElement('div');
       draggedElement.setAttribute('data-issue-number', '123');
-      
-      const fromColumn = document.getElementById('backlog');
-      const toColumn = document.getElementById('inprogress');
-      
       const evt = {
         item: draggedElement,
-        from: fromColumn,
-        to: toColumn
+        from: document.getElementById('backlog'),
+        to: document.getElementById('inprogress')
       };
-      
-      // Mock GitHub functions
-      global.window.GitHub.updateGitHubIssueLabels = jest.fn();
-      global.window.GitHub.closeGitHubIssue = jest.fn();
-      global.window.GitHub.updateCardIndicators = jest.fn();
-      
-      // Mock updateColumnCounts in the global scope where it's actually called
-      const originalUpdateColumnCounts = global.updateColumnCounts;
-      global.updateColumnCounts = jest.fn();
-      
-      // Get the sortable options from the call (backlog column)
-      const sortableOptions = global.Sortable.mock.calls[1][1]; // Second call options
-      
-      // Call the onEnd function from the options
-      sortableOptions.onEnd(evt);
-      
-      // The onEnd function is called, which means the drag functionality works
-      // We can't easily mock the internal updateColumnCounts call, so we verify other effects
-      expect(global.window.GitHub.updateGitHubIssueLabels).toHaveBeenCalledWith('123', 'inprogress');
-      expect(global.window.GitHub.updateCardIndicators).toHaveBeenCalledWith(draggedElement, 'inprogress');
-      
-      // Restore original function
-      global.updateColumnCounts = originalUpdateColumnCounts;
+
+      getOnEnd()(evt);
+
+      expect(moved).toHaveBeenCalledWith({
+        element: draggedElement,
+        issueNumber: '123',
+        fromColumnId: 'backlog',
+        toColumnId: 'inprogress',
+        movedBetweenColumns: true
+      });
     });
 
-    test('should close GitHub issue when moved to Done column', () => {
+    test('marks a move to the Done column in the broadcast payload', () => {
+      const moved = jest.fn();
+      window.EventBus.on('card:moved', moved);
+
       const draggedElement = document.createElement('div');
       draggedElement.setAttribute('data-issue-number', '123');
-      
-      const fromColumn = document.getElementById('backlog');
-      const toColumn = document.getElementById('done');
-      
       const evt = {
         item: draggedElement,
-        from: fromColumn,
-        to: toColumn
+        from: document.getElementById('backlog'),
+        to: document.getElementById('done')
       };
-      
-      global.window.GitHub.closeGitHubIssue = jest.fn();
-      global.window.GitHub.updateGitHubIssueLabels = jest.fn();
-      
-      // Get the sortable options and call onEnd
-      const sortableOptions = global.Sortable.mock.calls[1][1];
-      sortableOptions.onEnd(evt);
-      
-      expect(global.window.GitHub.closeGitHubIssue).toHaveBeenCalledWith('123');
+
+      getOnEnd()(evt);
+
+      expect(moved).toHaveBeenCalledWith(expect.objectContaining({
+        issueNumber: '123',
+        toColumnId: 'done',
+        movedBetweenColumns: true
+      }));
     });
 
-    test('should handle drag end without issue number', () => {
-      const draggedElement = document.createElement('div');
-      // No data-issue-number attribute
-      
-      const fromColumn = document.getElementById('backlog');
-      const toColumn = document.getElementById('inprogress');
-      
+    test('broadcasts a null issueNumber for a non-issue card', () => {
+      const moved = jest.fn();
+      window.EventBus.on('card:moved', moved);
+
+      const draggedElement = document.createElement('div'); // no data-issue-number
       const evt = {
         item: draggedElement,
-        from: fromColumn,
-        to: toColumn
+        from: document.getElementById('backlog'),
+        to: document.getElementById('inprogress')
       };
-      
-      global.window.GitHub.updateCardIndicators = jest.fn();
-      
-      // Get the sortable options and call onEnd
-      const sortableOptions = global.Sortable.mock.calls[1][1];
-      sortableOptions.onEnd(evt);
-      
-      // Should still call updateCardIndicators for column change
-      expect(global.window.GitHub.updateCardIndicators).toHaveBeenCalledWith(draggedElement, 'inprogress');
+
+      getOnEnd()(evt);
+
+      expect(moved).toHaveBeenCalledWith(expect.objectContaining({
+        issueNumber: null,
+        movedBetweenColumns: true
+      }));
     });
 
-    test('should handle drag end in same column', () => {
+    test('flags a same-column move as not crossing columns', () => {
+      const moved = jest.fn();
+      window.EventBus.on('card:moved', moved);
+
       const draggedElement = document.createElement('div');
       draggedElement.setAttribute('data-issue-number', '123');
-      
       const column = document.getElementById('backlog');
-      
+      const evt = { item: draggedElement, from: column, to: column };
+
+      getOnEnd()(evt);
+
+      expect(moved).toHaveBeenCalledWith(expect.objectContaining({
+        movedBetweenColumns: false
+      }));
+    });
+
+    test('still broadcasts when CardPersistence.saveCardOrder is unavailable', () => {
+      const moved = jest.fn();
+      window.EventBus.on('card:moved', moved);
+      delete window.CardPersistence.saveCardOrder;
+
+      const draggedElement = document.createElement('div');
+      draggedElement.setAttribute('data-issue-number', '123');
       const evt = {
         item: draggedElement,
-        from: column,
-        to: column
+        from: document.getElementById('backlog'),
+        to: document.getElementById('todo')
       };
-      
-      global.window.GitHub.updateGitHubIssueLabels = jest.fn();
-      global.window.GitHub.updateCardIndicators = jest.fn();
-      
-      // Get the sortable options and call onEnd
-      const sortableOptions = global.Sortable.mock.calls[1][1];
-      sortableOptions.onEnd(evt);
-      
-      // Should not call GitHub functions for same column
-      expect(global.window.GitHub.updateGitHubIssueLabels).not.toHaveBeenCalled();
-      expect(global.window.GitHub.updateCardIndicators).not.toHaveBeenCalled();
+
+      expect(() => getOnEnd()(evt)).not.toThrow();
+      expect(moved).toHaveBeenCalled();
     });
   });
 
@@ -2405,179 +2405,28 @@ describe('Uncovered Lines Tests', () => {
 // and the load-time defensive guards by re-requiring kanban.js with the
 // relevant window.* dependencies present or absent.
 // ===========================================================================
-describe('100% coverage: Sortable onEnd About card handling (lines 60-74)', () => {
-    let onEnd;
-    let aboutCard;
-
-    beforeEach(() => {
-        // The main beforeEach already loaded kanban.js and registered 5 Sortable
-        // instances. Grab the onEnd handler from the most recent registration.
+// The drag handler now only broadcasts 'card:moved'. The About card archive
+// logic lives in about-card.js (handleCardMoved) and is covered there; here we
+// simply confirm an About card move is broadcast like any other card.
+describe('Sortable onEnd broadcasts About card moves', () => {
+    test('emits card:moved for an About card dragged to done', () => {
         const calls = global.Sortable.mock.calls;
-        onEnd = calls[calls.length - 1][1].onEnd;
+        const onEnd = calls[calls.length - 1][1].onEnd;
+        const moved = jest.fn();
+        window.EventBus.on('card:moved', moved);
 
-        // A draggable element whose <h4> title contains "About"
-        aboutCard = document.createElement('div');
+        const aboutCard = document.createElement('div');
         aboutCard.className = 'bg-white border';
         aboutCard.innerHTML = '<h4>About This Project</h4>';
 
-        // Default: make GitHub label/indicator functions present and harmless
-        global.window.GitHub.updateGitHubIssueLabels = jest.fn();
-        global.window.GitHub.closeGitHubIssue = jest.fn();
-        global.window.GitHub.updateCardIndicators = jest.fn();
+        onEnd({ item: aboutCard, from: { id: 'todo' }, to: { id: 'done' } });
 
-        // Ensure AboutCard module present with spies by default
-        global.window.AboutCard = global.window.AboutCard || {};
-        global.window.AboutCard.addArchiveButtonToAboutCard = jest.fn();
-        global.window.AboutCard.removeArchiveButtonFromAboutCard = jest.fn();
-    });
-
-    test('adds archive button when About card dragged to done (branch 63 path0 TRUE, 64 done, 65 present)', () => {
-        const evt = {
-            item: aboutCard,
-            from: { id: 'todo' },
-            to: { id: 'done' }
-        };
-
-        expect(() => onEnd(evt)).not.toThrow();
-
-        expect(global.window.AboutCard.addArchiveButtonToAboutCard).toHaveBeenCalledWith(aboutCard);
-        expect(global.window.AboutCard.removeArchiveButtonFromAboutCard).not.toHaveBeenCalled();
-    });
-
-    test('removes archive button when About card dragged away from done (branch 64 else, 69 present)', () => {
-        const evt = {
-            item: aboutCard,
-            from: { id: 'done' },
-            to: { id: 'todo' }
-        };
-
-        expect(() => onEnd(evt)).not.toThrow();
-
-        expect(global.window.AboutCard.removeArchiveButtonFromAboutCard).toHaveBeenCalledWith(aboutCard);
-        expect(global.window.AboutCard.addArchiveButtonToAboutCard).not.toHaveBeenCalled();
-    });
-
-    test('does not archive when title does not include About (branch 63 path1 FALSE)', () => {
-        // titleElement exists but text does not include "About"
-        aboutCard.innerHTML = '<h4>Some Other Card</h4>';
-
-        const evt = {
-            item: aboutCard,
-            from: { id: 'todo' },
-            to: { id: 'done' }
-        };
-
-        expect(() => onEnd(evt)).not.toThrow();
-
-        expect(global.window.AboutCard.addArchiveButtonToAboutCard).not.toHaveBeenCalled();
-        expect(global.window.AboutCard.removeArchiveButtonFromAboutCard).not.toHaveBeenCalled();
-    });
-
-    test('does nothing extra when card has no h4 title (branch 62 FALSE)', () => {
-        const plain = document.createElement('div');
-        plain.className = 'bg-white border';
-        // no <h4> child
-
-        const evt = {
-            item: plain,
-            from: { id: 'todo' },
-            to: { id: 'done' }
-        };
-
-        expect(() => onEnd(evt)).not.toThrow();
-        expect(global.window.AboutCard.addArchiveButtonToAboutCard).not.toHaveBeenCalled();
-    });
-
-    test('does not throw moving About card to done when AboutCard module absent (branch 65 binary FALSE)', () => {
-        const savedAboutCard = global.window.AboutCard;
-        delete global.window.AboutCard;
-
-        const evt = {
-            item: aboutCard,
-            from: { id: 'todo' },
-            to: { id: 'done' }
-        };
-
-        expect(() => onEnd(evt)).not.toThrow();
-
-        global.window.AboutCard = savedAboutCard;
-    });
-
-    test('does not throw moving About card from done when AboutCard module absent (branch 69 binary FALSE)', () => {
-        const savedAboutCard = global.window.AboutCard;
-        delete global.window.AboutCard;
-
-        const evt = {
-            item: aboutCard,
-            from: { id: 'done' },
-            to: { id: 'todo' }
-        };
-
-        expect(() => onEnd(evt)).not.toThrow();
-
-        global.window.AboutCard = savedAboutCard;
-    });
-
-    test('does not throw to done when AboutCard present but addArchiveButton fn missing (branch 65 binary partial)', () => {
-        const savedAdd = global.window.AboutCard.addArchiveButtonToAboutCard;
-        delete global.window.AboutCard.addArchiveButtonToAboutCard;
-
-        const evt = {
-            item: aboutCard,
-            from: { id: 'todo' },
-            to: { id: 'done' }
-        };
-
-        expect(() => onEnd(evt)).not.toThrow();
-
-        global.window.AboutCard.addArchiveButtonToAboutCard = savedAdd;
-    });
-
-    test('does not throw away from done when AboutCard present but removeArchiveButton fn missing (branch 69 binary partial)', () => {
-        const savedRemove = global.window.AboutCard.removeArchiveButtonFromAboutCard;
-        delete global.window.AboutCard.removeArchiveButtonFromAboutCard;
-
-        const evt = {
-            item: aboutCard,
-            from: { id: 'done' },
-            to: { id: 'todo' }
-        };
-
-        expect(() => onEnd(evt)).not.toThrow();
-
-        global.window.AboutCard.removeArchiveButtonFromAboutCard = savedRemove;
-    });
-
-    test('does not throw in onEnd when CardPersistence.saveCardOrder absent (branch 31 FALSE)', () => {
-        const saved = global.window.CardPersistence.saveCardOrder;
-        delete global.window.CardPersistence.saveCardOrder;
-
-        const evt = {
-            item: aboutCard,
-            from: { id: 'todo' },
-            to: { id: 'todo' }
-        };
-
-        expect(() => onEnd(evt)).not.toThrow();
-
-        global.window.CardPersistence.saveCardOrder = saved;
-    });
-
-    test('does not throw in onEnd when GitHub.updateGitHubIssueLabels absent (branch 45 FALSE)', () => {
-        const issueEl = document.createElement('div');
-        issueEl.setAttribute('data-issue-number', '999');
-        const saved = global.window.GitHub.updateGitHubIssueLabels;
-        delete global.window.GitHub.updateGitHubIssueLabels;
-
-        const evt = {
-            item: issueEl,
-            from: { id: 'backlog' },
-            to: { id: 'inprogress' }
-        };
-
-        expect(() => onEnd(evt)).not.toThrow();
-
-        global.window.GitHub.updateGitHubIssueLabels = saved;
+        expect(moved).toHaveBeenCalledWith(expect.objectContaining({
+            element: aboutCard,
+            fromColumnId: 'todo',
+            toColumnId: 'done',
+            movedBetweenColumns: true
+        }));
     });
 });
 

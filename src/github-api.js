@@ -5,6 +5,16 @@ function isTestEnvironment() {
     return typeof jest !== 'undefined';
 }
 
+// Surface an error to the user. Prefers a non-blocking toast notification and
+// falls back to a blocking alert only when the Notifications module is absent.
+function notifyError(message) {
+    if (window.Notifications && window.Notifications.showError) {
+        window.Notifications.showError(message);
+    } else {
+        window['alert'](message);
+    }
+}
+
 // Archive GitHub issue by adding "archive" label
 async function archiveGitHubIssue(issueNumber, taskElement) {
     if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
@@ -46,7 +56,7 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
         console.error('❌ Failed to archive GitHub issue:', error);
         
         // Show user-friendly error message but still remove from UI
-        alert(`Failed to add archive label to GitHub issue: ${error.message}\n\nThe task will be removed from the board anyway.`);
+        notifyError(`Failed to add archive label to GitHub issue: ${error.message}\n\nThe task will be removed from the board anyway.`);
         taskElement.remove();
         window.updateColumnCounts();
     }
@@ -114,17 +124,14 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
             throw new Error(`GitHub API error: ${updateResponse.status} - ${errorData.message || 'Unknown error'}`);
         }
 
-        const columnDisplayName = newColumn === 'inprogress' ? 'In Progress' : 
-                                 newColumn.charAt(0).toUpperCase() + newColumn.slice(1);
+        return true;
 
-        
     } catch (error) {
         console.error('❌ Failed to update GitHub issue labels:', error);
-        
-        // Show user-friendly error message but don't revert the UI change
-        const columnDisplayName = newColumn === 'inprogress' ? 'In Progress' : 
-                                 newColumn.charAt(0).toUpperCase() + newColumn.slice(1);
-        alert(`Failed to update GitHub issue labels: ${error.message}\n\nThe issue was moved to ${columnDisplayName} on the board but the labels weren't updated on GitHub.`);
+
+        // Notify the user; the caller (board sync) reverts the optimistic move.
+        notifyError(`Failed to update GitHub issue labels: ${error.message}\n\nThe card was moved back.`);
+        return false;
     }
 }
 
@@ -162,7 +169,7 @@ async function updateGitHubIssueTitle(issueNumber, newTitle) {
         console.error('❌ Failed to update GitHub issue title:', error);
         
         // Show user-friendly error message
-        alert(`Failed to update GitHub issue title: ${error.message}\n\nThe title was updated on the board but not on GitHub.`);
+        notifyError(`Failed to update GitHub issue title: ${error.message}\n\nThe title was updated on the board but not on GitHub.`);
         return false;
     }
 }
@@ -208,7 +215,7 @@ async function updateGitHubIssueDescription(issueNumber, newDescription) {
         console.error('❌ Failed to update GitHub issue description:', error);
         
         // Show user-friendly error message
-        alert(`Failed to update GitHub issue description: ${error.message}\n\nThe description was updated on the board but not on GitHub.`);
+        notifyError(`Failed to update GitHub issue description: ${error.message}\n\nThe description was updated on the board but not on GitHub.`);
         return false;
     }
 }
@@ -241,13 +248,14 @@ async function closeGitHubIssue(issueNumber) {
             throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
         }
 
+        return true;
 
-        
     } catch (error) {
         console.error('❌ Failed to close GitHub issue:', error);
-        
-        // Show user-friendly error message but don't revert the UI change
-        alert(`Failed to close GitHub issue: ${error.message}\n\nThe issue was moved to Done on the board but wasn't closed on GitHub.`);
+
+        // Notify the user; the caller (board sync) reverts the optimistic move.
+        notifyError(`Failed to close GitHub issue: ${error.message}\n\nThe card was moved back.`);
+        return false;
     }
 }
 
@@ -283,7 +291,7 @@ async function reopenGitHubIssue(issueNumber) {
         console.error('❌ Failed to reopen GitHub issue:', error);
         
         // Show user-friendly error message but don't revert the UI change
-        alert(`Failed to reopen GitHub issue: ${error.message}\n\nThe issue state was changed on the board but wasn't reopened on GitHub.`);
+        notifyError(`Failed to reopen GitHub issue: ${error.message}\n\nThe issue state was changed on the board but wasn't reopened on GitHub.`);
     }
 }
 
@@ -359,7 +367,7 @@ async function updateGitHubIssueMetadata(issueNumber, type, newValue) {
         console.error(`❌ Failed to update GitHub issue ${type}:`, error);
         
         // Show user-friendly error message
-        alert(`Failed to update GitHub issue ${type}: ${error.message}\n\nThe ${type} was updated on the board but not on GitHub.`);
+        notifyError(`Failed to update GitHub issue ${type}: ${error.message}\n\nThe ${type} was updated on the board but not on GitHub.`);
         return false;
     }
 }
@@ -409,7 +417,7 @@ async function createGitHubIssue(title, description, labels = []) {
             ? error.message 
             : 'Failed to create GitHub issue. Check your token permissions and network connection.';
         
-        alert(`GitHub Issue Creation Failed:\n${errorMessage}\n\nThe task will be created locally instead.`);
+        notifyError(`GitHub Issue Creation Failed:\n${errorMessage}\n\nThe task will be created locally instead.`);
         return null;
     }
 }
@@ -600,7 +608,7 @@ async function getGitHubIssueComments(issueNumber) {
         console.error(`❌ Failed to fetch GitHub issue comments:`, error);
         
         // Show user-friendly error message
-        alert(`Failed to fetch GitHub issue comments: ${error.message}`);
+        notifyError(`Failed to fetch GitHub issue comments: ${error.message}`);
         return [];
     }
 }
@@ -638,7 +646,7 @@ async function createGitHubIssueComment(issueNumber, commentBody) {
         console.error(`❌ Failed to create GitHub issue comment:`, error);
         
         // Show user-friendly error message
-        alert(`Failed to create GitHub issue comment: ${error.message}`);
+        notifyError(`Failed to create GitHub issue comment: ${error.message}`);
         return null;
     }
 }

@@ -128,7 +128,7 @@ function initializeExports() {
 }
 
 // Call the initialization
-const exportResult = initializeExports();
+initializeExports();
 
 // Export functions for testing
 function addTestExports(moduleObj) {
@@ -144,4 +144,4 @@ function addTestExports(moduleObj) {
 
 // Add test exports if in Node.js environment
 const env = detectEnvironment();
-const testExportsResult = addTestExports(env.module); 
+addTestExports(env.module);
