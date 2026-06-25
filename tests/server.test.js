@@ -3,6 +3,9 @@
  *
  * Tests for the Express backend (server.js).
  */
+// Ensure Clerk is treated as unconfigured here so the /api/github fallback is mounted.
+delete process.env.CLERK_SECRET_KEY;
+
 const request = require('supertest');
 const app = require('../server.js');
 
@@ -67,6 +70,14 @@ describe('Dashban server', () => {
             expect((await request(app).get('/server.js')).status).toBe(404);
             expect((await request(app).get('/package.json')).status).toBe(404);
             expect((await request(app).get('/.env')).status).toBe(404);
+        });
+    });
+
+    describe('GitHub proxy when Clerk is not configured', () => {
+        test('returns 503 instead of crashing', async () => {
+            const res = await request(app).get('/api/github/repos/super3/dashban/issues');
+            expect(res.status).toBe(503);
+            expect(res.body.error).toMatch(/not configured/i);
         });
     });
 
