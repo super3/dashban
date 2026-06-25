@@ -1022,4 +1022,256 @@ describe('GitHub Authentication', () => {
             }, 10);
         });
     });
+
+    describe('Appended Coverage - Complete Branch and Statement Coverage', () => {
+        test('validateAndSetToken catch path suppresses console.error under jest (branch 98 false path)', async () => {
+            // Mock fetch to reject so we deterministically enter the catch block.
+            global.fetch = jest.fn().mockRejectedValueOnce(new Error('boom'));
+
+            // Capture console.error. Under Jest, `typeof jest !== 'undefined'`, so the
+            // guard at line 98 takes its ELSE/false path and line 99's console.error is
+            // intentionally NOT executed.
+            const originalConsoleError = console.error;
+            const mockConsoleError = jest.fn();
+            console.error = mockConsoleError;
+
+            let result;
+            try {
+                result = await window.GitHubAuth.validateAndSetToken('sometoken');
+            } finally {
+                console.error = originalConsoleError;
+            }
+
+            // The catch block still ran (returned false and cleared auth via signOutGitHub)...
+            expect(result).toBe(false);
+            expect(window.GitHubAuth.githubAuth.isAuthenticated).toBe(false);
+            // ...but no error was logged because the jest guard suppressed it.
+            expect(mockConsoleError).not.toHaveBeenCalled();
+        });
+
+        test('toggleUserDropdown sign out button removes dropdown and signs out (lines 318-320, func anonymous_20)', () => {
+            // Set up authenticated state and build the real dropdown via toggleUserDropdown
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'token';
+            window.GitHubAuth.githubAuth.user = { login: 'testuser' };
+            window.GitHubAuth.updateGitHubSignInUI();
+
+            const signInButton = document.querySelector('header a[href="#"]');
+            expect(signInButton).toBeTruthy();
+            const container = signInButton.parentElement;
+
+            // Create the dropdown using the real function (this attaches the onclick handler)
+            window.GitHubAuth.toggleUserDropdown();
+
+            const dropdown = container.querySelector('.user-dropdown');
+            expect(dropdown).toBeTruthy();
+
+            const signOutBtn = dropdown.querySelector('button');
+            expect(signOutBtn).toBeTruthy();
+            expect(typeof signOutBtn.onclick).toBe('function');
+
+            // Invoke the real onclick handler defined at lines 318-321
+            signOutBtn.onclick();
+
+            // Dropdown should be removed (line 319) and sign-out should have cleared state (line 320)
+            expect(container.querySelector('.user-dropdown')).toBeNull();
+            expect(window.GitHubAuth.githubAuth.isAuthenticated).toBe(false);
+            expect(window.GitHubAuth.githubAuth.accessToken).toBeNull();
+            expect(window.GitHubAuth.githubAuth.user).toBeNull();
+        });
+
+        test('toggleUserDropdown keeps dropdown open when clicking inside container (branch 326 false path)', (done) => {
+            // Set up authenticated state and build the real dropdown via toggleUserDropdown
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'token';
+            window.GitHubAuth.githubAuth.user = { login: 'testuser' };
+            window.GitHubAuth.updateGitHubSignInUI();
+
+            const signInButton = document.querySelector('header a[href="#"]');
+            const container = signInButton.parentElement;
+
+            // Create the dropdown using the real function which registers the outside-click handler
+            window.GitHubAuth.toggleUserDropdown();
+            const dropdown = container.querySelector('.user-dropdown');
+            expect(dropdown).toBeTruthy();
+
+            // Wait for the setTimeout(0) that registers the document click listener, then click
+            // INSIDE the container (on the dropdown element itself) so that
+            // `!container.contains(e.target)` is false (line 326 false path). We click the
+            // dropdown div directly rather than the toggle button so we do not re-toggle it.
+            setTimeout(() => {
+                dropdown.dispatchEvent(new Event('click', { bubbles: true }));
+
+                // Because the click was inside the container, the dropdown must remain
+                expect(container.querySelector('.user-dropdown')).toBeTruthy();
+                done();
+            }, 5);
+        });
+
+        test('showGitHubTokenModal handles missing modal (branch 21 false path)', () => {
+            // Remove the modal entirely
+            const modal = document.getElementById('github-token-modal');
+            modal.remove();
+
+            // Should not throw when the modal is absent
+            expect(() => {
+                window.GitHubAuth.showGitHubTokenModal();
+            }).not.toThrow();
+        });
+
+        test('showGitHubTokenModal handles missing input but present modal (branch 23 false path)', () => {
+            // Remove only the input, keep the modal
+            const input = document.getElementById('github-token-input');
+            input.remove();
+
+            const modal = document.getElementById('github-token-modal');
+            window.GitHubAuth.showGitHubTokenModal();
+
+            // Modal should still be revealed even though the input is missing
+            expect(modal.classList.contains('hidden')).toBe(false);
+        });
+
+        test('hideGitHubTokenModal handles missing modal (branch 35 false path)', () => {
+            // Remove the modal entirely
+            const modal = document.getElementById('github-token-modal');
+            modal.remove();
+
+            expect(() => {
+                window.GitHubAuth.hideGitHubTokenModal();
+            }).not.toThrow();
+        });
+
+        test('hideGitHubTokenModal handles missing form but present modal (branch 37 false path)', () => {
+            const modal = document.getElementById('github-token-modal');
+            const form = document.getElementById('github-token-form');
+            // Remove the form (and thereby its children) but keep the modal in place
+            form.remove();
+
+            modal.classList.remove('hidden');
+            window.GitHubAuth.hideGitHubTokenModal();
+
+            // Modal should be hidden again even though there is no form to reset
+            expect(modal.classList.contains('hidden')).toBe(true);
+        });
+
+        test('hideGitHubTokenModal handles present form but missing input/eyeIcon (branch 41 false path)', () => {
+            const modal = document.getElementById('github-token-modal');
+            // Keep the form, but remove the input and the eye icon so the
+            // `if (gitHubTokenInput && tokenEyeIcon)` guard is false
+            document.getElementById('github-token-input').remove();
+            document.getElementById('token-eye-icon').remove();
+
+            modal.classList.remove('hidden');
+            window.GitHubAuth.hideGitHubTokenModal();
+
+            // The modal is hidden and the form reset path ran, but the visibility-reset branch is skipped
+            expect(modal.classList.contains('hidden')).toBe(true);
+        });
+
+        test('initializeAuthModalListeners handles missing toggle visibility button (branch 226 false path)', () => {
+            // Remove the toggle visibility button so its listener block is skipped
+            document.getElementById('toggle-token-visibility').remove();
+
+            expect(() => {
+                window.GitHubAuth.initializeAuthModalListeners();
+            }).not.toThrow();
+        });
+
+        test('initializeAuthModalListeners handles missing cancel button (branch 239 false path)', () => {
+            // Remove the cancel button so its listener block is skipped
+            document.getElementById('cancel-github-token').remove();
+
+            expect(() => {
+                window.GitHubAuth.initializeAuthModalListeners();
+            }).not.toThrow();
+        });
+
+        test('initializeAuthModalListeners handles missing form (branch 247 false path)', () => {
+            // Remove the form so the submit-listener block is skipped
+            document.getElementById('github-token-form').remove();
+
+            expect(() => {
+                window.GitHubAuth.initializeAuthModalListeners();
+            }).not.toThrow();
+        });
+
+        test('initializeAuthModalListeners handles missing modal for outside-click (branch 282 false path)', () => {
+            // Remove the modal so the outside-click listener block is skipped
+            document.getElementById('github-token-modal').remove();
+
+            expect(() => {
+                window.GitHubAuth.initializeAuthModalListeners();
+            }).not.toThrow();
+        });
+
+        test('form submission with no save button still validates successfully (branches 260 & 273 false paths)', async () => {
+            const form = document.getElementById('github-token-form');
+            const input = document.getElementById('github-token-input');
+            const modal = document.getElementById('github-token-modal');
+
+            // The test DOM form contains a submit button by default; remove it so
+            // `gitHubTokenForm.querySelector('button[type="submit"]')` returns null,
+            // exercising the false paths of `if (saveButton)` at lines 260 and 273.
+            const existingSubmit = form.querySelector('button[type="submit"]');
+            if (existingSubmit) {
+                existingSubmit.remove();
+            }
+
+            // Mock successful validation
+            global.fetch = jest.fn().mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ login: 'testuser', id: 123 })
+            });
+
+            window.GitHubAuth.initializeAuthModalListeners();
+
+            modal.classList.remove('hidden');
+            input.value = 'valid-token';
+
+            const submitEvent = new Event('submit');
+            form.dispatchEvent(submitEvent);
+
+            // Wait for the async submit handler to finish
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            // Successful validation hides the modal even without a save button
+            expect(modal.classList.contains('hidden')).toBe(true);
+            expect(window.GitHubAuth.githubAuth.isAuthenticated).toBe(true);
+        });
+
+        test('form submission with failing validation leaves modal open (branch 267 false path)', async () => {
+            const form = document.getElementById('github-token-form');
+            const input = document.getElementById('github-token-input');
+            const modal = document.getElementById('github-token-modal');
+
+            // Ensure a submit button exists so the surrounding saveButton branches stay true
+            let submitBtn = form.querySelector('button[type="submit"]');
+            if (!submitBtn) {
+                submitBtn = document.createElement('button');
+                submitBtn.type = 'submit';
+                submitBtn.innerHTML = '<i class="fas fa-key mr-2"></i>Save Token';
+                form.appendChild(submitBtn);
+            }
+
+            // Mock validation failure (fetch rejects -> validateAndSetToken returns false)
+            global.fetch = jest.fn().mockRejectedValueOnce(new Error('Network error'));
+
+            window.GitHubAuth.initializeAuthModalListeners();
+
+            modal.classList.remove('hidden');
+            input.value = 'invalid-token';
+
+            const submitEvent = new Event('submit');
+            form.dispatchEvent(submitEvent);
+
+            // Wait for the async submit handler to finish
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            // Because validation failed (success === false), the modal should NOT be hidden
+            expect(modal.classList.contains('hidden')).toBe(false);
+            // And the save button should be re-enabled by the finally block
+            expect(submitBtn.disabled).toBe(false);
+            expect(submitBtn.innerHTML).toBe('<i class="fas fa-key mr-2"></i>Save Token');
+        });
+    });
 }); 

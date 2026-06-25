@@ -1032,6 +1032,31 @@ describe('Status Cards Functions', () => {
         statusAPI.setupBadgeDebugging();
       }).not.toThrow();
     });
+
+    // Covers line 442 else-path: refresh button exists but the badge <img> is
+    // absent, so the click handler runs and skips the badge-src refresh while
+    // still performing the status refresh + logging.
+    test('should handle refresh click when badge image is missing', () => {
+      // DOM with the refresh button but NO #github-badge element.
+      document.body.innerHTML = `
+        <div data-frontend-status></div>
+        <div data-ci-status></div>
+        <div data-coverage-status></div>
+        <button id="refresh-badge"></button>
+      `;
+      setupMocks();
+      const localStatusAPI = loadStatusCardsModule();
+
+      const refreshBtn = document.querySelector('#refresh-badge');
+      expect(document.querySelector('#github-badge')).toBeNull();
+
+      localStatusAPI.setupBadgeDebugging();
+
+      // Fire the click; with no badge image present the handler must not throw
+      // and must still log the manual refresh message.
+      expect(() => refreshBtn.click()).not.toThrow();
+      expect(console.log).toHaveBeenCalledWith('Badge refreshed manually');
+    });
   });
 
   // ============================================================================

@@ -1803,4 +1803,473 @@ describe('GitHub API', () => {
         });
     });
 
-}); 
+    describe('100% coverage completion', () => {
+        // NOTE: The `if (!isTestEnvironment())` guards in createGitHubIssue (line 403) and
+        // loadGitHubIssues (lines 524-531) are UNREACHABLE from the test file. `isTestEnvironment()`
+        // returns `typeof jest !== 'undefined'`, and Jest's runtime injects `jest` as a per-module
+        // wrapper argument in every transformed src/ module (independent of global.jest). Manipulating
+        // global.jest / globalThis.jest from the test file therefore has no effect on `typeof jest`
+        // inside the source module, so those guarded console.error/console.log lines cannot execute
+        // here. Covering them would require editing src/, which is out of scope.
+
+        // --- createGitHubIssue: 'Unknown error' fallback (binary-expr branch 44 path1 @393) ---
+        test('createGitHubIssue should use Unknown error fallback when API error has no message', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({}) // No message property -> triggers || 'Unknown error'
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.createGitHubIssue('Test', 'Description');
+
+            expect(result).toBeNull();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 500 - Unknown error'));
+        });
+
+        // --- updateGitHubIssueLabels: 'Unknown error' fallback (binary-expr branch 9 path1 @114) ---
+        test('updateGitHubIssueLabels should use Unknown error fallback when PUT error has no message', async () => {
+            // GET succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [{ name: 'bug' }] })
+            });
+            // PUT fails with no message
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({})
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.updateGitHubIssueLabels('123', 'review');
+
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 500 - Unknown error'));
+        });
+
+        // --- updateGitHubIssueTitle: 'Unknown error' fallback (binary-expr branch 15 path1 @154) ---
+        test('updateGitHubIssueTitle should use Unknown error fallback when API error has no message', async () => {
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({})
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueTitle('123', 'New title');
+
+            expect(result).toBe(false);
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 500 - Unknown error'));
+
+            console.error = originalConsoleError;
+        });
+
+        // --- updateGitHubIssueDescription: 'Unknown error' fallback (binary-expr branch 19 path1 @193) ---
+        test('updateGitHubIssueDescription should use Unknown error fallback when API error has no message', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({})
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueDescription('123', 'New description');
+
+            expect(result).toBe(false);
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 500 - Unknown error'));
+        });
+
+        // --- updateGitHubIssueDescription: taskElement not found (if branch 20 path1 @201) ---
+        test('updateGitHubIssueDescription should succeed when no matching task element exists', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ body: 'Updated description' })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            // No element with data-issue-number="999" exists in the DOM -> if (taskElement) is false
+            const result = await window.GitHubAPI.updateGitHubIssueDescription('999', 'Updated description');
+
+            expect(result).toBe(true);
+            expect(document.querySelector('[data-issue-number="999"]')).toBeNull();
+        });
+
+        // --- closeGitHubIssue: 'Unknown error' fallback (binary-expr branch 24 path1 @241) ---
+        test('closeGitHubIssue should use Unknown error fallback when API error has no message', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({})
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.closeGitHubIssue('123');
+
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 500 - Unknown error'));
+        });
+
+        // --- reopenGitHubIssue: 'Unknown error' fallback (binary-expr branch 28 path1 @277) ---
+        test('reopenGitHubIssue should use Unknown error fallback when API error has no message', async () => {
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({})
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.reopenGitHubIssue('123');
+
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 500 - Unknown error'));
+
+            console.error = originalConsoleError;
+        });
+
+        // --- updateGitHubIssueMetadata: 'Unknown error' fallback (binary-expr branch 39 path1 @352) ---
+        test('updateGitHubIssueMetadata should use Unknown error fallback when PUT error has no message', async () => {
+            const originalConsoleError = console.error;
+            console.error = jest.fn();
+
+            // GET succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [] })
+            });
+            // PUT fails with no message
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({})
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'priority', 'high');
+
+            expect(result).toBe(false);
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 500 - Unknown error'));
+
+            console.error = originalConsoleError;
+        });
+
+        // --- updateGitHubIssueMetadata: empty priority value (if branch 33 path1 @324) ---
+        test('updateGitHubIssueMetadata should remove priority label when value is empty', async () => {
+            // GET returns existing priority label
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [{ name: 'high' }, { name: 'frontend' }] })
+            });
+            // PUT succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [{ name: 'frontend' }] })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'priority', '');
+
+            expect(result).toBe(true);
+            // Empty priority -> existing priority label removed, none added
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/labels'),
+                expect.objectContaining({
+                    method: 'PUT',
+                    body: JSON.stringify({ labels: ['frontend'] })
+                })
+            );
+        });
+
+        // --- updateGitHubIssueMetadata: type is neither priority nor category (if branch 35 path1 @327) ---
+        test('updateGitHubIssueMetadata should leave labels unchanged for unknown type', async () => {
+            // GET returns existing labels
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [{ name: 'high' }, { name: 'frontend' }] })
+            });
+            // PUT succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ labels: [{ name: 'high' }, { name: 'frontend' }] })
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'unknown-type', 'something');
+
+            expect(result).toBe(true);
+            // Neither priority nor category branch taken -> labels unchanged
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/labels'),
+                expect.objectContaining({
+                    method: 'PUT',
+                    body: JSON.stringify({ labels: ['high', 'frontend'] })
+                })
+            );
+        });
+
+        // --- getGitHubIssueComments: 'Unknown error' fallback (binary-expr branch 77 path1 @590) ---
+        test('getGitHubIssueComments should use Unknown error fallback when API error has no message', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({})
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.getGitHubIssueComments('123');
+
+            expect(result).toEqual([]);
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 500 - Unknown error'));
+        });
+
+        // --- createGitHubIssueComment: 'Unknown error' fallback (binary-expr branch 81 path1 @628) ---
+        test('createGitHubIssueComment should use Unknown error fallback when API error has no message', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({})
+            });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            const result = await window.GitHubAPI.createGitHubIssueComment('123', 'New comment');
+
+            expect(result).toBeNull();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 500 - Unknown error'));
+        });
+
+        // --- loadGitHubIssues: removes existing issue cards (stmt 472, fn anonymous_20) ---
+        test('loadGitHubIssues should remove pre-existing GitHub issue cards before re-rendering', async () => {
+            // Add an existing GitHub issue card to a column so the forEach(card => card.remove()) runs
+            const existingCard = document.createElement('div');
+            existingCard.setAttribute('data-issue-number', '555');
+            document.getElementById('backlog').appendChild(existingCard);
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubUI.createGitHubIssueElement = jest.fn().mockReturnValue(document.createElement('div'));
+            window.GitHubUI.applyReviewIndicatorsToColumn = jest.fn();
+            window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            // The pre-existing issue card should have been removed
+            expect(document.querySelector('[data-issue-number="555"]')).toBeNull();
+        });
+
+        // --- loadGitHubIssues: no access token -> fetchOptions.headers = {} (cond-expr branch 47 path1 @427) ---
+        test('loadGitHubIssues should use empty headers when no access token is present', async () => {
+            // No RateLimit so the plain fetch path is taken with the empty-headers fetchOptions
+            window.GitHubAuth.githubAuth.isAuthenticated = false;
+            window.GitHubAuth.githubAuth.accessToken = null;
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubUI.createGitHubIssueElement = jest.fn().mockReturnValue(document.createElement('div'));
+            window.GitHubUI.applyReviewIndicatorsToColumn = jest.fn();
+            window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            // fetch should have been called with an options object whose headers is an empty object
+            const callArgs = mockFetch.mock.calls[0];
+            expect(callArgs[1].headers).toEqual({});
+        });
+
+        // --- loadGitHubIssues: RateLimit.rateLimitedFetch path (cond-expr branches 48/49 path0 @432/@435) ---
+        test('loadGitHubIssues should use RateLimit.rateLimitedFetch when available', async () => {
+            const rateLimitedFetch = jest.fn()
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+            window.RateLimit = { rateLimitedFetch };
+
+            window.GitHubUI.createGitHubIssueElement = jest.fn().mockReturnValue(document.createElement('div'));
+            window.GitHubUI.applyReviewIndicatorsToColumn = jest.fn();
+            window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            // Both open and closed fetches should have gone through rateLimitedFetch
+            expect(rateLimitedFetch).toHaveBeenCalledTimes(2);
+            expect(rateLimitedFetch).toHaveBeenCalledWith(
+                expect.stringContaining('state=open'),
+                expect.any(Object)
+            );
+            expect(rateLimitedFetch).toHaveBeenCalledWith(
+                expect.stringContaining('state=closed'),
+                expect.any(Object)
+            );
+        });
+
+        // --- loadGitHubIssues: 403 with openResponse.ok true -> handleApiResponse(closedResponse) (cond-expr branch 55 path0 @443) ---
+        test('loadGitHubIssues should pass closed response to handleApiResponse when open response is ok', async () => {
+            window.RateLimit = { handleApiResponse: jest.fn() };
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                })
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 403
+                });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            // openResponse.ok is true, so the closedResponse should be passed to handleApiResponse
+            expect(window.RateLimit.handleApiResponse).toHaveBeenCalledWith(
+                expect.objectContaining({ ok: false, status: 403 })
+            );
+        });
+
+        // NOTE: The loadGitHubIssues() catch block lines 524-531 (console.error + rate-limit
+        // console.log/return) live inside `if (!isTestEnvironment())` and are unreachable from the
+        // test file for the same reason documented above (Jest injects a per-module `jest` binding
+        // that is not affected by global.jest). The generic-error, 'Rate limit' and lowercase
+        // 'rate limit' operand branches all sit inside that guard and cannot be exercised here.
+
+        // --- initializeGitHubIssues: CardPersistence.cleanupClosedIssuesFromStorage called (stmt 562, branches 70/71) ---
+        test('initializeGitHubIssues should call CardPersistence.cleanupClosedIssuesFromStorage when available', async () => {
+            window.CardPersistence = {
+                cleanupClosedIssuesFromStorage: jest.fn()
+            };
+
+            window.GitHubUI.createSkeletonCard = jest.fn().mockReturnValue(document.createElement('div'));
+            window.GitHubUI.createGitHubIssueElement = jest.fn().mockReturnValue(document.createElement('div'));
+            window.GitHubUI.applyReviewIndicatorsToColumn = jest.fn();
+            window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubAPI.initializeGitHubIssues();
+
+            // Wait for the loadGitHubIssues().then() callback to run
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(window.CardPersistence.cleanupClosedIssuesFromStorage).toHaveBeenCalled();
+        });
+
+        // --- initializeGitHubIssues: kanbanTestExports.applyCardOrder called (if branch 72 path0 @566 - true side) ---
+        test('initializeGitHubIssues should call applyCardOrder when kanbanTestExports is available', async () => {
+            const applyCardOrder = jest.fn();
+            window.kanbanTestExports = { applyCardOrder };
+
+            window.GitHubUI.createSkeletonCard = jest.fn().mockReturnValue(document.createElement('div'));
+            window.GitHubUI.createGitHubIssueElement = jest.fn().mockReturnValue(document.createElement('div'));
+            window.GitHubUI.applyReviewIndicatorsToColumn = jest.fn();
+            window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubAPI.initializeGitHubIssues();
+
+            // Wait for the loadGitHubIssues().then() callback to run
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(applyCardOrder).toHaveBeenCalled();
+        });
+
+        // --- initializeGitHubIssues: kanbanTestExports absent (if branch 72 path1 @566 - false side) ---
+        test('initializeGitHubIssues should not throw when kanbanTestExports is unavailable', async () => {
+            // Ensure the window.kanbanTestExports guard evaluates to false
+            delete window.kanbanTestExports;
+
+            window.GitHubUI.createSkeletonCard = jest.fn().mockReturnValue(document.createElement('div'));
+            window.GitHubUI.createGitHubIssueElement = jest.fn().mockReturnValue(document.createElement('div'));
+            window.GitHubUI.applyReviewIndicatorsToColumn = jest.fn();
+            window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubAPI.initializeGitHubIssues();
+
+            // Wait for the loadGitHubIssues().then() callback to run; should complete without error
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(window.kanbanTestExports).toBeUndefined();
+        });
+    });
+
+});

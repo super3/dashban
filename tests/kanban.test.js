@@ -2398,3 +2398,677 @@ describe('Uncovered Lines Tests', () => {
         }, 150);
     });
 });
+
+// ===========================================================================
+// Appended tests to reach 100% coverage for kanban.js
+// These exercise the real handlers (Sortable onEnd, document click/dblclick)
+// and the load-time defensive guards by re-requiring kanban.js with the
+// relevant window.* dependencies present or absent.
+// ===========================================================================
+describe('100% coverage: Sortable onEnd About card handling (lines 60-74)', () => {
+    let onEnd;
+    let aboutCard;
+
+    beforeEach(() => {
+        // The main beforeEach already loaded kanban.js and registered 5 Sortable
+        // instances. Grab the onEnd handler from the most recent registration.
+        const calls = global.Sortable.mock.calls;
+        onEnd = calls[calls.length - 1][1].onEnd;
+
+        // A draggable element whose <h4> title contains "About"
+        aboutCard = document.createElement('div');
+        aboutCard.className = 'bg-white border';
+        aboutCard.innerHTML = '<h4>About This Project</h4>';
+
+        // Default: make GitHub label/indicator functions present and harmless
+        global.window.GitHub.updateGitHubIssueLabels = jest.fn();
+        global.window.GitHub.closeGitHubIssue = jest.fn();
+        global.window.GitHub.updateCardIndicators = jest.fn();
+
+        // Ensure AboutCard module present with spies by default
+        global.window.AboutCard = global.window.AboutCard || {};
+        global.window.AboutCard.addArchiveButtonToAboutCard = jest.fn();
+        global.window.AboutCard.removeArchiveButtonFromAboutCard = jest.fn();
+    });
+
+    test('adds archive button when About card dragged to done (branch 63 path0 TRUE, 64 done, 65 present)', () => {
+        const evt = {
+            item: aboutCard,
+            from: { id: 'todo' },
+            to: { id: 'done' }
+        };
+
+        expect(() => onEnd(evt)).not.toThrow();
+
+        expect(global.window.AboutCard.addArchiveButtonToAboutCard).toHaveBeenCalledWith(aboutCard);
+        expect(global.window.AboutCard.removeArchiveButtonFromAboutCard).not.toHaveBeenCalled();
+    });
+
+    test('removes archive button when About card dragged away from done (branch 64 else, 69 present)', () => {
+        const evt = {
+            item: aboutCard,
+            from: { id: 'done' },
+            to: { id: 'todo' }
+        };
+
+        expect(() => onEnd(evt)).not.toThrow();
+
+        expect(global.window.AboutCard.removeArchiveButtonFromAboutCard).toHaveBeenCalledWith(aboutCard);
+        expect(global.window.AboutCard.addArchiveButtonToAboutCard).not.toHaveBeenCalled();
+    });
+
+    test('does not archive when title does not include About (branch 63 path1 FALSE)', () => {
+        // titleElement exists but text does not include "About"
+        aboutCard.innerHTML = '<h4>Some Other Card</h4>';
+
+        const evt = {
+            item: aboutCard,
+            from: { id: 'todo' },
+            to: { id: 'done' }
+        };
+
+        expect(() => onEnd(evt)).not.toThrow();
+
+        expect(global.window.AboutCard.addArchiveButtonToAboutCard).not.toHaveBeenCalled();
+        expect(global.window.AboutCard.removeArchiveButtonFromAboutCard).not.toHaveBeenCalled();
+    });
+
+    test('does nothing extra when card has no h4 title (branch 62 FALSE)', () => {
+        const plain = document.createElement('div');
+        plain.className = 'bg-white border';
+        // no <h4> child
+
+        const evt = {
+            item: plain,
+            from: { id: 'todo' },
+            to: { id: 'done' }
+        };
+
+        expect(() => onEnd(evt)).not.toThrow();
+        expect(global.window.AboutCard.addArchiveButtonToAboutCard).not.toHaveBeenCalled();
+    });
+
+    test('does not throw moving About card to done when AboutCard module absent (branch 65 binary FALSE)', () => {
+        const savedAboutCard = global.window.AboutCard;
+        delete global.window.AboutCard;
+
+        const evt = {
+            item: aboutCard,
+            from: { id: 'todo' },
+            to: { id: 'done' }
+        };
+
+        expect(() => onEnd(evt)).not.toThrow();
+
+        global.window.AboutCard = savedAboutCard;
+    });
+
+    test('does not throw moving About card from done when AboutCard module absent (branch 69 binary FALSE)', () => {
+        const savedAboutCard = global.window.AboutCard;
+        delete global.window.AboutCard;
+
+        const evt = {
+            item: aboutCard,
+            from: { id: 'done' },
+            to: { id: 'todo' }
+        };
+
+        expect(() => onEnd(evt)).not.toThrow();
+
+        global.window.AboutCard = savedAboutCard;
+    });
+
+    test('does not throw to done when AboutCard present but addArchiveButton fn missing (branch 65 binary partial)', () => {
+        const savedAdd = global.window.AboutCard.addArchiveButtonToAboutCard;
+        delete global.window.AboutCard.addArchiveButtonToAboutCard;
+
+        const evt = {
+            item: aboutCard,
+            from: { id: 'todo' },
+            to: { id: 'done' }
+        };
+
+        expect(() => onEnd(evt)).not.toThrow();
+
+        global.window.AboutCard.addArchiveButtonToAboutCard = savedAdd;
+    });
+
+    test('does not throw away from done when AboutCard present but removeArchiveButton fn missing (branch 69 binary partial)', () => {
+        const savedRemove = global.window.AboutCard.removeArchiveButtonFromAboutCard;
+        delete global.window.AboutCard.removeArchiveButtonFromAboutCard;
+
+        const evt = {
+            item: aboutCard,
+            from: { id: 'done' },
+            to: { id: 'todo' }
+        };
+
+        expect(() => onEnd(evt)).not.toThrow();
+
+        global.window.AboutCard.removeArchiveButtonFromAboutCard = savedRemove;
+    });
+
+    test('does not throw in onEnd when CardPersistence.saveCardOrder absent (branch 31 FALSE)', () => {
+        const saved = global.window.CardPersistence.saveCardOrder;
+        delete global.window.CardPersistence.saveCardOrder;
+
+        const evt = {
+            item: aboutCard,
+            from: { id: 'todo' },
+            to: { id: 'todo' }
+        };
+
+        expect(() => onEnd(evt)).not.toThrow();
+
+        global.window.CardPersistence.saveCardOrder = saved;
+    });
+
+    test('does not throw in onEnd when GitHub.updateGitHubIssueLabels absent (branch 45 FALSE)', () => {
+        const issueEl = document.createElement('div');
+        issueEl.setAttribute('data-issue-number', '999');
+        const saved = global.window.GitHub.updateGitHubIssueLabels;
+        delete global.window.GitHub.updateGitHubIssueLabels;
+
+        const evt = {
+            item: issueEl,
+            from: { id: 'backlog' },
+            to: { id: 'inprogress' }
+        };
+
+        expect(() => onEnd(evt)).not.toThrow();
+
+        global.window.GitHub.updateGitHubIssueLabels = saved;
+    });
+});
+
+describe('100% coverage: document collapse-btn click handler (lines 285-291)', () => {
+    test('real click on collapse button toggles via CardPersistence (branches 61, 62, 63 TRUE)', () => {
+        global.window.CardPersistence.toggleColumn = jest.fn();
+
+        const btn = document.querySelector('.column-collapse-btn[data-column="backlog"]');
+        expect(btn).toBeTruthy();
+
+        // Click the inner icon to also exercise e.target.closest('.column-collapse-btn')
+        const icon = btn.querySelector('i') || btn;
+        icon.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(global.window.CardPersistence.toggleColumn).toHaveBeenCalledWith('backlog');
+    });
+
+    test('real click on collapse button does not throw when CardPersistence.toggleColumn absent (branch 63 FALSE)', () => {
+        const saved = global.window.CardPersistence.toggleColumn;
+        delete global.window.CardPersistence.toggleColumn;
+
+        const btn = document.querySelector('.column-collapse-btn[data-column="todo"]');
+        expect(() => {
+            btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        }).not.toThrow();
+
+        global.window.CardPersistence.toggleColumn = saved;
+    });
+
+    test('real click on collapse button without data-column does not toggle (branch 62 FALSE)', () => {
+        global.window.CardPersistence.toggleColumn = jest.fn();
+
+        const btn = document.createElement('button');
+        btn.className = 'column-collapse-btn';
+        // no data-column attribute
+        document.body.appendChild(btn);
+
+        btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        // toggleColumn should not be called for this button (columnId is null)
+        expect(global.window.CardPersistence.toggleColumn).not.toHaveBeenCalledWith(null);
+
+        btn.remove();
+    });
+
+    test('real click on column title with empty data-column does not toggle (branch 67 @300 FALSE)', () => {
+        global.window.CardPersistence.toggleColumn = jest.fn();
+
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-column', ''); // empty -> falsy columnId
+        const title = document.createElement('h3');
+        title.className = 'column-title';
+        title.textContent = 'Empty';
+        wrapper.appendChild(title);
+        document.body.appendChild(wrapper);
+
+        title.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(global.window.CardPersistence.toggleColumn).not.toHaveBeenCalledWith('');
+
+        wrapper.remove();
+    });
+});
+
+describe('100% coverage: document archive-btn click handler (lines 318-326)', () => {
+    test('archive button without issueNumber and non-about cardType does nothing (branch 70 @318 FALSE)', () => {
+        global.window.GitHub.archiveGitHubIssue = jest.fn();
+
+        const card = document.createElement('div');
+        card.className = 'bg-white border';
+        const btn = document.createElement('button');
+        btn.className = 'archive-btn';
+        // neither data-issue-number nor data-card-type='about'
+        btn.setAttribute('data-card-type', 'other');
+        card.appendChild(btn);
+        document.body.appendChild(card);
+
+        expect(() => {
+            btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        }).not.toThrow();
+
+        expect(global.window.GitHub.archiveGitHubIssue).not.toHaveBeenCalled();
+
+        card.remove();
+    });
+
+    test('about-card archive click does not throw when AboutCard module absent (branch 71 @320 FALSE)', () => {
+        const savedAboutCard = global.window.AboutCard;
+        delete global.window.AboutCard;
+        global.window.updateColumnCounts = jest.fn();
+        console.log = jest.fn();
+
+        const card = document.createElement('div');
+        card.className = 'bg-white border';
+        const btn = document.createElement('button');
+        btn.className = 'archive-btn';
+        btn.setAttribute('data-card-type', 'about');
+        card.appendChild(btn);
+        document.body.appendChild(card);
+
+        expect(() => {
+            btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        }).not.toThrow();
+
+        // The card should have been removed and counts updated even without AboutCard module
+        expect(document.body.contains(card)).toBe(false);
+        expect(global.window.updateColumnCounts).toHaveBeenCalled();
+        expect(console.log).toHaveBeenCalledWith('📦 About card archived');
+
+        global.window.AboutCard = savedAboutCard;
+    });
+});
+
+describe('100% coverage: document card click -> issue modal (lines 334-343)', () => {
+    test('real click on issue card opens issue modal (branches 73, 75 FALSE-path, 77 TRUE)', () => {
+        global.window.IssueModal = { openIssueModal: jest.fn() };
+
+        const card = document.createElement('div');
+        card.className = 'bg-white border';
+        card.setAttribute('data-issue-number', '321');
+        const span = document.createElement('span');
+        span.textContent = 'click me';
+        card.appendChild(span);
+        document.body.appendChild(card);
+
+        // Click on a non-interactive child element
+        span.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(global.window.IssueModal.openIssueModal).toHaveBeenCalledWith('321', card);
+
+        delete global.window.IssueModal;
+        card.remove();
+    });
+
+    test('click on a BUTTON inside issue card does not open modal (branch 76 tagName BUTTON path)', () => {
+        global.window.IssueModal = { openIssueModal: jest.fn() };
+
+        const card = document.createElement('div');
+        card.className = 'bg-white border';
+        card.setAttribute('data-issue-number', '654');
+        const button = document.createElement('button');
+        button.textContent = 'btn';
+        card.appendChild(button);
+        document.body.appendChild(card);
+
+        button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(global.window.IssueModal.openIssueModal).not.toHaveBeenCalled();
+
+        delete global.window.IssueModal;
+        card.remove();
+    });
+
+    test('click on an anchor inside issue card does not open modal (branch 76 closest a path)', () => {
+        global.window.IssueModal = { openIssueModal: jest.fn() };
+
+        const card = document.createElement('div');
+        card.className = 'bg-white border';
+        card.setAttribute('data-issue-number', '655');
+        const link = document.createElement('a');
+        link.href = '#';
+        const inner = document.createElement('span');
+        link.appendChild(inner);
+        card.appendChild(link);
+        document.body.appendChild(card);
+
+        // target is a span nested inside <a>; closest('a, button, .archive-btn') matches the anchor
+        inner.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(global.window.IssueModal.openIssueModal).not.toHaveBeenCalled();
+
+        delete global.window.IssueModal;
+        card.remove();
+    });
+
+    test('real click on issue card does not throw when IssueModal absent (branch 77 FALSE)', () => {
+        const saved = global.window.IssueModal;
+        delete global.window.IssueModal;
+
+        const card = document.createElement('div');
+        card.className = 'bg-white border';
+        card.setAttribute('data-issue-number', '777');
+        const span = document.createElement('span');
+        card.appendChild(span);
+        document.body.appendChild(card);
+
+        expect(() => {
+            span.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        }).not.toThrow();
+
+        global.window.IssueModal = saved;
+        card.remove();
+    });
+
+    test('click on card without issue number does not open modal (branch 73 FALSE)', () => {
+        global.window.IssueModal = { openIssueModal: jest.fn() };
+
+        const card = document.createElement('div');
+        card.className = 'bg-white border';
+        // no data-issue-number
+        const span = document.createElement('span');
+        card.appendChild(span);
+        document.body.appendChild(card);
+
+        span.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(global.window.IssueModal.openIssueModal).not.toHaveBeenCalled();
+
+        delete global.window.IssueModal;
+        card.remove();
+    });
+});
+
+describe('100% coverage: dblclick handler issue-number guard (line 350)', () => {
+    test('double-click on issue card (with issue number) does not log local edit (branch 79 FALSE)', () => {
+        console.log = jest.fn();
+
+        const card = document.createElement('div');
+        card.className = 'bg-white border';
+        card.setAttribute('data-issue-number', '888');
+        document.body.appendChild(card);
+
+        card.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+        expect(console.log).not.toHaveBeenCalledWith('Edit local task:', card);
+
+        card.remove();
+    });
+});
+
+describe('100% coverage: form submission edge branches', () => {
+    beforeEach(() => {
+        // Earlier tests in this file may clobber global.window.GitHub (e.g. timeout
+        // tests reassign it without githubAuth). Restore a complete mock here.
+        global.window.GitHub = {
+            GITHUB_CONFIG: { owner: 'super3', repo: 'dashban' },
+            githubAuth: { isAuthenticated: false, accessToken: null, user: null },
+            createGitHubIssue: jest.fn(),
+            createGitHubIssueElement: jest.fn(),
+            archiveGitHubIssue: jest.fn()
+        };
+    });
+
+    test('falls back to backlog column when column field is empty (branch 29 @140 FALSE)', async () => {
+        const api = global.kanbanTestExports;
+        const form = api.addTaskForm;
+        const titleInput = document.getElementById('task-title');
+        const columnSelect = document.getElementById('task-column');
+
+        // Remove the column field options effect by setting value to empty
+        // Add an empty option and select it so FormData returns '' for column
+        const emptyOpt = document.createElement('option');
+        emptyOpt.value = '';
+        emptyOpt.textContent = '';
+        columnSelect.insertBefore(emptyOpt, columnSelect.firstChild);
+        columnSelect.value = '';
+
+        global.window.GitHub.githubAuth.isAuthenticated = true;
+        global.window.GitHub.githubAuth.accessToken = 'token';
+        const mockEl = document.createElement('div');
+        global.window.GitHub.createGitHubIssue = jest.fn().mockResolvedValue({ number: 5 });
+        global.window.GitHub.createGitHubIssueElement = jest.fn().mockReturnValue(mockEl);
+
+        titleInput.value = 'Fallback Column Task';
+
+        form.dispatchEvent(new Event('submit'));
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // The created element should have been appended to the backlog column (fallback)
+        expect(document.getElementById('backlog').contains(mockEl)).toBe(true);
+    });
+
+    test('handles missing submit button during successful creation (branches 34, 35, 40 FALSE)', async () => {
+        const api = global.kanbanTestExports;
+        const form = api.addTaskForm;
+        const titleInput = document.getElementById('task-title');
+
+        // Remove the submit button so submitBtn is null
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.remove();
+
+        global.window.GitHub.githubAuth.isAuthenticated = true;
+        global.window.GitHub.githubAuth.accessToken = 'token';
+        const mockEl = document.createElement('div');
+        global.window.GitHub.createGitHubIssue = jest.fn().mockResolvedValue({ number: 9 });
+        global.window.GitHub.createGitHubIssueElement = jest.fn().mockReturnValue(mockEl);
+
+        titleInput.value = 'No Submit Button Task';
+
+        await expect((async () => {
+            form.dispatchEvent(new Event('submit'));
+            await new Promise(resolve => setTimeout(resolve, 0));
+        })()).resolves.toBeUndefined();
+
+        expect(global.window.GitHub.createGitHubIssue).toHaveBeenCalled();
+    });
+
+    test('handles missing submit button during error path (branch 41 FALSE)', async () => {
+        const api = global.kanbanTestExports;
+        const form = api.addTaskForm;
+        const titleInput = document.getElementById('task-title');
+
+        global.alert = jest.fn();
+        console.error = jest.fn();
+
+        // Remove the submit button so submitBtn is null in the catch block too
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.remove();
+
+        global.window.GitHub.githubAuth.isAuthenticated = true;
+        global.window.GitHub.githubAuth.accessToken = 'token';
+        global.window.GitHub.createGitHubIssue = jest.fn().mockRejectedValue(new Error('boom'));
+
+        titleInput.value = 'Error No Submit Button';
+
+        form.dispatchEvent(new Event('submit'));
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(console.error).toHaveBeenCalledWith('Error during GitHub issue creation:', expect.any(Error));
+        expect(global.alert).toHaveBeenCalledWith('An error occurred while creating the GitHub issue. Please try again.');
+    });
+});
+
+describe('100% coverage: updateColumnCounts missing badge (branch 47 @234 FALSE)', () => {
+    test('does not throw when a column wrapper has no count badge span', () => {
+        const api = global.kanbanTestExports;
+
+        // Remove the count badge span from the backlog column header
+        const badge = document.querySelector('[data-column="backlog"] .column-header span');
+        if (badge) badge.remove();
+
+        expect(() => api.updateColumnCounts()).not.toThrow();
+    });
+});
+
+describe('100% coverage: debugAboutCardStatus cond-exprs (lines 480, 485, func 464)', () => {
+    test('debug reports Not found and false status when AboutCard absent (branches 105, 106 FALSE + fallback fn)', () => {
+        // Re-require kanban.js with AboutCard absent so window.restoreAboutCard becomes
+        // the fallback function (line 464 col 98-142) and debug cond-exprs take the false path.
+        const savedAboutCard = global.window.AboutCard;
+        delete global.window.AboutCard;
+        console.log = jest.fn();
+        console.warn = jest.fn();
+
+        delete require.cache[require.resolve('../src/kanban.js')];
+        require('../src/kanban.js');
+        document.dispatchEvent(new Event('DOMContentLoaded'));
+
+        // Ensure no About card in DOM
+        const existing = document.querySelector('[data-card-id="about-card"]');
+        if (existing) existing.remove();
+
+        // Run debug -> exercises window.AboutCard ? ... : false  and aboutCard ? 'Found' : 'Not found'
+        window.debugAboutCardStatus();
+
+        expect(console.log).toHaveBeenCalledWith('Current repository About card archived status:', false);
+        expect(console.log).toHaveBeenCalledWith('About card in DOM:', 'Not found');
+
+        // The fallback restoreAboutCard function should warn when invoked
+        window.restoreAboutCard();
+        expect(console.warn).toHaveBeenCalledWith('AboutCard module not loaded');
+
+        // Restore module and reload so other tests see the normal state
+        global.window.AboutCard = savedAboutCard;
+        delete require.cache[require.resolve('../src/kanban.js')];
+        require('../src/about-card.js');
+        require('../src/kanban.js');
+        document.dispatchEvent(new Event('DOMContentLoaded'));
+    });
+});
+
+describe('100% coverage: load-time defensive guards (dependencies absent)', () => {
+    // Helper to reload kanban.js fresh and fire DOMContentLoaded
+    function reloadKanban() {
+        delete require.cache[require.resolve('../src/kanban.js')];
+        require('../src/kanban.js');
+        document.dispatchEvent(new Event('DOMContentLoaded'));
+    }
+
+    afterEach(() => {
+        // Restore a fully-populated environment by reloading about-card + kanban
+        require('../src/about-card.js');
+        reloadKanban();
+    });
+
+    test('init does not throw when CardPersistence absent (branches 1, 49, 86, 88, 98 FALSE)', () => {
+        const saved = global.window.CardPersistence;
+        global.window.CardPersistence = undefined;
+
+        expect(() => reloadKanban()).not.toThrow();
+
+        global.window.CardPersistence = saved;
+    });
+
+    test('init does not throw when CardPersistence lacks initialize/loadCollapseStates/applyCardOrder', () => {
+        const saved = global.window.CardPersistence;
+        // present but empty object: each guard's second operand is falsy
+        global.window.CardPersistence = {};
+
+        expect(() => reloadKanban()).not.toThrow();
+
+        global.window.CardPersistence = saved;
+    });
+
+    test('init does not throw when AboutCard absent (branch 51-related fallbacks)', () => {
+        const saved = global.window.AboutCard;
+        delete global.window.AboutCard;
+
+        expect(() => reloadKanban()).not.toThrow();
+
+        global.window.AboutCard = saved;
+    });
+
+    test('init does not throw when add-task button is absent (branch 23 @96 FALSE)', () => {
+        const btn = document.getElementById('add-task-btn');
+        if (btn) btn.remove();
+
+        expect(() => reloadKanban()).not.toThrow();
+        expect(global.kanbanTestExports.addTaskBtn).toBeNull();
+    });
+
+    test('init does not throw when cancel-task button is absent (branch 27 @123 FALSE)', () => {
+        const btn = document.getElementById('cancel-task');
+        if (btn) btn.remove();
+
+        expect(() => reloadKanban()).not.toThrow();
+        expect(global.kanbanTestExports.cancelTaskBtn).toBeNull();
+    });
+
+    test('init does not throw when add-task form is absent (branch 28 @128 FALSE)', () => {
+        const form = document.getElementById('add-task-form');
+        if (form) form.remove();
+
+        expect(() => reloadKanban()).not.toThrow();
+        expect(global.kanbanTestExports.addTaskForm).toBeNull();
+    });
+
+    test('init does not throw when add-task modal is absent (branch 42 @210 FALSE)', () => {
+        const modal = document.getElementById('add-task-modal');
+        if (modal) modal.remove();
+
+        expect(() => reloadKanban()).not.toThrow();
+        expect(global.kanbanTestExports.addTaskModal).toBeNull();
+    });
+
+    test('delegate functions no-op when CardPersistence methods absent (branches 53, 55, 57, 59 FALSE)', () => {
+        const saved = global.window.CardPersistence;
+        global.window.CardPersistence = {}; // empty: all method guards false
+        reloadKanban();
+        const api = global.kanbanTestExports;
+
+        expect(() => api.saveCollapseStates()).not.toThrow();
+        expect(() => api.collapseColumn('backlog')).not.toThrow();
+        expect(() => api.expandColumn('backlog')).not.toThrow();
+        expect(() => api.toggleColumn('backlog')).not.toThrow();
+        expect(() => api.loadCollapseStates()).not.toThrow();
+        expect(() => api.applyDefaultCollapseStates()).not.toThrow();
+
+        global.window.CardPersistence = saved;
+    });
+});
+
+describe('100% coverage: post-init setTimeout guard with applyCardOrder absent (branch 98 @441 FALSE)', () => {
+    test('does not throw and skips applyCardOrder when it is absent at timeout fire', (done) => {
+        const savedCardPersistence = global.window.CardPersistence;
+
+        // Reload kanban with a CardPersistence that lacks applyCardOrder so that the
+        // 100ms post-init timeout takes the false branch of the applyCardOrder guard.
+        global.window.CardPersistence = {
+            initialize: jest.fn(),
+            loadCollapseStates: jest.fn(),
+            // intentionally no applyCardOrder
+            getCurrentRepoContext: jest.fn().mockReturnValue({ owner: 'super3', repo: 'dashban' })
+        };
+
+        delete require.cache[require.resolve('../src/kanban.js')];
+        require('../src/kanban.js');
+        document.dispatchEvent(new Event('DOMContentLoaded'));
+
+        // Wait for the 100ms timeout to fire; applyCardOrder remains absent.
+        setTimeout(() => {
+            // No throw means the false branch was handled gracefully.
+            expect(global.window.CardPersistence.applyCardOrder).toBeUndefined();
+
+            // Restore for subsequent tests and reload a clean kanban module.
+            global.window.CardPersistence = savedCardPersistence;
+            delete require.cache[require.resolve('../src/kanban.js')];
+            require('../src/about-card.js');
+            require('../src/kanban.js');
+            document.dispatchEvent(new Event('DOMContentLoaded'));
+            done();
+        }, 150);
+    });
+});

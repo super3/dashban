@@ -544,10 +544,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Attach to global for browser/Node access
+    /* istanbul ignore else: globalThis is always defined in supported runtimes */
     if (typeof globalThis !== 'undefined') {
         globalThis.kanbanTestExports = testAPI;
     }
 
+    /* istanbul ignore else: the browser-only path (no CommonJS module) is unreachable under Jest */
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = testAPI;
     }

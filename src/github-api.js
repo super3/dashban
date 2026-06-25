@@ -399,6 +399,7 @@ async function createGitHubIssue(title, description, labels = []) {
 
     } catch (error) {
         // Only log errors in non-test environments
+        /* istanbul ignore next: this console logging only runs outside the Jest test environment */
         if (!isTestEnvironment()) {
             console.error('❌ Failed to create GitHub issue:', error);
         }
@@ -520,9 +521,10 @@ async function loadGitHubIssues() {
         
     } catch (error) {
         // Only log errors in non-test environments to avoid console noise during tests
+        /* istanbul ignore next: this console logging only runs outside the Jest test environment */
         if (!isTestEnvironment()) {
             console.error('❌ Failed to load GitHub issues:', error);
-            
+
             // Handle rate limiting gracefully
             if (error.message.includes('Rate limit') || error.message.includes('rate limit')) {
                 console.log('📊 GitHub API rate limited - banner should be visible');

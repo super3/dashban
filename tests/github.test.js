@@ -123,6 +123,37 @@ describe('GitHub Integration - Main Coordinator', () => {
             expect(window.GitHubAuth.initializeGitHubAuth).toHaveBeenCalled();
             expect(window.GitHubAPI.initializeGitHubIssues).toHaveBeenCalled();
         });
+
+        test('should initialize RepoManager when present on DOMContentLoaded', () => {
+            // Covers line 8 TRUE branch + line 9: when window.RepoManager exists,
+            // the handler calls initializeRepositorySelector() first.
+            window.RepoManager = {
+                initializeRepositorySelector: jest.fn(),
+                validateRepository: jest.fn(),
+                addRepository: jest.fn(),
+                removeRepository: jest.fn(),
+                switchRepository: jest.fn(),
+                updateRepositoryDropdown: jest.fn()
+            };
+
+            // Mock the other init functions the handler touches so the handler
+            // runs cleanly without unrelated side effects.
+            window.GitHubAuth.initializeAuthModalListeners = jest.fn();
+            window.GitHubAuth.initializeGitHubAuth = jest.fn();
+            window.GitHubAuth.updateHeaderRepoName = jest.fn();
+            window.GitHubAPI.initializeGitHubIssues = jest.fn();
+
+            // Trigger a new DOMContentLoaded event
+            const event = new Event('DOMContentLoaded');
+            document.dispatchEvent(event);
+
+            // The RepoManager initializer must have been called (line 9),
+            // and the rest of the handler still ran.
+            expect(window.RepoManager.initializeRepositorySelector).toHaveBeenCalled();
+            expect(window.GitHubAuth.initializeAuthModalListeners).toHaveBeenCalled();
+            expect(window.GitHubAuth.initializeGitHubAuth).toHaveBeenCalled();
+            expect(window.GitHubAPI.initializeGitHubIssues).toHaveBeenCalled();
+        });
     });
 
     describe('Module Independence', () => {

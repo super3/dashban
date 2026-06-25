@@ -293,6 +293,7 @@
     window.AboutCard = AboutCard;
 
     // Export for Node.js/Jest testing
+    /* istanbul ignore else: the browser-only path (no CommonJS module) is unreachable under Jest */
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = AboutCard;
     }

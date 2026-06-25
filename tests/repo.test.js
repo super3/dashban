@@ -1458,5 +1458,417 @@ describe('Repository Management', () => {
              expect(newItem.onclick || newItem.addEventListener).toBeTruthy();
          });
      });
-     
- }); 
+
+    describe('100% Coverage Completion', () => {
+        // ---- Line 108: catch block in saveRepositories ----
+        // In jsdom, `localStorage` resolves to the native Storage instance (the
+        // `global.localStorage = localStorageMock` assignment in beforeEach is a
+        // no-op because jsdom defines localStorage as a non-writable accessor).
+        // To force the real catch branch, mock Storage.prototype.setItem to throw.
+        test('saveRepositories should log error when Storage.setItem throws', () => {
+            window.RepoManager.repoState.savedRepos = [{ owner: 'a', repo: 'b' }];
+            window.RepoManager.repoState.currentRepo = { owner: 'a', repo: 'b' };
+
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+            const originalSetItem = Storage.prototype.setItem;
+            Storage.prototype.setItem = jest.fn(() => {
+                throw new Error('QuotaExceededError');
+            });
+
+            expect(() => {
+                window.RepoManager.saveRepositories();
+            }).not.toThrow();
+
+            expect(consoleSpy).toHaveBeenCalledWith('Error saving repositories:', expect.any(Error));
+
+            Storage.prototype.setItem = originalSetItem;
+            consoleSpy.mockRestore();
+        });
+
+        // ---- Line 264 + branch 258(false): real createRepositoryDropdown ----
+        // beforeEach mocks createRepositoryDropdown, so require a fresh, unmocked
+        // copy of the module and exercise the real function body.
+        test('real createRepositoryDropdown attaches click handler when selector exists', () => {
+            jest.resetModules();
+            const FreshRepoManager = require('../src/repo.js');
+
+            document.body.innerHTML = `
+                <div id="repo-selector" class="relative">
+                    <div class="project-selector"><span id="repo-name">Project Board</span></div>
+                </div>
+                <button id="add-task-btn"></button>
+            `;
+
+            const selector = document.querySelector('#repo-selector .project-selector');
+            const addEventListenerSpy = jest.spyOn(selector, 'addEventListener');
+
+            FreshRepoManager.createRepositoryDropdown();
+
+            expect(addEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function));
+
+            addEventListenerSpy.mockRestore();
+        });
+
+        test('real createRepositoryDropdown warns when selector is missing', () => {
+            jest.resetModules();
+            const FreshRepoManager = require('../src/repo.js');
+
+            document.body.innerHTML = `<button id="add-task-btn"></button>`;
+
+            const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+            expect(() => {
+                FreshRepoManager.createRepositoryDropdown();
+            }).not.toThrow();
+
+            expect(warnSpy).toHaveBeenCalledWith('Repository selector element not found');
+
+            warnSpy.mockRestore();
+        });
+
+        // ---- Lines 367-380, function anonymous_18, branches 368/378 ----
+        // Dispatch real click events on a repository item to drive the async
+        // click handler. The handler calls the module-internal removeRepository /
+        // switchRepository directly, so we let the real functions run.
+        test('repository item click on remove button triggers removeRepository (branch 368 true)', async () => {
+            window.RepoManager.repoState.currentRepo = { owner: 'super3', repo: 'dashban' };
+            window.RepoManager.repoState.savedRepos = [
+                { owner: 'other', repo: 'thing', accessLevel: 'full', canModify: true, isPrivate: false }
+            ];
+
+            const repoInfo = { owner: 'other', repo: 'thing', accessLevel: 'full', canModify: true, isPrivate: false };
+            const item = window.RepoManager.createRepositoryItem(repoInfo);
+            document.body.appendChild(item);
+
+            const removeBtn = item.querySelector('.remove-repo-btn');
+            expect(removeBtn).toBeTruthy();
+
+            removeBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+            // Allow the async handler (and removeRepository) to settle.
+            await new Promise(resolve => setTimeout(resolve, 5));
+
+            // removeRepository filtered the repo out of savedRepos.
+            expect(window.RepoManager.repoState.savedRepos.some(r => r.owner === 'other' && r.repo === 'thing')).toBe(false);
+
+            item.remove();
+        });
+
+        test('repository item click on body switches repo and removes dropdown (branch 368 false, 378 true)', async () => {
+            window.RepoManager.repoState.currentRepo = { owner: 'super3', repo: 'dashban' };
+            window.RepoManager.repoState.savedRepos = [
+                { owner: 'other', repo: 'thing', accessLevel: 'full', canModify: true, isPrivate: false }
+            ];
+
+            const repoInfo = { owner: 'other', repo: 'thing', accessLevel: 'full', canModify: true, isPrivate: false };
+            const item = window.RepoManager.createRepositoryItem(repoInfo);
+            document.body.appendChild(item);
+
+            // Provide a dropdown so the `if (dropdown)` branch (378) is true and 379 runs.
+            const dropdown = document.createElement('div');
+            dropdown.className = 'repo-dropdown';
+            document.body.appendChild(dropdown);
+
+            // Dispatch on a non-remove-button child (the inner name div).
+            const nameDiv = item.querySelector('.font-medium');
+            expect(nameDiv).toBeTruthy();
+            nameDiv.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+            // switchRepository is async and also schedules a 150ms timeout.
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            expect(window.RepoManager.repoState.currentRepo.owner).toBe('other');
+            expect(window.RepoManager.repoState.currentRepo.repo).toBe('thing');
+            // Dropdown was removed by the handler (line 379).
+            expect(document.querySelector('.repo-dropdown')).toBeNull();
+
+            item.remove();
+        });
+
+        test('repository item click on body with no dropdown present (branch 378 false)', async () => {
+            window.RepoManager.repoState.currentRepo = { owner: 'super3', repo: 'dashban' };
+            window.RepoManager.repoState.savedRepos = [
+                { owner: 'solo', repo: 'item', accessLevel: 'read-only', canModify: false, isPrivate: false }
+            ];
+
+            const repoInfo = { owner: 'solo', repo: 'item', accessLevel: 'read-only', canModify: false, isPrivate: false };
+            const item = window.RepoManager.createRepositoryItem(repoInfo);
+            document.body.appendChild(item);
+
+            // Ensure no dropdown exists so `if (dropdown)` is false.
+            const stray = document.querySelector('.repo-dropdown');
+            if (stray) stray.remove();
+
+            const nameDiv = item.querySelector('.font-medium');
+            nameDiv.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            expect(window.RepoManager.repoState.currentRepo.owner).toBe('solo');
+            expect(window.RepoManager.repoState.currentRepo.repo).toBe('item');
+
+            item.remove();
+        });
+
+        // ---- Line 52: binary-expr path 2 (admin operand) + if-false ----
+        // Authenticated, permissions present but push=false so the `||` evaluates
+        // the `admin` operand; with admin=false the whole condition is false.
+        test('validateRepository evaluates admin permission and stays read-only when both false', async () => {
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            // Reset any once-queued responses leaked from earlier tests so this
+            // test's two-call sequence is deterministic.
+            fetch.mockReset();
+
+            const baseData = {
+                name: 'repo',
+                owner: { login: 'owner' },
+                private: false,
+                open_issues_count: 3
+            };
+
+            // First (public) call
+            fetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve(baseData)
+            });
+            // Second (authenticated) call - permissions present but push & admin false
+            fetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({ ...baseData, permissions: { push: false, admin: false } })
+            });
+
+            const result = await window.RepoManager.validateRepository('owner', 'repo');
+
+            expect(result.valid).toBe(true);
+            expect(result.accessLevel).toBe('read-only');
+            expect(result.canModify).toBe(false);
+            expect(fetch).toHaveBeenCalledTimes(2);
+        });
+
+        // ---- Branch 177 false: switchRepository when GitHubAuth.GITHUB_CONFIG absent ----
+        test('switchRepository handles missing GitHubAuth.GITHUB_CONFIG (branch 177 false)', async () => {
+            const savedAuth = window.GitHubAuth;
+            window.GitHubAuth = { githubAuth: { isAuthenticated: false, accessToken: null } }; // no GITHUB_CONFIG
+
+            window.RepoManager.repoState.savedRepos = [];
+
+            await expect(window.RepoManager.switchRepository('x', 'y')).resolves.toBeUndefined();
+            expect(window.RepoManager.repoState.currentRepo).toEqual({ owner: 'x', repo: 'y' });
+
+            window.GitHubAuth = savedAuth;
+        });
+
+        // ---- Branch 192 false: switchRepository when GitHubAPI.loadGitHubIssues absent ----
+        test('switchRepository handles missing GitHubAPI.loadGitHubIssues (branch 192 false)', async () => {
+            const savedAPI = window.GitHubAPI;
+            window.GitHubAPI = {}; // no loadGitHubIssues
+
+            window.RepoManager.repoState.savedRepos = [];
+
+            await expect(window.RepoManager.switchRepository('p', 'q')).resolves.toBeUndefined();
+            expect(window.GitHubAuth.GITHUB_CONFIG.owner).toBe('p');
+            expect(window.GitHubAuth.GITHUB_CONFIG.repo).toBe('q');
+
+            window.GitHubAPI = savedAPI;
+        });
+
+        // ---- Branch 230 false: initializeRepositorySelector skips config sync ----
+        // `if (repoState.currentRepo && window.GitHubAuth?.GITHUB_CONFIG)` is false
+        // when GITHUB_CONFIG is absent (currentRepo is still set by
+        // loadSavedRepositories). The sync block is then skipped without error.
+        test('initializeRepositorySelector skips config sync when GITHUB_CONFIG missing (branch 230 false)', () => {
+            localStorage.clear();
+
+            const savedAuth = window.GitHubAuth;
+            // GitHubAuth present but WITHOUT GITHUB_CONFIG -> `&&` right side falsy.
+            window.GitHubAuth = { githubAuth: { isAuthenticated: false, accessToken: null } };
+
+            window.RepoManager.repoState.savedRepos = [];
+
+            expect(() => {
+                window.RepoManager.initializeRepositorySelector();
+            }).not.toThrow();
+
+            // loadSavedRepositories still set a default current repo.
+            expect(window.RepoManager.repoState.currentRepo).toEqual({ owner: 'super3', repo: 'dashban' });
+            // No GITHUB_CONFIG was created on the replacement auth object.
+            expect(window.GitHubAuth.GITHUB_CONFIG).toBeUndefined();
+
+            window.GitHubAuth = savedAuth;
+        });
+
+        // ---- Branch 320 false: outside-click handler when click is inside container ----
+        test('toggleRepositoryDropdown outside-click handler keeps dropdown when clicking inside (branch 320 false)', () => {
+            jest.useFakeTimers();
+
+            document.body.innerHTML = `
+                <div id="repo-name">Project Board</div>
+                <button id="add-task-btn"></button>
+                <div id="repo-selector">
+                    <div class="project-selector">Click me</div>
+                </div>
+            `;
+
+            window.RepoManager.repoState.savedRepos = [
+                { owner: 'test', repo: 'repo', accessLevel: 'read-only', canModify: false, isPrivate: false }
+            ];
+
+            window.RepoManager.toggleRepositoryDropdown();
+
+            // Run the setTimeout(0) that registers the document click listener.
+            jest.runOnlyPendingTimers();
+
+            const container = document.getElementById('repo-selector');
+            expect(container.querySelector('.repo-dropdown')).toBeTruthy();
+
+            // Click INSIDE the container -> container.contains(e.target) is true ->
+            // `if (!container.contains(...))` is false -> dropdown NOT removed.
+            const insideTarget = container.querySelector('.project-selector');
+            const evt = new MouseEvent('click', { bubbles: true, cancelable: true });
+            insideTarget.dispatchEvent(evt);
+
+            expect(container.querySelector('.repo-dropdown')).toBeTruthy();
+
+            jest.useRealTimers();
+        });
+
+        // ---- Branch 428 false: modal keypress handler with non-Enter key ----
+        test('modal keypress handler ignores non-Enter keys (branch 428 false)', () => {
+            window.RepoManager.showAddRepositoryModal();
+            const input = document.getElementById('repo-input');
+            input.value = 'https://github.com/test/repo';
+
+            const handleSpy = jest.spyOn(window.RepoManager, 'handleAddRepository');
+
+            // A non-Enter key should NOT invoke handleAddRepository.
+            input.dispatchEvent(new KeyboardEvent('keypress', { key: 'a', bubbles: true, cancelable: true }));
+
+            expect(handleSpy).not.toHaveBeenCalled();
+
+            handleSpy.mockRestore();
+        });
+
+        // ---- Branch 493 false: handleAddRepository when dropdown lacks #repo-list ----
+        // handleAddRepository calls the module-internal addRepository/switchRepository
+        // (not the exported props), so we drive them with a deterministic fetch mock
+        // instead of spies. The dropdown exists but has no #repo-list child, so the
+        // `if (repoList)` guard at line 493 takes its false branch.
+        test('handleAddRepository handles dropdown without #repo-list (branch 493 false)', async () => {
+            window.RepoManager.repoState.savedRepos = [];
+            window.RepoManager.repoState.currentRepo = { owner: 'super3', repo: 'dashban' };
+
+            window.RepoManager.showAddRepositoryModal();
+            const input = document.getElementById('repo-input');
+            input.value = 'https://github.com/facebook/react';
+
+            // A dropdown that exists but has no #repo-list child.
+            const dropdown = document.createElement('div');
+            dropdown.className = 'repo-dropdown';
+            document.body.appendChild(dropdown);
+
+            // Deterministic validation response for the real addRepository call.
+            fetch.mockReset();
+            fetch.mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    name: 'react',
+                    owner: { login: 'facebook' },
+                    private: false,
+                    open_issues_count: 100
+                })
+            });
+
+            await expect(window.RepoManager.handleAddRepository()).resolves.toBeUndefined();
+
+            // The repo was added and switched to.
+            expect(window.RepoManager.repoState.savedRepos.some(r => r.owner === 'facebook' && r.repo === 'react')).toBe(true);
+            // Dropdown still present, but no repo-list existed so nothing was rebuilt.
+            expect(document.querySelector('.repo-dropdown')).toBeTruthy();
+            expect(document.querySelector('.repo-dropdown #repo-list')).toBeNull();
+
+            dropdown.remove();
+        });
+
+        // ---- Branch 553 false: real updateRepositoryDropdown, dropdown w/o #repo-list ----
+        // beforeEach mocks updateRepositoryDropdown; require a fresh module to run
+        // the real one. Dropdown present but missing #repo-list -> false branch.
+        test('real updateRepositoryDropdown handles dropdown without #repo-list (branch 553 false)', () => {
+            jest.resetModules();
+            const FreshRepoManager = require('../src/repo.js');
+
+            document.body.innerHTML = `
+                <div id="repo-name">Project Board</div>
+                <button id="add-task-btn"></button>
+                <div class="repo-dropdown"></div>
+            `;
+
+            expect(() => {
+                FreshRepoManager.updateRepositoryDropdown();
+            }).not.toThrow();
+
+            // No #repo-list existed, so nothing was rebuilt.
+            expect(document.querySelector('.repo-dropdown #repo-list')).toBeNull();
+        });
+
+        test('real updateRepositoryDropdown rebuilds list when #repo-list exists', () => {
+            jest.resetModules();
+            const FreshRepoManager = require('../src/repo.js');
+
+            document.body.innerHTML = `
+                <div id="repo-name">Project Board</div>
+                <button id="add-task-btn"></button>
+                <div class="repo-dropdown"><div id="repo-list"><div>old content</div></div></div>
+            `;
+
+            FreshRepoManager.repoState.savedRepos = [
+                { owner: 'test', repo: 'repo', accessLevel: 'read-only', canModify: false, isPrivate: false }
+            ];
+
+            FreshRepoManager.updateRepositoryDropdown();
+
+            const repoList = document.querySelector('.repo-dropdown #repo-list');
+            expect(repoList).toBeTruthy();
+            expect(repoList.innerHTML).not.toContain('old content');
+            expect(repoList.querySelector('.repo-item')).toBeTruthy();
+        });
+
+        // ---- Branch 616 false: module loaded without `window` defined ----
+        // Re-executing the module (jest.resetModules forces a fresh evaluation)
+        // while `window` is undefined makes the `if (typeof window !== 'undefined')`
+        // guard take its false path (line 617 does not run). State is restored
+        // afterwards so other tests keep a valid window.RepoManager.
+        test('module load skips window export when window is undefined (branch 616 false)', () => {
+            const hadWindow = Object.prototype.hasOwnProperty.call(global, 'window');
+            const savedWindow = global.window;
+
+            try {
+                delete global.window;
+                expect(typeof window).toBe('undefined');
+
+                jest.resetModules();
+                const FreshRepoManager = require('../src/repo.js');
+
+                // Module still exported via module.exports (Node path) even though
+                // the window export branch was skipped.
+                expect(typeof FreshRepoManager.validateRepository).toBe('function');
+            } finally {
+                if (hadWindow) {
+                    global.window = savedWindow;
+                } else {
+                    delete global.window;
+                }
+                // Restore the standard module instance for subsequent tests.
+                jest.resetModules();
+                global.window.RepoManager = require('../src/repo.js');
+            }
+
+            expect(typeof window).toBe('object');
+        });
+    });
+
+ });

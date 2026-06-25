@@ -478,9 +478,93 @@ describe('About Card Module', () => {
             window.RepoManager = null;
             window.GitHubAuth = null;
             mockStore['dashban_current_repo'] = null;
-            
+
             AboutCard.saveAboutCardArchivedStatus(true);
             expect(console.log).toHaveBeenCalledWith('📦 Repository context from default:', { owner: 'super3', repo: 'dashban' });
+        });
+    });
+
+    describe('branch coverage for defensive guards', () => {
+        // Covers line 100 else-path: an "About" card that is NOT the about-card
+        // and HAS a data-issue-number, so no archive button should be added.
+        test('should not add archive button to About-titled card that has a data-issue-number', () => {
+            const doneColumn = document.getElementById('done');
+            const issueCard = document.createElement('div');
+            issueCard.className = 'bg-white border';
+            issueCard.setAttribute('data-issue-number', '42');
+            issueCard.innerHTML = '<h4>About time fix</h4>';
+            doneColumn.appendChild(issueCard);
+
+            AboutCard.checkAboutCardInDoneColumn();
+            expect(issueCard.querySelector('.archive-btn')).toBeFalsy();
+        });
+
+        // Covers line 146 else-path: archived card is present in DOM but
+        // window.updateColumnCounts is NOT a function (graceful skip).
+        test('should hide archived About card without calling non-function updateColumnCounts', () => {
+            window.updateColumnCounts = 'not-a-function';
+            mockStore['aboutCardArchived_super3_dashban'] = 'true';
+            const aboutCard = document.createElement('div');
+            aboutCard.setAttribute('data-card-id', 'about-card');
+            document.body.appendChild(aboutCard);
+
+            expect(() => AboutCard.hideAboutCardIfArchived()).not.toThrow();
+            expect(document.querySelector('[data-card-id="about-card"]')).toBeFalsy();
+            expect(console.log).toHaveBeenCalledWith('📦 About card hidden (was previously archived)');
+        });
+
+        // Covers line 170 else-path: About card recreated but
+        // window.updateColumnCounts is NOT a function (graceful skip).
+        test('should recreate About card without calling non-function updateColumnCounts', () => {
+            window.updateColumnCounts = undefined;
+
+            expect(() => AboutCard.ensureAboutCardExists()).not.toThrow();
+            const todoColumn = document.getElementById('todo');
+            expect(todoColumn.querySelector('[data-card-id="about-card"]')).toBeTruthy();
+            expect(console.log).toHaveBeenCalledWith('📦 About card recreated in Todo column');
+        });
+
+        // Covers line 256 else-path: About card restored but
+        // window.updateColumnCounts is NOT a function (graceful skip).
+        test('should restore About card without calling non-function updateColumnCounts', () => {
+            window.updateColumnCounts = null;
+            mockStore['aboutCardArchived_super3_dashban'] = 'true';
+
+            expect(() => AboutCard.restoreAboutCard()).not.toThrow();
+            const todoColumn = document.getElementById('todo');
+            expect(todoColumn.querySelector('[data-card-id="about-card"]')).toBeTruthy();
+            expect(console.log).toHaveBeenCalledWith('📦 About card restored to Todo column');
+        });
+
+        // Exercises the module-export guard's browser path (line 296 else-branch
+        // behaviorally): when `module` is undefined the IIFE attaches AboutCard to
+        // window only and skips the module.exports assignment without throwing.
+        // NOTE: this runs an un-instrumented copy of the source in a vm sandbox
+        // (the repo's established pattern), so it documents the browser behavior
+        // but does not register against the instrumented coverage of line 296.
+        test('should attach AboutCard to window and skip module.exports when module is undefined', () => {
+            const fs = require('fs');
+            const vm = require('vm');
+            const code = fs.readFileSync(require.resolve('../src/about-card.js'), 'utf8');
+
+            const fakeWindow = {};
+            const sandbox = {
+                console: { log: jest.fn(), warn: jest.fn(), error: jest.fn() },
+                localStorage: { getItem: () => null, setItem: () => {} },
+                document: {
+                    getElementById: () => null,
+                    querySelector: () => null,
+                    querySelectorAll: () => []
+                },
+                window: fakeWindow
+            };
+            vm.createContext(sandbox);
+            vm.runInContext('var module = undefined;\n' + code, sandbox);
+
+            // The browser export path ran: AboutCard attached to window.
+            expect(typeof fakeWindow.AboutCard).toBe('object');
+            expect(typeof fakeWindow.AboutCard.initialize).toBe('function');
+            expect(typeof fakeWindow.AboutCard.createAboutCardElement).toBe('function');
         });
     });
 });

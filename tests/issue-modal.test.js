@@ -1268,4 +1268,587 @@ describe('Issue Modal', () => {
       });
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Additional coverage tests (appended) to reach 100% for src/issue-modal.js
+  // ---------------------------------------------------------------------------
+  describe('Additional branch coverage', () => {
+    describe('populateIssueModal defensive branches', () => {
+      test('should use empty-string fallbacks when description element has no text or html (lines 63-64)', () => {
+        // Only create the elements populateIssueModal writes to unconditionally,
+        // so the description fallback path (no raw description) runs with an
+        // empty .markdown-content element -> textContent || '' and
+        // innerHTML || 'No description available' both take the false operand.
+        ['issue-modal-number', 'issue-modal-title', 'issue-description-display',
+         'issue-description-edit'].forEach(id => {
+          const el = document.createElement('div');
+          el.id = id;
+          document.body.appendChild(el);
+        });
+
+        const backlogCol = document.createElement('div');
+        backlogCol.id = 'backlog';
+        document.body.appendChild(backlogCol);
+
+        const taskElement = document.createElement('div');
+        // No data-raw-description attribute -> fallback branch
+        const descEl = document.createElement('div');
+        descEl.className = 'markdown-content';
+        // descEl.textContent === '' (falsy) and descEl.innerHTML === '' (falsy)
+        taskElement.appendChild(descEl);
+        backlogCol.appendChild(taskElement);
+
+        global.loadAndDisplayComments = jest.fn();
+
+        window.IssueModal.populateIssueModal('77', taskElement);
+
+        // textContent || '' -> '' so edit value is empty
+        expect(document.getElementById('issue-description-edit').value).toBe('');
+        // innerHTML || 'No description available' -> the fallback string
+        expect(document.getElementById('issue-description-display').innerHTML)
+          .toBe('No description available');
+      });
+
+      test('should not throw when optional badge/select/title elements are absent (lines 100,106,110,118,128,136)', () => {
+        // Create ONLY the always-written elements. Omit issue-title-edit,
+        // issue-priority-select, issue-category-select, issue-state-badge,
+        // issue-column-badge, close-issue-btn, reopen-issue-btn so each
+        // `if (element)` guard takes its false branch.
+        ['issue-modal-number', 'issue-modal-title', 'issue-description-display',
+         'issue-description-edit'].forEach(id => {
+          const el = document.createElement('div');
+          el.id = id;
+          document.body.appendChild(el);
+        });
+
+        const backlogCol = document.createElement('div');
+        backlogCol.id = 'backlog';
+        document.body.appendChild(backlogCol);
+
+        const taskElement = document.createElement('div');
+        backlogCol.appendChild(taskElement);
+
+        global.loadAndDisplayComments = jest.fn();
+
+        expect(() => {
+          window.IssueModal.populateIssueModal('88', taskElement);
+        }).not.toThrow();
+
+        // Confirms the always-written branch still executed.
+        expect(document.getElementById('issue-modal-number').textContent).toBe('#88');
+        // Confirms the omitted optional elements really were not present.
+        expect(document.getElementById('issue-title-edit')).toBeNull();
+        expect(document.getElementById('issue-priority-select')).toBeNull();
+        expect(document.getElementById('issue-column-badge')).toBeNull();
+      });
+
+      test('should fall back to raw column id when column is not in columnNames map (line 129)', () => {
+        // columnBadge present, but the task lives in a column whose id is not a
+        // key of columnNames -> columnNames[column] is undefined -> `|| column`.
+        ['issue-modal-number', 'issue-modal-title', 'issue-description-display',
+         'issue-description-edit'].forEach(id => {
+          const el = document.createElement('div');
+          el.id = id;
+          document.body.appendChild(el);
+        });
+
+        const columnBadge = document.createElement('span');
+        columnBadge.id = 'issue-column-badge';
+        document.body.appendChild(columnBadge);
+
+        const customCol = document.createElement('div');
+        customCol.id = 'customcolumn';
+        document.body.appendChild(customCol);
+
+        const taskElement = document.createElement('div');
+        customCol.appendChild(taskElement);
+
+        global.loadAndDisplayComments = jest.fn();
+
+        window.IssueModal.populateIssueModal('99', taskElement);
+
+        expect(document.getElementById('issue-column-badge').textContent).toBe('customcolumn');
+      });
+    });
+
+    describe('resetEditStates defensive branch', () => {
+      test('should handle missing title-edit element specifically (line 157)', () => {
+        // The existing "missing elements gracefully" test removes
+        // issue-modal-title and issue-description-edit but leaves
+        // issue-title-edit present. Here we remove ONLY issue-title-edit (and a
+        // few others) so the `if (titleEdit)` guard at line 157 takes its
+        // false branch while the rest run.
+        ['issue-modal-title', 'issue-modal-number',
+         'issue-description-display', 'issue-description-edit',
+         'description-edit-actions'].forEach(id => {
+          const el = document.createElement('div');
+          el.id = id;
+          document.body.appendChild(el);
+        });
+        // Intentionally do NOT create issue-title-edit / title-edit-actions / edit-title-btn
+
+        expect(() => {
+          window.IssueModal.resetEditStates();
+        }).not.toThrow();
+
+        // The present elements were still reset.
+        expect(document.getElementById('issue-modal-title').classList.contains('hidden')).toBe(false);
+        expect(document.getElementById('issue-description-edit').classList.contains('hidden')).toBe(true);
+        expect(document.getElementById('issue-title-edit')).toBeNull();
+      });
+    });
+
+    describe('setupIssueModalEventHandlers defensive branches', () => {
+      // Minimal helper that creates only the elements needed for a given
+      // handler, so that other-element guards take their false branches.
+      function makeButton(id) {
+        const btn = document.createElement('button');
+        btn.id = id;
+        document.body.appendChild(btn);
+        return btn;
+      }
+      function makeEl(tag, id, text) {
+        const el = document.createElement(tag);
+        el.id = id;
+        if (text) el.textContent = text;
+        document.body.appendChild(el);
+        return el;
+      }
+
+      test('should handle save title when matching task has no h4 title element (line 230)', async () => {
+        document.body.innerHTML = '';
+        const saveTitleBtn = makeButton('save-title-btn');
+        makeButton('edit-title-btn');
+        makeEl('h2', 'issue-modal-title');
+        const numberEl = makeEl('span', 'issue-modal-number', '#123');
+        const titleEditInput = document.createElement('input');
+        titleEditInput.id = 'issue-title-edit';
+        titleEditInput.value = 'A New Title';
+        document.body.appendChild(titleEditInput);
+        makeEl('div', 'title-edit-actions');
+
+        // Matching task element exists but has NO <h4> child -> `if (titleElement)` false.
+        const taskElement = document.createElement('div');
+        taskElement.setAttribute('data-issue-number', '123');
+        document.body.appendChild(taskElement);
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        await saveTitleBtn.click();
+
+        // Title in modal updated even though card had no h4.
+        expect(document.getElementById('issue-modal-title').textContent).toBe('A New Title');
+        // No GitHubAPI -> local-only log path.
+        expect(console.log).toHaveBeenCalledWith('GitHub API not available, title updated locally only');
+        expect(numberEl.textContent).toBe('#123');
+      });
+
+      test('should handle save description when no matching task element exists (line 300)', async () => {
+        document.body.innerHTML = '';
+        const saveDescBtn = makeButton('save-description-btn');
+        makeEl('div', 'issue-description-display');
+        const descEdit = document.createElement('textarea');
+        descEdit.id = 'issue-description-edit';
+        descEdit.value = 'Some description';
+        document.body.appendChild(descEdit);
+        makeEl('div', 'description-edit-actions');
+        makeEl('span', 'issue-modal-number', '#404'); // no task with data-issue-number="404"
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        await saveDescBtn.click();
+
+        // No GitHubUI -> textContent path used for display.
+        expect(document.getElementById('issue-description-display').textContent).toBe('Some description');
+        // No matching task -> local update log.
+        expect(console.log).toHaveBeenCalledWith('Updated local task description: "Some description"');
+      });
+
+      test('should log success when GitHub description update resolves truthy (line 318)', async () => {
+        document.body.innerHTML = '';
+        const saveDescBtn = makeButton('save-description-btn');
+        makeEl('div', 'issue-description-display');
+        const descEdit = document.createElement('textarea');
+        descEdit.id = 'issue-description-edit';
+        descEdit.value = 'Updated body';
+        document.body.appendChild(descEdit);
+        makeEl('div', 'description-edit-actions');
+        makeEl('span', 'issue-modal-number', '#321');
+
+        const taskElement = document.createElement('div');
+        taskElement.setAttribute('data-issue-number', '321');
+        taskElement.setAttribute('data-github-issue', 'true');
+        const descMd = document.createElement('div');
+        descMd.className = 'markdown-content';
+        taskElement.appendChild(descMd);
+        document.body.appendChild(taskElement);
+
+        window.GitHubAPI = {
+          updateGitHubIssueDescription: jest.fn().mockResolvedValue(true)
+        };
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        await saveDescBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(window.GitHubAPI.updateGitHubIssueDescription).toHaveBeenCalledWith('321', 'Updated body');
+        expect(console.log).toHaveBeenCalledWith(
+          '✅ Successfully updated GitHub issue #321 description locally and on GitHub'
+        );
+      });
+
+      test('should handle priority change when no matching task element exists (line 352)', async () => {
+        document.body.innerHTML = '';
+        const prioritySelect = document.createElement('select');
+        prioritySelect.id = 'issue-priority-select';
+        prioritySelect.innerHTML = '<option value="">None</option><option value="High">High</option>';
+        document.body.appendChild(prioritySelect);
+        makeEl('span', 'issue-modal-number', '#555'); // no matching task
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        prioritySelect.value = 'High';
+        prioritySelect.dispatchEvent(new Event('change'));
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(console.log).toHaveBeenCalledWith('GitHub API not available, priority updated locally only');
+      });
+
+      test('should handle priority change when task has no label container (line 355)', async () => {
+        document.body.innerHTML = '';
+        const prioritySelect = document.createElement('select');
+        prioritySelect.id = 'issue-priority-select';
+        prioritySelect.innerHTML = '<option value="">None</option><option value="High">High</option>';
+        document.body.appendChild(prioritySelect);
+        makeEl('span', 'issue-modal-number', '#556');
+
+        // Task element present but WITHOUT a .flex.items-center.space-x-2 container.
+        const taskElement = document.createElement('div');
+        taskElement.setAttribute('data-issue-number', '556');
+        document.body.appendChild(taskElement);
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        prioritySelect.value = 'High';
+        prioritySelect.dispatchEvent(new Event('change'));
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(console.log).toHaveBeenCalledWith('GitHub API not available, priority updated locally only');
+      });
+
+      test('should handle category change when no matching task element exists (line 397)', async () => {
+        document.body.innerHTML = '';
+        const categorySelect = document.createElement('select');
+        categorySelect.id = 'issue-category-select';
+        categorySelect.innerHTML = '<option value="">None</option><option value="Backend">Backend</option>';
+        document.body.appendChild(categorySelect);
+        makeEl('span', 'issue-modal-number', '#557'); // no matching task
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        categorySelect.value = 'Backend';
+        categorySelect.dispatchEvent(new Event('change'));
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(console.log).toHaveBeenCalledWith('GitHub API not available, category updated locally only');
+      });
+
+      test('should handle category change when task has no label container (line 400)', async () => {
+        document.body.innerHTML = '';
+        const categorySelect = document.createElement('select');
+        categorySelect.id = 'issue-category-select';
+        categorySelect.innerHTML = '<option value="">None</option><option value="Backend">Backend</option>';
+        document.body.appendChild(categorySelect);
+        makeEl('span', 'issue-modal-number', '#558');
+
+        const taskElement = document.createElement('div');
+        taskElement.setAttribute('data-issue-number', '558');
+        document.body.appendChild(taskElement);
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        categorySelect.value = 'Backend';
+        categorySelect.dispatchEvent(new Event('change'));
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(console.log).toHaveBeenCalledWith('GitHub API not available, category updated locally only');
+      });
+
+      test('should insert category badge AFTER an existing priority badge (lines 418-424, branch 423 true)', async () => {
+        document.body.innerHTML = '';
+        const categorySelect = document.createElement('select');
+        categorySelect.id = 'issue-category-select';
+        categorySelect.innerHTML = '<option value="">None</option><option value="Backend">Backend</option>';
+        document.body.appendChild(categorySelect);
+        makeEl('span', 'issue-modal-number', '#559');
+
+        const taskElement = document.createElement('div');
+        taskElement.setAttribute('data-issue-number', '559');
+        const labelContainer = document.createElement('div');
+        labelContainer.className = 'flex items-center space-x-2';
+
+        // A priority badge whose text is one of critical/high/medium/low so the
+        // find() callback at line 418-421 returns it, exercising lines 419-420
+        // and taking the `if (priorityBadge)` true branch (line 423) -> 424.
+        const priorityBadge = document.createElement('span');
+        priorityBadge.textContent = 'High';
+        labelContainer.appendChild(priorityBadge);
+        taskElement.appendChild(labelContainer);
+        document.body.appendChild(taskElement);
+
+        window.getCategoryColor = jest.fn().mockReturnValue('bg-blue-100 text-blue-800');
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        categorySelect.value = 'Backend';
+        categorySelect.dispatchEvent(new Event('change'));
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        const spans = Array.from(labelContainer.querySelectorAll('span'));
+        // Category badge inserted right after the priority badge.
+        expect(spans.length).toBe(2);
+        expect(spans[0].textContent).toBe('High');
+        expect(spans[1].textContent).toBe('Backend');
+        expect(spans[1].className).toContain('bg-blue-100 text-blue-800');
+        // priorityBadge.nextSibling should be the category badge.
+        expect(priorityBadge.nextSibling).toBe(spans[1]);
+      });
+
+      test('should handle close issue when state badge is missing (line 456)', async () => {
+        document.body.innerHTML = '';
+        const closeIssueBtn = makeButton('close-issue-btn');
+        const reopenIssueBtn = makeButton('reopen-issue-btn');
+        makeEl('span', 'issue-modal-number', '#601');
+        // No issue-state-badge -> `if (stateBadge)` false.
+        // No matching task -> `if (taskElement)` false (also covers 465).
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        await closeIssueBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(closeIssueBtn.classList.contains('hidden')).toBe(true);
+        expect(reopenIssueBtn.classList.contains('hidden')).toBe(false);
+        expect(console.log).toHaveBeenCalledWith('GitHub API not available, issue closed locally only');
+      });
+
+      test('should handle close issue when reopen button is absent at setup (line 461)', async () => {
+        document.body.innerHTML = '';
+        const closeIssueBtn = makeButton('close-issue-btn');
+        // reopen-issue-btn intentionally NOT created so `if (reopenIssueBtn)` is false.
+        makeEl('span', 'issue-modal-number', '#602');
+        makeEl('span', 'issue-state-badge');
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        await closeIssueBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(document.getElementById('issue-state-badge').textContent).toBe('Closed');
+        expect(closeIssueBtn.classList.contains('hidden')).toBe(true);
+        expect(document.getElementById('reopen-issue-btn')).toBeNull();
+      });
+
+      test('should handle close issue when done column is absent (line 467)', async () => {
+        document.body.innerHTML = '';
+        const closeIssueBtn = makeButton('close-issue-btn');
+        makeButton('reopen-issue-btn');
+        makeEl('span', 'issue-modal-number', '#603');
+        makeEl('span', 'issue-state-badge');
+
+        // Matching task exists so `if (taskElement)` true, but NO #done column
+        // so `if (doneColumn)` takes false branch (line 467).
+        const taskElement = document.createElement('div');
+        taskElement.setAttribute('data-issue-number', '603');
+        document.body.appendChild(taskElement);
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        await closeIssueBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(document.getElementById('done')).toBeNull();
+        // Task NOT moved (no done column), still attached to body.
+        expect(taskElement.parentElement).toBe(document.body);
+        expect(console.log).toHaveBeenCalledWith('GitHub API not available, issue closed locally only');
+      });
+
+      test('should handle reopen issue when state badge is missing and no task (lines 501,510)', async () => {
+        document.body.innerHTML = '';
+        const closeIssueBtn = makeButton('close-issue-btn');
+        const reopenIssueBtn = makeButton('reopen-issue-btn');
+        makeEl('span', 'issue-modal-number', '#604');
+        // No issue-state-badge -> line 501 false. No matching task -> line 510 false.
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        await reopenIssueBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(reopenIssueBtn.classList.contains('hidden')).toBe(true);
+        expect(closeIssueBtn.classList.contains('hidden')).toBe(false);
+        expect(console.log).toHaveBeenCalledWith('GitHub API not available, issue reopened locally only');
+      });
+
+      test('should handle reopen issue when close button is absent at setup (line 506)', async () => {
+        document.body.innerHTML = '';
+        const reopenIssueBtn = makeButton('reopen-issue-btn');
+        // close-issue-btn intentionally NOT created so `if (closeIssueBtn)` is false.
+        makeEl('span', 'issue-modal-number', '#605');
+        makeEl('span', 'issue-state-badge');
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        await reopenIssueBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(document.getElementById('issue-state-badge').textContent).toBe('Open');
+        expect(reopenIssueBtn.classList.contains('hidden')).toBe(true);
+        expect(document.getElementById('close-issue-btn')).toBeNull();
+      });
+
+      test('should handle reopen issue when backlog column is absent (line 512)', async () => {
+        document.body.innerHTML = '';
+        makeButton('close-issue-btn');
+        const reopenIssueBtn = makeButton('reopen-issue-btn');
+        makeEl('span', 'issue-modal-number', '#606');
+        makeEl('span', 'issue-state-badge');
+
+        // Matching task exists, but NO #backlog column -> line 512 false branch.
+        const taskElement = document.createElement('div');
+        taskElement.setAttribute('data-issue-number', '606');
+        document.body.appendChild(taskElement);
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        await reopenIssueBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(document.getElementById('backlog')).toBeNull();
+        expect(taskElement.parentElement).toBe(document.body);
+        expect(console.log).toHaveBeenCalledWith('GitHub API not available, issue reopened locally only');
+      });
+    });
+
+    describe('save description success-resolve false branch', () => {
+      test('should not log success when GitHub description update resolves falsy (line 318 false path)', async () => {
+        document.body.innerHTML = '';
+        const saveDescBtn = document.createElement('button');
+        saveDescBtn.id = 'save-description-btn';
+        document.body.appendChild(saveDescBtn);
+        const display = document.createElement('div');
+        display.id = 'issue-description-display';
+        document.body.appendChild(display);
+        const descEdit = document.createElement('textarea');
+        descEdit.id = 'issue-description-edit';
+        descEdit.value = 'Body that fails to persist';
+        document.body.appendChild(descEdit);
+        const descActions = document.createElement('div');
+        descActions.id = 'description-edit-actions';
+        document.body.appendChild(descActions);
+        const numberEl = document.createElement('span');
+        numberEl.id = 'issue-modal-number';
+        numberEl.textContent = '#888';
+        document.body.appendChild(numberEl);
+
+        const taskElement = document.createElement('div');
+        taskElement.setAttribute('data-issue-number', '888');
+        taskElement.setAttribute('data-github-issue', 'true');
+        const descMd = document.createElement('div');
+        descMd.className = 'markdown-content';
+        taskElement.appendChild(descMd);
+        document.body.appendChild(taskElement);
+
+        // Resolves falsy -> `if (success)` false branch (line 318).
+        window.GitHubAPI = {
+          updateGitHubIssueDescription: jest.fn().mockResolvedValue(false)
+        };
+
+        window.IssueModal.setupIssueModalEventHandlers();
+        await saveDescBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(window.GitHubAPI.updateGitHubIssueDescription).toHaveBeenCalledWith('888', 'Body that fails to persist');
+        // Success log must NOT have been emitted (success was falsy).
+        expect(console.log).not.toHaveBeenCalledWith(
+          expect.stringContaining('Successfully updated GitHub issue')
+        );
+      });
+    });
+
+    describe('module export browser branch (lines 699,707-713)', () => {
+      test('should attach helpers to the global object when module is undefined', () => {
+        // The source file ends with:
+        //   if (typeof module !== 'undefined' && module.exports) { module.exports = {...} }
+        //   else { window.getPriorityClasses = ...; ... }   <-- lines 709-713
+        // Under CommonJS/Jest `module` is always defined, so the ELSE branch is
+        // never taken by the normally-required module. To exercise it we run the
+        // file's source with `module` undefined inside a VM context.
+        //
+        // We instrument that source copy with Jest's OWN babel-jest pipeline so
+        // its coverage map (statement/branch IDs) is byte-for-byte identical to
+        // the map Jest already produced for the required module; an afterAll then
+        // merges the executed counts back so the lines are correctly credited.
+        const path = require('path');
+        const fs = require('fs');
+        const vm = require('vm');
+        const babelJest = require('babel-jest').default || require('babel-jest');
+
+        const abs = require.resolve('../src/issue-modal.js');
+        const src = fs.readFileSync(abs, 'utf8');
+        const rootDir = path.resolve(__dirname, '..');
+
+        const transformer = babelJest.createTransformer
+          ? babelJest.createTransformer()
+          : babelJest;
+        const transformed = transformer.process(src, abs, {
+          config: { rootDir, cwd: rootDir },
+          configString: 'issue-modal-export-branch',
+          instrument: { filename: abs, collectCoverageFrom: ['src/issue-modal.js'] },
+          cacheFS: new Map(),
+          transformerConfig: {},
+        });
+        const instrumentedCode =
+          typeof transformed === 'string' ? transformed : transformed.code;
+
+        const fakeWindow = {};
+        const sandbox = {
+          module: undefined, // forces the ELSE (browser-global) export branch
+          window: fakeWindow,
+          globalThis: {},
+          console: { log: jest.fn(), error: jest.fn() },
+          document: {
+            getElementById: () => null,
+            querySelector: () => null,
+            querySelectorAll: () => [],
+            addEventListener: () => {},
+          },
+        };
+        vm.createContext(sandbox);
+        vm.runInContext(instrumentedCode, sandbox);
+
+        // The else branch genuinely ran: helper functions are now on window.
+        expect(typeof fakeWindow.IssueModal).toBe('object');
+        expect(typeof fakeWindow.getPriorityClasses).toBe('function');
+        expect(typeof fakeWindow.getCategoryClasses).toBe('function');
+        expect(typeof fakeWindow.loadAndDisplayComments).toBe('function');
+        expect(typeof fakeWindow.createCommentElement).toBe('function');
+        expect(typeof fakeWindow.getTimeAgo).toBe('function');
+        // Sanity: an assigned helper actually works.
+        expect(fakeWindow.getPriorityClasses()).toContain('task-priority');
+
+        // Stash the executed coverage for this file so afterAll can merge it
+        // into the report (the instrumented copy records under __coverage__).
+        const probeCov = sandbox.__coverage__ && sandbox.__coverage__[abs];
+        if (probeCov) {
+          global.__issueModalExportBranchCoverage = probeCov;
+        }
+      });
+    });
+  });
+
+  // After every test has run and populated Jest's coverage object for this
+  // file, fold in the counts captured while executing the browser-export ELSE
+  // branch inside the VM (see "module export browser branch" above). The probe
+  // copy was instrumented with the identical babel-jest pipeline, so its
+  // statement/branch maps line up exactly and istanbul's merge simply sums the
+  // hit counts onto the lines that the CommonJS-loaded module cannot reach.
+  afterAll(() => {
+    const probeCov = global.__issueModalExportBranchCoverage;
+    if (!probeCov || !global.__coverage__) return;
+    const libCoverage = require('istanbul-lib-coverage');
+    const jestKey = Object.keys(global.__coverage__).find(k => k.includes('issue-modal.js'));
+    if (!jestKey) return;
+    const merged = libCoverage.createFileCoverage(global.__coverage__[jestKey]);
+    merged.merge(probeCov);
+    global.__coverage__[jestKey] = merged.toJSON ? merged.toJSON() : merged.data;
+    delete global.__issueModalExportBranchCoverage;
+  });
 }); 
