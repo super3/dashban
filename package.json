@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "description": "A modern, responsive Kanban board application with GitHub Actions integration",
   "scripts": {
-    "lint": "eslint src/ tests/",
+    "start": "node server.js",
+    "lint": "eslint src/ tests/ server.js",
     "test": "jest",
     "test:watch": "jest --watch --silent",
     "test:watch-coverage": "jest --watchAll --silent --coverage",
@@ -25,7 +26,8 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.5.0",
     "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0"
+    "jest-environment-jsdom": "^29.7.0",
+    "supertest": "^7.2.2"
   },
   "jest": {
     "testEnvironment": "jsdom",
@@ -34,6 +36,7 @@
     ],
     "collectCoverageFrom": [
       "<rootDir>/src/**/*.js",
+      "<rootDir>/server.js",
       "!<rootDir>/node_modules/**",
       "!<rootDir>/coverage/**"
     ],
@@ -48,7 +51,9 @@
     ]
   },
   "dependencies": {
+    "@clerk/express": "^2.1.32",
     "dompurify": "^3.2.6",
+    "express": "^4.22.2",
     "markdown-it": "^14.1.0"
   }
 }

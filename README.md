@@ -37,6 +37,23 @@ This project includes a GitHub Actions workflow for automatic deployment to GitH
 
 Your Dashban application will then be available at: `https://yourusername.github.io/dashban`
 
+## 🖥️ Backend (Node / Railway)
+
+The board runs fully static on GitHub Pages, but there is also a small
+[Express](https://expressjs.com/) server (`server.js`) so it can run on a Node
+host such as [Railway](https://railway.app). The server serves the frontend and
+exposes a tiny API (`/api/health`, `/api/config`); it is the foundation for the
+upcoming Clerk "Sign in with GitHub" flow, which needs a server-side step to
+obtain the GitHub token.
+
+```bash
+npm install
+npm start        # serves the app on http://localhost:3000
+```
+
+Configuration is via environment variables (see [`.env.example`](.env.example)).
+On Railway, set them in the project dashboard — `PORT` is provided automatically.
+
 ## 🔧 GitHub Integration Setup
 
 To enable GitHub issue creation directly from Dashban:
