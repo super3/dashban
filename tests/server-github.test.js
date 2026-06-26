@@ -6,16 +6,13 @@
  */
 
 // Controllable mock state (must be prefixed `mock*` to be used in jest.mock factory).
-let mockAuthed = true;
+// `mockUserId` of null models an unauthenticated request: clerkMiddleware always
+// runs and decorates the request, and getAuth then reports no signed-in user.
 let mockUserId = 'user_123';
 const mockGetUserOauthAccessToken = jest.fn();
 
 jest.mock('@clerk/express', () => ({
     clerkMiddleware: () => (req, res, next) => next(),
-    requireAuth: () => (req, res, next) => {
-        if (mockAuthed) return next();
-        return res.status(401).json({ error: 'Unauthenticated' });
-    },
     getAuth: () => ({ userId: mockUserId }),
     clerkClient: {
         users: {
@@ -34,7 +31,6 @@ describe('GitHub proxy (/api/github)', () => {
     let originalFetch;
 
     beforeEach(() => {
-        mockAuthed = true;
         mockUserId = 'user_123';
         mockGetUserOauthAccessToken.mockReset();
         mockGetUserOauthAccessToken.mockResolvedValue({ data: [{ token: 'gho_usertoken' }] });
@@ -54,7 +50,7 @@ describe('GitHub proxy (/api/github)', () => {
     }
 
     test('rejects unauthenticated requests with 401', async () => {
-        mockAuthed = false;
+        mockUserId = null;
         const res = await request(app).get('/api/github/repos/super3/dashban/issues');
         expect(res.status).toBe(401);
         expect(mockGetUserOauthAccessToken).not.toHaveBeenCalled();
