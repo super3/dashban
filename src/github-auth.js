@@ -7,12 +7,60 @@ const GITHUB_CONFIG = {
     repo: 'dashban'
 };
 
-// GitHub authentication state
+// GitHub authentication state.
+//
+// `mode` records *how* the user is authenticated:
+//   - 'pat'   : a Personal Access Token pasted by the user (talks to api.github.com
+//               directly; this is the fallback used by the static GitHub Pages build).
+//   - 'clerk' : signed in with GitHub via Clerk. GitHub calls are routed through the
+//               server-side proxy (/api/github), which attaches the user's own token,
+//               so `accessToken` stays null in the browser.
+//   - null    : not authenticated.
 let githubAuth = {
     isAuthenticated: false,
     accessToken: null,
-    user: null
+    user: null,
+    mode: null
 };
+
+// Whether the user is authenticated by either method. PAT mode requires a stored
+// token; Clerk mode authenticates via the session (the token lives server-side).
+function isGitHubAuthed() {
+    return Boolean(githubAuth.isAuthenticated && (githubAuth.accessToken || githubAuth.mode === 'clerk'));
+}
+
+// Build the URL and headers for a GitHub REST request, honouring the auth mode.
+//
+// In Clerk mode the call is sent to the same-origin proxy with a Bearer session
+// token; the proxy swaps in the user's real GitHub token. In PAT mode the call
+// goes straight to GitHub with the classic `token` scheme. When unauthenticated
+// (public, read-only browsing) no auth headers are sent — matching GitHub's
+// anonymous access and keeping the request header set empty.
+async function buildGitHubRequest(path, extraHeaders = {}) {
+    const headers = { ...extraHeaders };
+
+    if (githubAuth.mode === 'clerk') {
+        const token = window.ClerkAuth ? await window.ClerkAuth.getToken() : null;
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+            headers['Accept'] = 'application/vnd.github.v3+json';
+        }
+        return { url: `/api/github${path}`, headers };
+    }
+
+    if (githubAuth.accessToken) {
+        headers['Authorization'] = `token ${githubAuth.accessToken}`;
+        headers['Accept'] = 'application/vnd.github.v3+json';
+    }
+    return { url: `${GITHUB_CONFIG.apiBaseUrl}${path}`, headers };
+}
+
+// Perform a GitHub REST request through the appropriate transport for the current
+// auth mode. `path` is everything after the API root (e.g. `/repos/o/r/issues`).
+async function githubFetch(path, options = {}) {
+    const { url, headers } = await buildGitHubRequest(path, options.headers || {});
+    return fetch(url, { ...options, headers });
+}
 
 // GitHub Token Modal Functions
 function showGitHubTokenModal() {
@@ -61,7 +109,13 @@ function initializeGitHubAuth() {
 }
 
 function signInWithGitHub() {
-    // Show the GitHub token modal for Personal Access Token input
+    // Prefer Clerk "Sign in with GitHub" when it is available (i.e. the backend
+    // is present). Otherwise fall back to the Personal Access Token modal — this
+    // is the path used by the static GitHub Pages build, which has no backend.
+    if (window.ClerkAuth && window.ClerkAuth.isAvailable()) {
+        window.ClerkAuth.signIn();
+        return;
+    }
     showGitHubTokenModal();
 }
 
@@ -82,11 +136,12 @@ async function validateAndSetToken(token) {
         
         const user = await response.json();
         
-        // Store authentication
+        // Store authentication (Personal Access Token mode)
         githubAuth.isAuthenticated = true;
         githubAuth.accessToken = token;
         githubAuth.user = user;
-        
+        githubAuth.mode = 'pat';
+
         localStorage.setItem('github_access_token', token);
         
 
@@ -105,13 +160,19 @@ async function validateAndSetToken(token) {
 }
 
 function signOutGitHub() {
-    
-    
+    // A Clerk session is ended through Clerk; its listener then clears the shared
+    // auth state via syncAuthState(), so there is nothing more to do here.
+    if (githubAuth.mode === 'clerk' && window.ClerkAuth) {
+        window.ClerkAuth.signOut();
+        return;
+    }
+
     // Clear authentication state
     githubAuth.isAuthenticated = false;
     githubAuth.accessToken = null;
     githubAuth.user = null;
-    
+    githubAuth.mode = null;
+
     // Clear stored access token
     localStorage.removeItem('github_access_token');
     
@@ -350,7 +411,12 @@ window.GitHubAuth = {
     // Configuration
     GITHUB_CONFIG,
     githubAuth,
-    
+
+    // Mode-aware request layer (used by github-api.js and repo.js)
+    isGitHubAuthed,
+    buildGitHubRequest,
+    githubFetch,
+
     // Authentication functions
     initializeGitHubAuth,
     signInWithGitHub,

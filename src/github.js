@@ -12,9 +12,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize authentication modal listeners
     window.GitHubAuth.initializeAuthModalListeners();
 
-    // Initialize GitHub authentication
+    // Initialize GitHub authentication (Personal Access Token fallback)
     window.GitHubAuth.initializeGitHubAuth();
-    
+
+    // Initialize Clerk "Sign in with GitHub" (the primary path when a backend is
+    // present). It is a no-op on the static build where /api/config is absent.
+    if (window.ClerkAuth) {
+        window.ClerkAuth.initialize();
+    }
+
     // Load GitHub issues
     window.GitHubAPI.initializeGitHubIssues();
     

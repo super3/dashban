@@ -154,6 +154,21 @@ describe('GitHub Integration - Main Coordinator', () => {
             expect(window.GitHubAuth.initializeGitHubAuth).toHaveBeenCalled();
             expect(window.GitHubAPI.initializeGitHubIssues).toHaveBeenCalled();
         });
+
+        test('should initialize Clerk when ClerkAuth is present on DOMContentLoaded', () => {
+            // Covers the window.ClerkAuth TRUE branch: the handler kicks off Clerk
+            // initialization when the module is loaded (backend present).
+            window.ClerkAuth = { initialize: jest.fn() };
+            window.GitHubAuth.initializeAuthModalListeners = jest.fn();
+            window.GitHubAuth.initializeGitHubAuth = jest.fn();
+            window.GitHubAuth.updateHeaderRepoName = jest.fn();
+            window.GitHubAPI.initializeGitHubIssues = jest.fn();
+
+            const event = new Event('DOMContentLoaded');
+            document.dispatchEvent(event);
+
+            expect(window.ClerkAuth.initialize).toHaveBeenCalled();
+        });
     });
 
     describe('Module Independence', () => {

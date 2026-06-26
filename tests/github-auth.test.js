@@ -1274,4 +1274,145 @@ describe('GitHub Authentication', () => {
             expect(submitBtn.innerHTML).toBe('<i class="fas fa-key mr-2"></i>Save Token');
         });
     });
-}); 
+
+    describe('Clerk integration (dual auth)', () => {
+        afterEach(() => {
+            delete window.ClerkAuth;
+            window.GitHubAuth.githubAuth.mode = null;
+        });
+
+        describe('isGitHubAuthed', () => {
+            test('is true in Clerk mode without an access token', () => {
+                window.GitHubAuth.githubAuth.isAuthenticated = true;
+                window.GitHubAuth.githubAuth.accessToken = null;
+                window.GitHubAuth.githubAuth.mode = 'clerk';
+                expect(window.GitHubAuth.isGitHubAuthed()).toBe(true);
+            });
+
+            test('is false when not authenticated', () => {
+                window.GitHubAuth.githubAuth.isAuthenticated = false;
+                window.GitHubAuth.githubAuth.accessToken = null;
+                window.GitHubAuth.githubAuth.mode = null;
+                expect(window.GitHubAuth.isGitHubAuthed()).toBe(false);
+            });
+        });
+
+        describe('buildGitHubRequest', () => {
+            test('routes through the proxy with a Bearer token in Clerk mode', async () => {
+                window.GitHubAuth.githubAuth.mode = 'clerk';
+                window.ClerkAuth = { getToken: jest.fn().mockResolvedValue('clerk-jwt') };
+
+                const { url, headers } = await window.GitHubAuth.buildGitHubRequest('/repos/o/r/issues');
+
+                expect(url).toBe('/api/github/repos/o/r/issues');
+                expect(headers).toEqual({
+                    'Authorization': 'Bearer clerk-jwt',
+                    'Accept': 'application/vnd.github.v3+json'
+                });
+            });
+
+            test('omits auth headers in Clerk mode when no token is available', async () => {
+                window.GitHubAuth.githubAuth.mode = 'clerk';
+                window.ClerkAuth = { getToken: jest.fn().mockResolvedValue(null) };
+
+                const { url, headers } = await window.GitHubAuth.buildGitHubRequest('/repos/o/r/issues');
+
+                expect(url).toBe('/api/github/repos/o/r/issues');
+                expect(headers).toEqual({});
+            });
+
+            test('omits auth headers in Clerk mode when ClerkAuth is absent', async () => {
+                window.GitHubAuth.githubAuth.mode = 'clerk';
+                delete window.ClerkAuth;
+
+                const { url, headers } = await window.GitHubAuth.buildGitHubRequest('/x');
+
+                expect(url).toBe('/api/github/x');
+                expect(headers).toEqual({});
+            });
+
+            test('uses api.github.com with a token in PAT mode', async () => {
+                window.GitHubAuth.githubAuth.mode = 'pat';
+                window.GitHubAuth.githubAuth.accessToken = 'pat-123';
+
+                const { url, headers } = await window.GitHubAuth.buildGitHubRequest(
+                    '/repos/o/r/issues', { 'Content-Type': 'application/json' }
+                );
+
+                expect(url).toBe('https://api.github.com/repos/o/r/issues');
+                expect(headers).toEqual({
+                    'Content-Type': 'application/json',
+                    'Authorization': 'token pat-123',
+                    'Accept': 'application/vnd.github.v3+json'
+                });
+            });
+
+            test('sends no auth headers when unauthenticated', async () => {
+                window.GitHubAuth.githubAuth.mode = null;
+                window.GitHubAuth.githubAuth.accessToken = null;
+
+                const { url, headers } = await window.GitHubAuth.buildGitHubRequest('/repos/o/r/issues');
+
+                expect(url).toBe('https://api.github.com/repos/o/r/issues');
+                expect(headers).toEqual({});
+            });
+        });
+
+        describe('githubFetch', () => {
+            test('issues a Clerk-mode request through fetch', async () => {
+                window.GitHubAuth.githubAuth.mode = 'clerk';
+                window.ClerkAuth = { getToken: jest.fn().mockResolvedValue('clerk-jwt') };
+                const mockFetch = jest.fn().mockResolvedValue({ ok: true });
+                global.fetch = mockFetch;
+
+                await window.GitHubAuth.githubFetch('/repos/o/r/issues', { method: 'GET' });
+
+                expect(mockFetch).toHaveBeenCalledWith(
+                    '/api/github/repos/o/r/issues',
+                    expect.objectContaining({
+                        method: 'GET',
+                        headers: expect.objectContaining({ 'Authorization': 'Bearer clerk-jwt' })
+                    })
+                );
+            });
+        });
+
+        describe('signInWithGitHub', () => {
+            test('uses Clerk when it is available', () => {
+                const signIn = jest.fn();
+                window.ClerkAuth = { isAvailable: () => true, signIn };
+                const modal = document.getElementById('github-token-modal');
+
+                window.GitHubAuth.signInWithGitHub();
+
+                expect(signIn).toHaveBeenCalled();
+                expect(modal.classList.contains('hidden')).toBe(true); // PAT modal not shown
+            });
+
+            test('falls back to the PAT modal when Clerk is present but unavailable', () => {
+                window.ClerkAuth = { isAvailable: () => false, signIn: jest.fn() };
+                const modal = document.getElementById('github-token-modal');
+
+                window.GitHubAuth.signInWithGitHub();
+
+                expect(window.ClerkAuth.signIn).not.toHaveBeenCalled();
+                expect(modal.classList.contains('hidden')).toBe(false);
+            });
+        });
+
+        describe('signOutGitHub', () => {
+            test('delegates to Clerk in Clerk mode and leaves state for the listener', () => {
+                const signOut = jest.fn();
+                window.ClerkAuth = { signOut };
+                window.GitHubAuth.githubAuth.isAuthenticated = true;
+                window.GitHubAuth.githubAuth.mode = 'clerk';
+
+                window.GitHubAuth.signOutGitHub();
+
+                expect(signOut).toHaveBeenCalled();
+                // State is cleared by Clerk's listener (syncAuthState), not synchronously here.
+                expect(window.GitHubAuth.githubAuth.isAuthenticated).toBe(true);
+            });
+        });
+    });
+});

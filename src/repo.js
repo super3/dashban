@@ -14,9 +14,12 @@ const repoState = {
 // Repository validation and access checking
 async function validateRepository(owner, repo) {
     try {
-        // Check if repository exists and determine access level
-        const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
-        
+        // Existence/access check. Authenticated callers (Clerk or PAT) make this
+        // an authenticated request — routed through the proxy in Clerk mode — so
+        // private repositories they can access are visible; anonymous callers can
+        // still validate public repositories.
+        const repoResponse = await window.GitHubAuth.githubFetch(`/repos/${owner}/${repo}`);
+
         if (repoResponse.status === 404) {
             return { 
                 valid: false, 
@@ -37,16 +40,12 @@ async function validateRepository(owner, repo) {
         let accessLevel = 'read-only'; // Default for public repos
         let canModify = false;
         
-        // If user is authenticated, check write access
-        if (window.GitHubAuth?.githubAuth?.isAuthenticated && window.GitHubAuth?.githubAuth?.accessToken) {
+        // If the user is authenticated, confirm write access from the repo's
+        // permissions (present on authenticated responses).
+        if (window.GitHubAuth.isGitHubAuthed()) {
             try {
-                const authResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-                    headers: {
-                        'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
-                        'Accept': 'application/vnd.github.v3+json'
-                    }
-                });
-                
+                const authResponse = await window.GitHubAuth.githubFetch(`/repos/${owner}/${repo}`);
+
                 if (authResponse.ok) {
                     const authRepoData = await authResponse.json();
                     if (authRepoData.permissions && (authRepoData.permissions.push || authRepoData.permissions.admin)) {
