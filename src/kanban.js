@@ -135,7 +135,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const labels = [];
                 if (priority && priority !== 'Medium') labels.push(priority.toLowerCase());
                 if (category) labels.push(category.toLowerCase());
-                
+
+                // Add the status label for the chosen column so the issue lands —
+                // and stays — in that column after a reload/sync. Without it an
+                // unlabeled issue is treated as backlog (matches drag-to-column).
+                const columnStatusLabels = {
+                    backlog: null,
+                    todo: 'todo',
+                    inprogress: 'in progress',
+                    review: 'review',
+                    done: 'done'
+                };
+                const statusLabel = columnStatusLabels[targetColumn];
+                if (statusLabel) labels.push(statusLabel);
+
                 // Create GitHub issue
                 const githubIssue = await window.GitHub.createGitHubIssue(title, description, labels);
                 

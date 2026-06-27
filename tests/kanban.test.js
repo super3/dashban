@@ -948,6 +948,35 @@ describe('Kanban Board Core Functionality', () => {
         ['high', 'bug']
       );
     });
+
+    test('includes the column status label so the issue lands in the chosen column', async () => {
+      const form = api.addTaskForm;
+      const titleInput = document.getElementById('task-title');
+      const prioritySelect = document.getElementById('task-priority');
+      const categorySelect = document.getElementById('task-category');
+      const columnSelect = document.getElementById('task-column');
+
+      global.window.GitHub.githubAuth.isAuthenticated = true;
+      global.window.GitHub.githubAuth.mode = 'clerk';
+      global.window.GitHub.createGitHubIssue = jest.fn().mockResolvedValue({ number: 7, title: 'T' });
+      global.window.GitHub.createGitHubIssueElement = jest.fn().mockReturnValue(document.createElement('div'));
+
+      titleInput.value = 'In-progress Issue';
+      prioritySelect.value = 'Medium'; // default -> no priority label
+      categorySelect.value = '';
+      columnSelect.value = 'inprogress';
+
+      form.dispatchEvent(new Event('submit'));
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // The 'inprogress' column maps to the 'in progress' status label. Without
+      // it the issue would be unlabeled and reload into backlog.
+      expect(global.window.GitHub.createGitHubIssue).toHaveBeenCalledWith(
+        'In-progress Issue',
+        '',
+        ['in progress']
+      );
+    });
   });
 
   describe('error handling', () => {
