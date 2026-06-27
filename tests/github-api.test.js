@@ -1614,10 +1614,12 @@ describe('GitHub API', () => {
                 handleApiResponse: jest.fn()
             };
 
+            // A genuine rate limit: 403 carrying x-ratelimit-remaining: 0.
             mockFetch
                 .mockResolvedValueOnce({
                     ok: false,
-                    status: 403
+                    status: 403,
+                    headers: { get: (h) => (h === 'x-ratelimit-remaining' ? '0' : null) }
                 })
                 .mockResolvedValueOnce({
                     ok: true,
@@ -1630,6 +1632,73 @@ describe('GitHub API', () => {
             await window.GitHubAPI.loadGitHubIssues();
 
             expect(window.RateLimit.handleApiResponse).toHaveBeenCalled();
+        });
+
+        test('loadGitHubIssues handles a rate-limit 403 even when RateLimit is unavailable', async () => {
+            // With RateLimit absent, the optional handleApiResponse call is skipped —
+            // but a real rate-limit 403 must not crash or alert.
+            delete window.RateLimit;
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 403,
+                    headers: { get: (h) => (h === 'x-ratelimit-remaining' ? '0' : null) }
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+
+            await expect(window.GitHubAPI.loadGitHubIssues()).resolves.toBeUndefined();
+            expect(mockAlert).not.toHaveBeenCalled();
+        });
+
+        test('loadGitHubIssues surfaces an auth error (not a rate limit) on a 403 with no rate-limit header', async () => {
+            // The Clerk proxy returns 403 "No GitHub account connected" with no
+            // x-ratelimit-* headers. This must read as an auth problem, not a limit.
+            window.RateLimit = { handleApiResponse: jest.fn() };
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 403,
+                    headers: { get: () => null }
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.mode = 'clerk';
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            expect(window.RateLimit.handleApiResponse).not.toHaveBeenCalled();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('reconnected'));
+        });
+
+        test('loadGitHubIssues surfaces an auth error on a 401 from the proxy', async () => {
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 401,
+                    headers: { get: () => null }
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => []
+                });
+
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.mode = 'clerk';
+
+            await window.GitHubAPI.loadGitHubIssues();
+
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('reconnected'));
         });
     });
 
@@ -2191,7 +2260,8 @@ describe('GitHub API', () => {
                 })
                 .mockResolvedValueOnce({
                     ok: false,
-                    status: 403
+                    status: 403,
+                    headers: { get: (h) => (h === 'x-ratelimit-remaining' ? '0' : null) }
                 });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;

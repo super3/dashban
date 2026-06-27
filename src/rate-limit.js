@@ -86,33 +86,35 @@ async function checkRateLimit() {
 
 // Handle API response and check for rate limiting
 function handleApiResponse(response) {
-    // Check rate limit headers
-    const remaining = parseInt(response.headers.get('x-ratelimit-remaining') || '0');
+    // Without GitHub's rate-limit headers there is nothing to conclude. This
+    // matters behind the proxy: a proxy/auth error — or any response that didn't
+    // surface these headers — must NOT be mistaken for an exhausted rate limit.
+    const remainingHeader = response.headers.get('x-ratelimit-remaining');
+    if (remainingHeader === null || remainingHeader === undefined) {
+        return false;
+    }
+
+    // Read rate limit headers
+    const remaining = parseInt(remainingHeader);
     const limit = parseInt(response.headers.get('x-ratelimit-limit') || '5000');
     const resetTime = parseInt(response.headers.get('x-ratelimit-reset') || '0');
-    
+
     // Update state
     rateLimitState.remaining = remaining;
     rateLimitState.limit = limit;
     rateLimitState.resetTime = resetTime;
     rateLimitState.lastChecked = Date.now();
-    
-    // Check if response indicates rate limiting
-    if (response.status === 403) {
-        const rateLimitExceeded = response.headers.get('x-ratelimit-remaining') === '0';
-        if (rateLimitExceeded) {
-            rateLimitState.isLimited = true;
-            showBanner({ remaining, limit, reset: resetTime });
-            return true; // Indicates rate limited
-        }
-    } else if (remaining === 0) {
+
+    // A real rate limit: GitHub reports zero remaining requests (this is what a
+    // genuine 403 rate-limit response carries).
+    if (remaining === 0) {
         rateLimitState.isLimited = true;
         showBanner({ remaining, limit, reset: resetTime });
-        return true;
+        return true; // Indicates rate limited
     } else if (remaining < 10) {
         showLowRemainingWarning({ remaining, limit, reset: resetTime });
     }
-    
+
     return false; // Not rate limited
 }
 
@@ -237,30 +239,18 @@ async function rateLimitedFetch(url, options = {}) {
     if (isRateLimited()) {
         throw new Error('Rate limited - requests are temporarily blocked');
     }
-    
-    try {
-        const response = await fetch(url, options);
-        
-        // Handle rate limit response
-        const isLimited = handleApiResponse(response);
-        
-        if (isLimited) {
-            throw new Error('Rate limit exceeded');
-        }
-        
-        return response;
-    } catch (error) {
-        // If it's a rate limit error, make sure banner is shown
-        if (error.message.includes('Rate limit') || error.message.includes('403')) {
-            rateLimitState.isLimited = true;
-            showBanner({
-                remaining: 0,
-                limit: rateLimitState.limit || 5000,
-                reset: rateLimitState.resetTime || (Date.now() / 1000 + 3600) // 1 hour from now as fallback
-            });
-        }
-        throw error;
+
+    const response = await fetch(url, options);
+
+    // handleApiResponse shows the banner with GitHub's real numbers when the limit
+    // is exhausted. We deliberately do NOT fabricate a banner for other failures
+    // (network errors, or proxy/auth errors), which previously surfaced a
+    // misleading "0/5000 - resets in 60 minutes" message on any 403.
+    if (handleApiResponse(response)) {
+        throw new Error('Rate limit exceeded');
     }
+
+    return response;
 }
 
 // Export rate limit manager

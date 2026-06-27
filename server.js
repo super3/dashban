@@ -105,10 +105,26 @@ async function githubProxy(req, res) {
 
     const body = await githubResponse.text();
     res.status(githubResponse.status);
-    const contentType = githubResponse.headers.get('content-type');
-    if (contentType) {
-        res.set('Content-Type', contentType);
-    }
+
+    // Forward GitHub's content type plus its rate-limit headers, so the browser
+    // can both render responses and tell a real rate limit (x-ratelimit-remaining: 0)
+    // apart from a proxy/auth error. Without these, the frontend can't distinguish
+    // them and may misreport an auth failure as a rate limit.
+    const passthroughHeaders = [
+        'content-type',
+        'x-ratelimit-limit',
+        'x-ratelimit-remaining',
+        'x-ratelimit-reset',
+        'x-ratelimit-used',
+        'x-ratelimit-resource',
+        'retry-after'
+    ];
+    passthroughHeaders.forEach((name) => {
+        const value = githubResponse.headers.get(name);
+        if (value) {
+            res.set(name, value);
+        }
+    });
     res.send(body);
 }
 

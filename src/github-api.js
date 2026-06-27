@@ -417,13 +417,26 @@ async function loadGitHubIssues() {
         ]);
         
         if (!openResponse.ok || !closedResponse.ok) {
-            // Check for rate limiting
-            if (openResponse.status === 403 || closedResponse.status === 403) {
+            const failed = openResponse.ok ? closedResponse : openResponse;
+            const remaining = failed.headers && failed.headers.get('x-ratelimit-remaining');
+
+            // A genuine GitHub rate limit: HTTP 403 with the remaining-requests
+            // header at 0 (the proxy forwards these headers).
+            if (failed.status === 403 && remaining === '0') {
                 if (window.RateLimit?.handleApiResponse) {
-                    window.RateLimit.handleApiResponse(openResponse.ok ? closedResponse : openResponse);
+                    window.RateLimit.handleApiResponse(failed);
                 }
                 throw new Error(`GitHub API rate limit exceeded`);
             }
+
+            // Auth/token failure — e.g. the Clerk proxy has no GitHub token for this
+            // user (401/403). This is NOT a rate limit; surface an actionable message
+            // instead of failing silently or mislabeling it.
+            if (failed.status === 401 || failed.status === 403) {
+                notifyError('Could not load GitHub issues — your GitHub access needs to be reconnected. Sign in again and make sure your account has access to this repository.');
+                throw new Error(`GitHub authorization failed: ${failed.status}`);
+            }
+
             throw new Error(`GitHub API error: ${openResponse.status} or ${closedResponse.status}`);
         }
         
