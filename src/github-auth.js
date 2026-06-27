@@ -204,8 +204,8 @@ function updateGitHubSignInUI() {
     
 
     
-    if (githubAuth.isAuthenticated && githubAuth.accessToken && githubAuth.user) {
-        // Fully authenticated - setup dropdown
+    if (isGitHubAuthed() && githubAuth.user) {
+        // Fully authenticated (Clerk session or PAT) - setup dropdown
         const container = signInButton.parentElement;
         container.style.position = 'relative';
         
@@ -249,7 +249,7 @@ function updateAddIssueButtonState() {
         return;
     }
     
-    const isAuthenticated = githubAuth.isAuthenticated && githubAuth.accessToken && githubAuth.user;
+    const isAuthenticated = isGitHubAuthed() && Boolean(githubAuth.user);
     
     if (isAuthenticated) {
         // Enable the button
