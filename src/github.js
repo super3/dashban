@@ -8,15 +8,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.RepoManager) {
         window.RepoManager.initializeRepositorySelector();
     }
-    
-    // Initialize authentication modal listeners
-    window.GitHubAuth.initializeAuthModalListeners();
 
-    // Initialize GitHub authentication (Personal Access Token fallback)
+    // Render the initial (signed-out) auth UI.
     window.GitHubAuth.initializeGitHubAuth();
 
-    // Initialize Clerk "Sign in with GitHub" (the primary path when a backend is
-    // present). It is a no-op on the static build where /api/config is absent.
+    // Initialize Clerk "Sign in with GitHub". It is a no-op on the static build
+    // where /api/config is absent (that build is read-only, public issues only).
     if (window.ClerkAuth) {
         window.ClerkAuth.initialize();
     }
@@ -37,19 +34,13 @@ window.GitHub = {
     githubAuth: window.GitHubAuth.githubAuth,
     
     // Authentication functions (from GitHubAuth)
+    isGitHubAuthed: window.GitHubAuth.isGitHubAuthed,
     initializeGitHubAuth: window.GitHubAuth.initializeGitHubAuth,
     signInWithGitHub: window.GitHubAuth.signInWithGitHub,
-    validateAndSetToken: window.GitHubAuth.validateAndSetToken,
     signOutGitHub: window.GitHubAuth.signOutGitHub,
     updateGitHubSignInUI: window.GitHubAuth.updateGitHubSignInUI,
-    updateGitHubOptionUI: window.GitHubAuth.updateGitHubOptionUI,
-    promptForAccessToken: window.GitHubAuth.promptForAccessToken,
     updateHeaderRepoName: window.GitHubAuth.updateHeaderRepoName,
-    
-    // Modal functions (from GitHubAuth)
-    showGitHubTokenModal: window.GitHubAuth.showGitHubTokenModal,
-    hideGitHubTokenModal: window.GitHubAuth.hideGitHubTokenModal,
-    
+
     // API functions (from GitHubAPI)
     createGitHubIssue: window.GitHubAPI.createGitHubIssue,
     loadGitHubIssues: window.GitHubAPI.loadGitHubIssues,

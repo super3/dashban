@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Check if button is disabled
             if (addTaskBtn.disabled) {
                 e.preventDefault();
-                alert('Please connect to GitHub with a Personal Access Token first to create issues');
+                alert('Please sign in with GitHub first to create issues');
                 return;
             }
             
@@ -115,8 +115,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            if (!window.GitHub.githubAuth.isAuthenticated || !window.GitHub.githubAuth.accessToken) {
-                alert('Please connect to GitHub with a Personal Access Token first to create GitHub issues');
+            if (!window.GitHub.isGitHubAuthed || !window.GitHub.isGitHubAuthed()) {
+                alert('Please sign in with GitHub first to create issues');
                 return;
             }
             

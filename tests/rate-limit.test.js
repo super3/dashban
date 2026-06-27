@@ -123,6 +123,8 @@ describe('Rate Limit Management', () => {
 
     describe('checkRateLimit', () => {
         test('should successfully check rate limit with authentication', async () => {
+            // Signed in: checkRateLimit goes through the proxy via githubFetch.
+            window.GitHubAuth.githubFetch = (path) => global.fetch(`/api/github${path}`);
             const mockResponse = {
                 ok: true,
                 json: jest.fn().mockResolvedValue({
@@ -139,11 +141,7 @@ describe('Rate Limit Management', () => {
 
             const result = await RateLimit.checkRateLimit();
 
-            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit', {
-                headers: {
-                    'Authorization': 'token test-token'
-                }
-            });
+            expect(global.fetch).toHaveBeenCalledWith('/api/github/rate_limit');
             expect(result).toEqual({
                 isLimited: false,
                 remaining: 4500,
@@ -155,8 +153,8 @@ describe('Rate Limit Management', () => {
             expect(RateLimit.state.resetTime).toBe(1600000);
         });
 
-        test('should check rate limit without authentication', async () => {
-            window.GitHubAuth.githubAuth.accessToken = null;
+        test('should check rate limit anonymously when no proxy is available', async () => {
+            // No githubFetch on GitHubAuth -> falls back to an anonymous request.
             const mockResponse = {
                 ok: true,
                 json: jest.fn().mockResolvedValue({
@@ -173,9 +171,7 @@ describe('Rate Limit Management', () => {
 
             await RateLimit.checkRateLimit();
 
-            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit', {
-                headers: {}
-            });
+            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit');
         });
 
         test('should handle rate limit exceeded (remaining = 0)', async () => {
@@ -277,9 +273,7 @@ describe('Rate Limit Management', () => {
 
             await RateLimit.checkRateLimit();
 
-            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit', {
-                headers: {}
-            });
+            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit');
         });
     });
 
@@ -787,7 +781,7 @@ describe('Rate Limit Management', () => {
             intervalCallback();
             
             // Since checkRateLimit makes a fetch call, we can verify it was called
-            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit', expect.any(Object));
+            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit');
         });
 
         test('should not execute periodic check when rate limited', () => {

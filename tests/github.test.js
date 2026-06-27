@@ -76,9 +76,7 @@ describe('GitHub Integration - Main Coordinator', () => {
             expect(typeof window.GitHub.initializeGitHubAuth).toBe('function');
             expect(typeof window.GitHub.signInWithGitHub).toBe('function');
             expect(typeof window.GitHub.signOutGitHub).toBe('function');
-            expect(typeof window.GitHub.validateAndSetToken).toBe('function');
-            expect(typeof window.GitHub.showGitHubTokenModal).toBe('function');
-            expect(typeof window.GitHub.hideGitHubTokenModal).toBe('function');
+            expect(typeof window.GitHub.isGitHubAuthed).toBe('function');
             
             // API functions
             expect(typeof window.GitHub.createGitHubIssue).toBe('function');
@@ -101,7 +99,7 @@ describe('GitHub Integration - Main Coordinator', () => {
             expect(window.GitHub.githubAuth).toBe(window.GitHubAuth.githubAuth);
             
             // Spot check a few key functions
-            expect(window.GitHub.showGitHubTokenModal).toBe(window.GitHubAuth.showGitHubTokenModal);
+            expect(window.GitHub.signInWithGitHub).toBe(window.GitHubAuth.signInWithGitHub);
             expect(window.GitHub.createGitHubIssue).toBe(window.GitHubAPI.createGitHubIssue);
             expect(window.GitHub.renderMarkdown).toBe(window.GitHubUI.renderMarkdown);
         });
@@ -110,7 +108,6 @@ describe('GitHub Integration - Main Coordinator', () => {
     describe('Initialization', () => {
         test('should initialize GitHub integration on DOMContentLoaded', () => {
             // Mock the initialization functions
-            window.GitHubAuth.initializeAuthModalListeners = jest.fn();
             window.GitHubAuth.initializeGitHubAuth = jest.fn();
             window.GitHubAPI.initializeGitHubIssues = jest.fn();
 
@@ -119,7 +116,6 @@ describe('GitHub Integration - Main Coordinator', () => {
             document.dispatchEvent(event);
 
             // Verify initialization functions were called
-            expect(window.GitHubAuth.initializeAuthModalListeners).toHaveBeenCalled();
             expect(window.GitHubAuth.initializeGitHubAuth).toHaveBeenCalled();
             expect(window.GitHubAPI.initializeGitHubIssues).toHaveBeenCalled();
         });
@@ -138,7 +134,6 @@ describe('GitHub Integration - Main Coordinator', () => {
 
             // Mock the other init functions the handler touches so the handler
             // runs cleanly without unrelated side effects.
-            window.GitHubAuth.initializeAuthModalListeners = jest.fn();
             window.GitHubAuth.initializeGitHubAuth = jest.fn();
             window.GitHubAuth.updateHeaderRepoName = jest.fn();
             window.GitHubAPI.initializeGitHubIssues = jest.fn();
@@ -150,7 +145,6 @@ describe('GitHub Integration - Main Coordinator', () => {
             // The RepoManager initializer must have been called (line 9),
             // and the rest of the handler still ran.
             expect(window.RepoManager.initializeRepositorySelector).toHaveBeenCalled();
-            expect(window.GitHubAuth.initializeAuthModalListeners).toHaveBeenCalled();
             expect(window.GitHubAuth.initializeGitHubAuth).toHaveBeenCalled();
             expect(window.GitHubAPI.initializeGitHubIssues).toHaveBeenCalled();
         });
@@ -159,7 +153,6 @@ describe('GitHub Integration - Main Coordinator', () => {
             // Covers the window.ClerkAuth TRUE branch: the handler kicks off Clerk
             // initialization when the module is loaded (backend present).
             window.ClerkAuth = { initialize: jest.fn() };
-            window.GitHubAuth.initializeAuthModalListeners = jest.fn();
             window.GitHubAuth.initializeGitHubAuth = jest.fn();
             window.GitHubAuth.updateHeaderRepoName = jest.fn();
             window.GitHubAPI.initializeGitHubIssues = jest.fn();
@@ -178,7 +171,7 @@ describe('GitHub Integration - Main Coordinator', () => {
             
             // Should be able to call auth functions directly
             expect(() => {
-                window.GitHubAuth.showGitHubTokenModal();
+                window.GitHubAuth.updateGitHubSignInUI();
             }).not.toThrow();
         });
 

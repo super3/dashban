@@ -235,8 +235,11 @@ beforeAll(() => {
     },
     githubAuth: {
       isAuthenticated: false,
-      accessToken: null,
+      mode: null,
       user: null
+    },
+    isGitHubAuthed() {
+      return Boolean(this.githubAuth.isAuthenticated && this.githubAuth.mode === 'clerk');
     },
     createGitHubIssue: jest.fn(),
     createGitHubIssueElement: jest.fn(),
@@ -518,7 +521,7 @@ describe('Kanban Board Core Functionality', () => {
       
       // Modal should remain hidden and alert should be shown
       expect(modal.classList.contains('hidden')).toBe(true);
-      expect(global.alert).toHaveBeenCalledWith('Please connect to GitHub with a Personal Access Token first to create issues');
+      expect(global.alert).toHaveBeenCalledWith('Please sign in with GitHub first to create issues');
     });
 
     test('should allow modal to open when button is enabled', () => {
@@ -563,7 +566,7 @@ describe('Kanban Board Core Functionality', () => {
       
       // Ensure GitHub auth is false
       global.window.GitHub.githubAuth.isAuthenticated = false;
-      global.window.GitHub.githubAuth.accessToken = null;
+      global.window.GitHub.githubAuth.mode = null;
 
       // Fill form
       titleInput.value = 'Test Task';
@@ -578,7 +581,7 @@ describe('Kanban Board Core Functionality', () => {
 
       // Should show auth warning
       expect(global.alert).toHaveBeenCalledWith(
-        'Please connect to GitHub with a Personal Access Token first to create GitHub issues'
+        'Please sign in with GitHub first to create issues'
       );
     });
   });
@@ -903,7 +906,7 @@ describe('Kanban Board Core Functionality', () => {
       
       // Should show auth warning
       expect(global.alert).toHaveBeenCalledWith(
-        'Please connect to GitHub with a Personal Access Token first to create GitHub issues'
+        'Please sign in with GitHub first to create issues'
       );
     });
 
@@ -920,7 +923,7 @@ describe('Kanban Board Core Functionality', () => {
       const mockTaskElement = document.createElement('div');
       
       global.window.GitHub.githubAuth.isAuthenticated = true;
-      global.window.GitHub.githubAuth.accessToken = 'token';
+      global.window.GitHub.githubAuth.mode = 'clerk';
       global.window.GitHub.createGitHubIssue = jest.fn().mockResolvedValue(mockGitHubIssue);
       global.window.GitHub.createGitHubIssueElement = jest.fn().mockReturnValue(mockTaskElement);
       
@@ -958,7 +961,7 @@ describe('Kanban Board Core Functionality', () => {
       
       // Set up authenticated state but make createGitHubIssue throw an error
       global.window.GitHub.githubAuth.isAuthenticated = true;
-      global.window.GitHub.githubAuth.accessToken = 'token';
+      global.window.GitHub.githubAuth.mode = 'clerk';
       global.window.GitHub.createGitHubIssue = jest.fn().mockRejectedValue(new Error('API error'));
       
       // Fill form
@@ -1093,7 +1096,7 @@ describe('Kanban Board Core Functionality', () => {
       
       // Set up authenticated state but make createGitHubIssue return null
       global.window.GitHub.githubAuth.isAuthenticated = true;
-      global.window.GitHub.githubAuth.accessToken = 'token';
+      global.window.GitHub.githubAuth.mode = 'clerk';
       global.window.GitHub.createGitHubIssue = jest.fn().mockResolvedValue(null);
       
       // Fill form
@@ -1120,7 +1123,7 @@ describe('Kanban Board Core Functionality', () => {
       
       // Set up authenticated state but make createGitHubIssue throw an error
       global.window.GitHub.githubAuth.isAuthenticated = true;
-      global.window.GitHub.githubAuth.accessToken = 'token';
+      global.window.GitHub.githubAuth.mode = 'clerk';
       global.window.GitHub.createGitHubIssue = jest.fn().mockRejectedValue(new Error('Network error'));
       
       // Fill form
@@ -1307,7 +1310,7 @@ describe('Kanban Board Core Functionality', () => {
       btn.dispatchEvent(clickEvent);
       
       expect(global.alert).toHaveBeenCalledWith(
-        'Please connect to GitHub with a Personal Access Token first to create issues'
+        'Please sign in with GitHub first to create issues'
       );
     });
 
@@ -2663,7 +2666,10 @@ describe('100% coverage: form submission edge branches', () => {
         // tests reassign it without githubAuth). Restore a complete mock here.
         global.window.GitHub = {
             GITHUB_CONFIG: { owner: 'super3', repo: 'dashban' },
-            githubAuth: { isAuthenticated: false, accessToken: null, user: null },
+            githubAuth: { isAuthenticated: false, mode: null, user: null },
+            isGitHubAuthed() {
+                return Boolean(this.githubAuth.isAuthenticated && this.githubAuth.mode === 'clerk');
+            },
             createGitHubIssue: jest.fn(),
             createGitHubIssueElement: jest.fn(),
             archiveGitHubIssue: jest.fn()
@@ -2685,7 +2691,7 @@ describe('100% coverage: form submission edge branches', () => {
         columnSelect.value = '';
 
         global.window.GitHub.githubAuth.isAuthenticated = true;
-        global.window.GitHub.githubAuth.accessToken = 'token';
+        global.window.GitHub.githubAuth.mode = 'clerk';
         const mockEl = document.createElement('div');
         global.window.GitHub.createGitHubIssue = jest.fn().mockResolvedValue({ number: 5 });
         global.window.GitHub.createGitHubIssueElement = jest.fn().mockReturnValue(mockEl);
@@ -2709,7 +2715,7 @@ describe('100% coverage: form submission edge branches', () => {
         if (submitBtn) submitBtn.remove();
 
         global.window.GitHub.githubAuth.isAuthenticated = true;
-        global.window.GitHub.githubAuth.accessToken = 'token';
+        global.window.GitHub.githubAuth.mode = 'clerk';
         const mockEl = document.createElement('div');
         global.window.GitHub.createGitHubIssue = jest.fn().mockResolvedValue({ number: 9 });
         global.window.GitHub.createGitHubIssueElement = jest.fn().mockReturnValue(mockEl);
@@ -2737,7 +2743,7 @@ describe('100% coverage: form submission edge branches', () => {
         if (submitBtn) submitBtn.remove();
 
         global.window.GitHub.githubAuth.isAuthenticated = true;
-        global.window.GitHub.githubAuth.accessToken = 'token';
+        global.window.GitHub.githubAuth.mode = 'clerk';
         global.window.GitHub.createGitHubIssue = jest.fn().mockRejectedValue(new Error('boom'));
 
         titleInput.value = 'Error No Submit Button';

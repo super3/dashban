@@ -79,7 +79,7 @@ beforeEach(() => {
 
     // Set up default mock responses for GitHub API calls
     mockFetch.mockImplementation((url) => {
-        if (url.includes('github.com/repos/super3/dashban/issues')) {
+        if (url.includes('/repos/super3/dashban/issues')) {
             return Promise.resolve({
                 ok: true,
                 json: async () => []
@@ -113,9 +113,11 @@ beforeEach(() => {
         jest.spyOn(window, 'updateColumnCounts');
     }
 
-    // Set up initial auth state for API tests
+    // Set up initial auth state for API tests (signed in via Clerk; the proxy
+    // transport asks ClerkAuth for a short-lived session token).
     window.GitHubAuth.githubAuth.isAuthenticated = true;
-    window.GitHubAuth.githubAuth.accessToken = 'test-token';
+    window.GitHubAuth.githubAuth.mode = 'clerk';
+    window.ClerkAuth = { getToken: jest.fn().mockResolvedValue('clerk-jwt') };
 });
 
 describe('GitHub API', () => {
@@ -138,17 +140,17 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssue('Test Issue', 'Description', ['bug']);
 
             expect(result).toEqual(mockIssue);
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.github.com/repos/super3/dashban/issues',
+                '/api/github/repos/super3/dashban/issues',
                 expect.objectContaining({
                     method: 'POST',
                     headers: expect.objectContaining({
-                        'Authorization': 'token test-token'
+                        'Authorization': 'Bearer clerk-jwt'
                     }),
                     body: JSON.stringify({
                         title: 'Test Issue',
@@ -167,7 +169,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssue('Test Issue', 'Description');
 
@@ -188,7 +190,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssue('Test', 'Description');
 
@@ -199,7 +201,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Some other error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssue('Test', 'Description');
 
@@ -238,7 +240,7 @@ describe('GitHub API', () => {
             // Check that fetch was called (the URL includes timestamp parameter)
             expect(mockFetch).toHaveBeenCalled();
             const firstCall = mockFetch.mock.calls[0];
-            expect(firstCall[0]).toMatch(/https:\/\/api\.github\.com\/repos\/super3\/dashban\/issues\?state=open/);
+            expect(firstCall[0]).toMatch(/\/api\/github\/repos\/super3\/dashban\/issues\?state=open/);
             // The loadGitHubIssues function calls fetch with URL and fetchOptions object
             expect(firstCall.length).toBe(2);
         });
@@ -542,16 +544,16 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
 
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.github.com/repos/super3/dashban/issues/123/labels',
+                '/api/github/repos/super3/dashban/issues/123/labels',
                 expect.objectContaining({
                     method: 'POST',
                     headers: expect.objectContaining({
-                        'Authorization': 'token test-token'
+                        'Authorization': 'Bearer clerk-jwt'
                     }),
                     body: '{"labels":["archive"]}'
                 })
@@ -585,7 +587,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
 
@@ -605,7 +607,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
 
@@ -622,7 +624,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
 
@@ -645,7 +647,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
 
@@ -672,7 +674,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
 
@@ -695,16 +697,16 @@ describe('GitHub API', () => {
             mockFetch.mockResolvedValueOnce(mockResponse);
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.updateGitHubIssueLabels('123', 'inprogress');
 
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.github.com/repos/super3/dashban/issues/123/labels',
+                '/api/github/repos/super3/dashban/issues/123/labels',
                 expect.objectContaining({
                     method: 'PUT',
                     headers: expect.objectContaining({
-                        'Authorization': 'token test-token'
+                        'Authorization': 'Bearer clerk-jwt'
                     }),
                     body: '{"labels":["in progress"]}'
                 })
@@ -721,7 +723,7 @@ describe('GitHub API', () => {
 
         test('updateGitHubIssueLabels should handle no access token', async () => {
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = null;
+            window.GitHubAuth.githubAuth.mode = null;
 
             await window.GitHubAPI.updateGitHubIssueLabels('123', 'inprogress');
 
@@ -735,7 +737,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.updateGitHubIssueLabels('123', 'inprogress');
 
@@ -757,7 +759,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.updateGitHubIssueLabels('123', 'review');
 
@@ -768,7 +770,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.updateGitHubIssueLabels('123', 'inprogress');
 
@@ -779,7 +781,7 @@ describe('GitHub API', () => {
             window.Notifications = { showError: jest.fn() };
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueLabels('123', 'inprogress');
 
@@ -793,7 +795,7 @@ describe('GitHub API', () => {
             mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ labels: [] }) });
             mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueLabels('123', 'review');
 
@@ -820,7 +822,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.updateGitHubIssueLabels('123', 'review');
 
@@ -855,7 +857,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.updateGitHubIssueLabels('123', 'backlog');
 
@@ -880,16 +882,16 @@ describe('GitHub API', () => {
             mockFetch.mockResolvedValueOnce(mockResponse);
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.closeGitHubIssue('123');
 
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.github.com/repos/super3/dashban/issues/123',
+                '/api/github/repos/super3/dashban/issues/123',
                 expect.objectContaining({
                     method: 'PATCH',
                     headers: expect.objectContaining({
-                        'Authorization': 'token test-token'
+                        'Authorization': 'Bearer clerk-jwt'
                     }),
                     body: JSON.stringify({ state: 'closed' })
                 })
@@ -906,7 +908,7 @@ describe('GitHub API', () => {
 
         test('closeGitHubIssue should handle no access token', async () => {
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = null;
+            window.GitHubAuth.githubAuth.mode = null;
 
             await window.GitHubAPI.closeGitHubIssue('123');
 
@@ -921,7 +923,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.closeGitHubIssue('123');
 
@@ -932,7 +934,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.closeGitHubIssue('123');
 
@@ -948,7 +950,7 @@ describe('GitHub API', () => {
             mockFetch.mockResolvedValueOnce(mockResponse);
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             // Create a mock task element
             const mockTask = document.createElement('div');
@@ -959,11 +961,11 @@ describe('GitHub API', () => {
 
             expect(result).toBe(true);
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.github.com/repos/super3/dashban/issues/123',
+                '/api/github/repos/super3/dashban/issues/123',
                 expect.objectContaining({
                     method: 'PATCH',
                     headers: expect.objectContaining({
-                        'Authorization': 'token test-token'
+                        'Authorization': 'Bearer clerk-jwt'
                     }),
                     body: JSON.stringify({ body: 'Updated description' })
                 })
@@ -987,7 +989,7 @@ describe('GitHub API', () => {
 
         test('updateGitHubIssueDescription should handle no access token', async () => {
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = null;
+            window.GitHubAuth.githubAuth.mode = null;
 
             const result = await window.GitHubAPI.updateGitHubIssueDescription('123', 'New description');
 
@@ -1003,7 +1005,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueDescription('123', 'New description');
 
@@ -1015,7 +1017,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.updateGitHubIssueDescription('123', 'Updated description');
 
@@ -1035,7 +1037,7 @@ describe('GitHub API', () => {
             mockFetch.mockResolvedValueOnce(mockResponse);
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.getGitHubIssueComments('123');
 
@@ -1044,7 +1046,7 @@ describe('GitHub API', () => {
                 expect.objectContaining({
                     method: 'GET',
                     headers: expect.objectContaining({
-                        'Authorization': 'token test-token'
+                        'Authorization': 'Bearer clerk-jwt'
                     })
                 })
             );
@@ -1053,7 +1055,7 @@ describe('GitHub API', () => {
 
         test('getGitHubIssueComments should return empty array when not authenticated', async () => {
             window.GitHubAuth.githubAuth.isAuthenticated = false;
-            window.GitHubAuth.githubAuth.accessToken = null;
+            window.GitHubAuth.githubAuth.mode = null;
 
             const result = await window.GitHubAPI.getGitHubIssueComments('123');
 
@@ -1071,7 +1073,7 @@ describe('GitHub API', () => {
             mockFetch.mockResolvedValueOnce(mockResponse);
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.getGitHubIssueComments('123');
 
@@ -1083,7 +1085,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.getGitHubIssueComments('123');
 
@@ -1105,7 +1107,7 @@ describe('GitHub API', () => {
             mockFetch.mockResolvedValueOnce(mockResponse);
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssueComment('123', 'New comment');
 
@@ -1114,7 +1116,7 @@ describe('GitHub API', () => {
                 expect.objectContaining({
                     method: 'POST',
                     headers: expect.objectContaining({
-                        'Authorization': 'token test-token',
+                        'Authorization': 'Bearer clerk-jwt',
                         'Content-Type': 'application/json'
                     }),
                     body: JSON.stringify({ body: 'New comment' })
@@ -1125,7 +1127,7 @@ describe('GitHub API', () => {
 
         test('createGitHubIssueComment should return null when not authenticated', async () => {
             window.GitHubAuth.githubAuth.isAuthenticated = false;
-            window.GitHubAuth.githubAuth.accessToken = null;
+            window.GitHubAuth.githubAuth.mode = null;
 
             const result = await window.GitHubAPI.createGitHubIssueComment('123', 'New comment');
 
@@ -1143,7 +1145,7 @@ describe('GitHub API', () => {
             mockFetch.mockResolvedValueOnce(mockResponse);
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssueComment('123', 'New comment');
 
@@ -1155,7 +1157,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssueComment('123', 'New comment');
 
@@ -1284,7 +1286,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssue('Test', 'Description');
 
@@ -1295,7 +1297,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssue('Test', 'Description');
 
@@ -1306,7 +1308,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Test error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.loadGitHubIssues();
         });
@@ -1324,7 +1326,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssue('Test', 'Description');
 
@@ -1361,7 +1363,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueTitle('123', 'Updated title');
 
@@ -1396,7 +1398,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueTitle('123', 'Updated title');
 
@@ -1417,7 +1419,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueTitle('123', 'Updated title');
 
@@ -1439,7 +1441,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.reopenGitHubIssue('123');
 
@@ -1472,7 +1474,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.reopenGitHubIssue('123');
 
@@ -1492,7 +1494,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.reopenGitHubIssue('123');
 
@@ -1526,7 +1528,7 @@ describe('GitHub API', () => {
                 });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             // Mock GitHubUI functions
             window.GitHubUI = {
@@ -1560,7 +1562,7 @@ describe('GitHub API', () => {
                 });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             // Mock GitHubUI functions
             window.GitHubUI = {
@@ -1594,7 +1596,7 @@ describe('GitHub API', () => {
                 });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             // Mock GitHubUI functions
             window.GitHubUI = {
@@ -1627,7 +1629,7 @@ describe('GitHub API', () => {
                 });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.loadGitHubIssues();
 
@@ -1650,7 +1652,7 @@ describe('GitHub API', () => {
                 });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await expect(window.GitHubAPI.loadGitHubIssues()).resolves.toBeUndefined();
             expect(mockAlert).not.toHaveBeenCalled();
@@ -1723,7 +1725,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'priority', 'critical');
 
@@ -1759,7 +1761,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'category', 'backend');
 
@@ -1794,7 +1796,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'category', '');
 
@@ -1830,7 +1832,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'priority', 'high');
 
@@ -1862,7 +1864,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'category', 'backend');
 
@@ -1883,7 +1885,7 @@ describe('GitHub API', () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'priority', 'high');
 
@@ -1915,7 +1917,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssue('Test', 'Description');
 
@@ -1938,7 +1940,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.updateGitHubIssueLabels('123', 'review');
 
@@ -1957,7 +1959,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueTitle('123', 'New title');
 
@@ -1976,7 +1978,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueDescription('123', 'New description');
 
@@ -1992,7 +1994,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             // No element with data-issue-number="999" exists in the DOM -> if (taskElement) is false
             const result = await window.GitHubAPI.updateGitHubIssueDescription('999', 'Updated description');
@@ -2010,7 +2012,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.closeGitHubIssue('123');
 
@@ -2029,7 +2031,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.reopenGitHubIssue('123');
 
@@ -2056,7 +2058,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'priority', 'high');
 
@@ -2080,7 +2082,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'priority', '');
 
@@ -2109,7 +2111,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.updateGitHubIssueMetadata('123', 'unknown-type', 'something');
 
@@ -2133,7 +2135,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.getGitHubIssueComments('123');
 
@@ -2150,7 +2152,7 @@ describe('GitHub API', () => {
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             const result = await window.GitHubAPI.createGitHubIssueComment('123', 'New comment');
 
@@ -2180,7 +2182,7 @@ describe('GitHub API', () => {
             window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.loadGitHubIssues();
 
@@ -2192,7 +2194,7 @@ describe('GitHub API', () => {
         test('loadGitHubIssues should use empty headers when no access token is present', async () => {
             // No RateLimit so the plain fetch path is taken with the empty-headers fetchOptions
             window.GitHubAuth.githubAuth.isAuthenticated = false;
-            window.GitHubAuth.githubAuth.accessToken = null;
+            window.GitHubAuth.githubAuth.mode = null;
 
             mockFetch
                 .mockResolvedValueOnce({
@@ -2233,7 +2235,7 @@ describe('GitHub API', () => {
             window.GitHubUI.applyCompletedSectionsToColumn = jest.fn();
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.loadGitHubIssues();
 
@@ -2265,7 +2267,7 @@ describe('GitHub API', () => {
                 });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
-            window.GitHubAuth.githubAuth.accessToken = 'test-token';
+            window.GitHubAuth.githubAuth.mode = 'clerk';
 
             await window.GitHubAPI.loadGitHubIssues();
 

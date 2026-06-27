@@ -36,17 +36,12 @@ function clearRateLimitState() {
 // Check GitHub API rate limit status
 async function checkRateLimit() {
     try {
-        const headers = {};
-        
-        // Add auth header if available
-        if (window.GitHubAuth?.githubAuth?.accessToken) {
-            headers['Authorization'] = `token ${window.GitHubAuth.githubAuth.accessToken}`;
-        }
-        
-        const response = await fetch('https://api.github.com/rate_limit', {
-            headers: headers
-        });
-        
+        // Route through the proxy when signed in (so we see the user's authenticated
+        // limit); fall back to an anonymous request to GitHub otherwise.
+        const response = window.GitHubAuth?.githubFetch
+            ? await window.GitHubAuth.githubFetch('/rate_limit')
+            : await fetch('https://api.github.com/rate_limit');
+
         if (response.ok) {
             const data = await response.json();
             const core = data.resources.core;

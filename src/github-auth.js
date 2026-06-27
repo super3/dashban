@@ -1,4 +1,10 @@
-// GitHub Authentication and Configuration for Dashban Kanban Board
+// GitHub Authentication for Dashban — Clerk "Sign in with GitHub" only.
+//
+// Authentication is handled by Clerk (see clerk-auth.js). When a user signs in,
+// GitHub API calls are routed through the server-side proxy (/api/github), which
+// attaches the user's own GitHub token — so no token is ever stored in the
+// browser. Unauthenticated visitors get read-only public access straight from
+// api.github.com.
 
 // GitHub configuration
 const GITHUB_CONFIG = {
@@ -7,39 +13,28 @@ const GITHUB_CONFIG = {
     repo: 'dashban'
 };
 
-// GitHub authentication state.
-//
-// `mode` records *how* the user is authenticated:
-//   - 'pat'   : a Personal Access Token pasted by the user (talks to api.github.com
-//               directly; this is the fallback used by the static GitHub Pages build).
-//   - 'clerk' : signed in with GitHub via Clerk. GitHub calls are routed through the
-//               server-side proxy (/api/github), which attaches the user's own token,
-//               so `accessToken` stays null in the browser.
-//   - null    : not authenticated.
+// GitHub authentication state. `mode` is 'clerk' when signed in via Clerk, else null.
 let githubAuth = {
     isAuthenticated: false,
-    accessToken: null,
     user: null,
     mode: null
 };
 
-// Whether the user is authenticated by either method. PAT mode requires a stored
-// token; Clerk mode authenticates via the session (the token lives server-side).
+// Whether the user is authenticated (a Clerk session). The real GitHub token
+// lives server-side, so there is nothing token-like to check in the browser.
 function isGitHubAuthed() {
-    return Boolean(githubAuth.isAuthenticated && (githubAuth.accessToken || githubAuth.mode === 'clerk'));
+    return Boolean(githubAuth.isAuthenticated && githubAuth.mode === 'clerk');
 }
 
-// Build the URL and headers for a GitHub REST request, honouring the auth mode.
+// Build the URL and headers for a GitHub REST request.
 //
-// In Clerk mode the call is sent to the same-origin proxy with a Bearer session
-// token; the proxy swaps in the user's real GitHub token. In PAT mode the call
-// goes straight to GitHub with the classic `token` scheme. When unauthenticated
-// (public, read-only browsing) no auth headers are sent — matching GitHub's
-// anonymous access and keeping the request header set empty.
+// Authenticated calls go through the same-origin proxy with a short-lived Clerk
+// session token (the proxy swaps in the user's real GitHub token). Anonymous
+// calls go straight to GitHub for public, read-only access with no auth headers.
 async function buildGitHubRequest(path, extraHeaders = {}) {
     const headers = { ...extraHeaders };
 
-    if (githubAuth.mode === 'clerk') {
+    if (isGitHubAuthed()) {
         const token = window.ClerkAuth ? await window.ClerkAuth.getToken() : null;
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
@@ -48,167 +43,57 @@ async function buildGitHubRequest(path, extraHeaders = {}) {
         return { url: `/api/github${path}`, headers };
     }
 
-    if (githubAuth.accessToken) {
-        headers['Authorization'] = `token ${githubAuth.accessToken}`;
-        headers['Accept'] = 'application/vnd.github.v3+json';
-    }
     return { url: `${GITHUB_CONFIG.apiBaseUrl}${path}`, headers };
 }
 
-// Perform a GitHub REST request through the appropriate transport for the current
-// auth mode. `path` is everything after the API root (e.g. `/repos/o/r/issues`).
+// Perform a GitHub REST request through the appropriate transport for the
+// current auth mode. `path` is everything after the API root.
 async function githubFetch(path, options = {}) {
     const { url, headers } = await buildGitHubRequest(path, options.headers || {});
     return fetch(url, { ...options, headers });
 }
 
-// GitHub Token Modal Functions
-function showGitHubTokenModal() {
-    const gitHubTokenModal = document.getElementById('github-token-modal');
-    const gitHubTokenInput = document.getElementById('github-token-input');
-    if (gitHubTokenModal) {
-        gitHubTokenModal.classList.remove('hidden');
-        if (gitHubTokenInput) {
-            setTimeout(() => gitHubTokenInput.focus(), 100);
-        }
-    }
-}
-
-function hideGitHubTokenModal() {
-    const gitHubTokenModal = document.getElementById('github-token-modal');
-    const gitHubTokenForm = document.getElementById('github-token-form');
-    const gitHubTokenInput = document.getElementById('github-token-input');
-    const tokenEyeIcon = document.getElementById('token-eye-icon');
-    
-    if (gitHubTokenModal) {
-        gitHubTokenModal.classList.add('hidden');
-        if (gitHubTokenForm) {
-            gitHubTokenForm.reset();
-        }
-        // Reset password visibility
-        if (gitHubTokenInput && tokenEyeIcon) {
-            gitHubTokenInput.type = 'password';
-            tokenEyeIcon.className = 'fas fa-eye';
-        }
-    }
-}
-
-// GitHub Personal Access Token Authentication Functions
+// Initialize auth UI. Clerk (clerk-auth.js, kicked off by github.js) drives the
+// actual sign-in and calls back into updateGitHubSignInUI() when the session
+// changes; here we just render the initial signed-out state.
 function initializeGitHubAuth() {
-    // Check for existing token
-    const savedToken = localStorage.getItem('github_access_token');
-    
-    if (savedToken) {
-        validateAndSetToken(savedToken);
-        updateHeaderRepoName();
-        return;
-    }
-    
     updateGitHubSignInUI();
     updateHeaderRepoName();
 }
 
+// Start the Clerk "Sign in with GitHub" flow.
 function signInWithGitHub() {
-    // Prefer Clerk "Sign in with GitHub" when it is available (i.e. the backend
-    // is present). Otherwise fall back to the Personal Access Token modal — this
-    // is the path used by the static GitHub Pages build, which has no backend.
-    if (window.ClerkAuth && window.ClerkAuth.isAvailable()) {
+    if (window.ClerkAuth) {
         window.ClerkAuth.signIn();
-        return;
-    }
-    showGitHubTokenModal();
-}
-
-async function validateAndSetToken(token) {
-    try {
-
-        
-        const response = await fetch(`${GITHUB_CONFIG.apiBaseUrl}/user`, {
-            headers: {
-                'Authorization': `token ${token}`,
-                'Accept': 'application/vnd.github.v3+json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Invalid token');
-        }
-        
-        const user = await response.json();
-        
-        // Store authentication (Personal Access Token mode)
-        githubAuth.isAuthenticated = true;
-        githubAuth.accessToken = token;
-        githubAuth.user = user;
-        githubAuth.mode = 'pat';
-
-        localStorage.setItem('github_access_token', token);
-        
-
-        updateGitHubSignInUI();
-        
-        return true;
-    } catch (error) {
-        // Only log errors in non-test environments
-        /* istanbul ignore next: this console logging only runs outside the Jest test environment */
-        if (typeof jest === 'undefined') {
-            console.error('❌ Token validation failed:', error);
-        }
-        signOutGitHub();
-        return false;
     }
 }
 
+// Sign out via Clerk; its listener (syncAuthState) then clears the shared state
+// and refreshes the UI.
 function signOutGitHub() {
-    // A Clerk session is ended through Clerk; its listener then clears the shared
-    // auth state via syncAuthState(), so there is nothing more to do here.
-    if (githubAuth.mode === 'clerk' && window.ClerkAuth) {
+    if (window.ClerkAuth) {
         window.ClerkAuth.signOut();
-        return;
     }
-
-    // Clear authentication state
-    githubAuth.isAuthenticated = false;
-    githubAuth.accessToken = null;
-    githubAuth.user = null;
-    githubAuth.mode = null;
-
-    // Clear stored access token
-    localStorage.removeItem('github_access_token');
-    
-    // Update UI
-    updateGitHubSignInUI();
-    
-    
-    
-    // Show reconnection message
-    setTimeout(() => {
-        if (window.location.href.includes('localhost') || window.location.href.includes('127.0.0.1')) {
-            console.log('💡 To reconnect, click "Connect to GitHub" and add your Personal Access Token');
-        }
-    }, 100);
 }
 
 function updateGitHubSignInUI() {
     // Find the GitHub button in header - it might have href="#" or the original URL
-    const signInButton = document.querySelector('header a[href="https://github.com/super3/dashban"]') || 
+    const signInButton = document.querySelector('header a[href="https://github.com/super3/dashban"]') ||
                         document.querySelector('header a[href="#"]') ||
                         document.querySelector('header .flex.items-center.space-x-2:last-child a');
     if (!signInButton) {
-        // Only warn in non-test environments (when we're not in JSDOM)
+        /* istanbul ignore next: warning only fires outside the jsdom test environment */
         if (typeof navigator !== 'undefined' && !navigator.userAgent.includes('jsdom')) {
             console.warn('⚠️ GitHub sign-in button not found in header');
         }
         return;
     }
-    
 
-    
     if (isGitHubAuthed() && githubAuth.user) {
-        // Fully authenticated (Clerk session or PAT) - setup dropdown
+        // Signed in - show the user menu dropdown.
         const container = signInButton.parentElement;
         container.style.position = 'relative';
-        
+
         signInButton.innerHTML = `
             <i class="fas fa-user text-xs"></i>
             <span>${githubAuth.user.login}</span>
@@ -222,12 +107,12 @@ function updateGitHubSignInUI() {
             toggleUserDropdown();
         };
     } else {
-        // Not authenticated
+        // Signed out.
         signInButton.innerHTML = `
             <i class="fab fa-github"></i>
-            <span>Connect to GitHub</span>
+            <span>Sign in with GitHub</span>
         `;
-        signInButton.title = 'Add Personal Access Token to create issues';
+        signInButton.title = 'Sign in with GitHub to create issues';
         signInButton.href = '#';
         signInButton.className = 'flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
         signInButton.onclick = (e) => {
@@ -235,10 +120,7 @@ function updateGitHubSignInUI() {
             signInWithGitHub();
         };
     }
-    
-    // Update GitHub option in form
-    updateGitHubOptionUI();
-    
+
     // Update Add Issue button state
     updateAddIssueButtonState();
 }
@@ -248,9 +130,9 @@ function updateAddIssueButtonState() {
     if (!addIssueButton) {
         return;
     }
-    
+
     const isAuthenticated = isGitHubAuthed() && Boolean(githubAuth.user);
-    
+
     if (isAuthenticated) {
         // Enable the button
         addIssueButton.disabled = false;
@@ -260,112 +142,25 @@ function updateAddIssueButtonState() {
         // Disable the button
         addIssueButton.disabled = true;
         addIssueButton.className = 'bg-gray-400 cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2';
-        addIssueButton.title = 'Connect to GitHub first to create issues';
+        addIssueButton.title = 'Sign in with GitHub first to create issues';
     }
 }
 
-function promptForAccessToken() {
-    showGitHubTokenModal();
-}
-
-function updateGitHubOptionUI() {
-    // GitHub option UI has been removed from the Add Issue modal
-    // This function is kept for backward compatibility but does nothing
-    return;
-}
-
-// Initialize modal event listeners when DOM is loaded
-function initializeAuthModalListeners() {
-    // Set up GitHub token modal event listeners
-    const gitHubTokenModal = document.getElementById('github-token-modal');
-    const gitHubTokenForm = document.getElementById('github-token-form');
-    const gitHubTokenInput = document.getElementById('github-token-input');
-    const cancelGitHubTokenBtn = document.getElementById('cancel-github-token');
-    const toggleTokenVisibilityBtn = document.getElementById('toggle-token-visibility');
-    const tokenEyeIcon = document.getElementById('token-eye-icon');
-
-    // Toggle token visibility
-    if (toggleTokenVisibilityBtn && gitHubTokenInput && tokenEyeIcon) {
-        toggleTokenVisibilityBtn.addEventListener('click', () => {
-            if (gitHubTokenInput.type === 'password') {
-                gitHubTokenInput.type = 'text';
-                tokenEyeIcon.className = 'fas fa-eye-slash';
-            } else {
-                gitHubTokenInput.type = 'password';
-                tokenEyeIcon.className = 'fas fa-eye';
-            }
-        });
-    }
-
-    // Handle cancel button
-    if (cancelGitHubTokenBtn) {
-        cancelGitHubTokenBtn.addEventListener('click', () => {
-            hideGitHubTokenModal();
-            updateGitHubSignInUI();
-        });
-    }
-
-    // Handle form submission
-    if (gitHubTokenForm) {
-        gitHubTokenForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(gitHubTokenForm);
-            const token = formData.get('token');
-            
-            if (!token || !token.trim()) {
-                alert('Please enter a valid Personal Access Token');
-                return;
-            }
-
-            const saveButton = gitHubTokenForm.querySelector('button[type="submit"]');
-            if (saveButton) {
-                saveButton.disabled = true;
-                saveButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Validating...';
-            }
-
-            try {
-                const success = await validateAndSetToken(token.trim());
-                if (success) {
-                    hideGitHubTokenModal();
-                    // Force UI update after modal closes
-                    updateGitHubSignInUI();
-                }
-            } finally {
-                if (saveButton) {
-                    saveButton.disabled = false;
-                    saveButton.innerHTML = '<i class="fas fa-key mr-2"></i>Save Token';
-                }
-            }
-        });
-    }
-
-    // Close modal when clicking outside
-    if (gitHubTokenModal) {
-        gitHubTokenModal.addEventListener('click', (e) => {
-            if (e.target === gitHubTokenModal) {
-                hideGitHubTokenModal();
-                updateGitHubSignInUI();
-            }
-        });
-    }
-}
-
-// Function to toggle user dropdown menu
+// Toggle the signed-in user dropdown menu (Sign out).
 function toggleUserDropdown() {
     const signInButton = document.querySelector('header a[href="#"]') ||
                         document.querySelector('header .flex.items-center.space-x-2:last-child a');
     if (!signInButton) return;
-    
+
     const container = signInButton.parentElement;
-    
+
     // Remove existing dropdown
     const existingDropdown = container.querySelector('.user-dropdown');
     if (existingDropdown) {
         existingDropdown.remove();
         return;
     }
-    
+
     // Create dropdown
     const dropdown = document.createElement('div');
     dropdown.className = 'user-dropdown absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50';
@@ -375,13 +170,13 @@ function toggleUserDropdown() {
             <span>Sign out</span>
         </button>
     `;
-    
+
     // Add click handler for sign out
     dropdown.querySelector('button').onclick = () => {
         dropdown.remove();
         signOutGitHub();
     };
-    
+
     // Close dropdown when clicking outside
     setTimeout(() => {
         document.addEventListener('click', function closeDropdown(e) {
@@ -391,7 +186,7 @@ function toggleUserDropdown() {
             }
         });
     }, 0);
-    
+
     container.appendChild(dropdown);
 }
 
@@ -400,7 +195,7 @@ function updateHeaderRepoName() {
     const repoNameElement = document.getElementById('repo-name');
     if (repoNameElement && GITHUB_CONFIG) {
         const { repo } = GITHUB_CONFIG;
-        
+
         // Update just the repo name text
         repoNameElement.textContent = repo;
     }
@@ -412,7 +207,7 @@ window.GitHubAuth = {
     GITHUB_CONFIG,
     githubAuth,
 
-    // Mode-aware request layer (used by github-api.js and repo.js)
+    // Mode-aware request layer (used by github-api.js, repo.js and labels.js)
     isGitHubAuthed,
     buildGitHubRequest,
     githubFetch,
@@ -420,19 +215,11 @@ window.GitHubAuth = {
     // Authentication functions
     initializeGitHubAuth,
     signInWithGitHub,
-    validateAndSetToken,
     signOutGitHub,
     updateGitHubSignInUI,
-    updateGitHubOptionUI,
     updateAddIssueButtonState,
-    promptForAccessToken,
-    
-    // Modal functions
-    showGitHubTokenModal,
-    hideGitHubTokenModal,
-    initializeAuthModalListeners,
-    
+
     // UI functions
     toggleUserDropdown,
     updateHeaderRepoName
-}; 
+};

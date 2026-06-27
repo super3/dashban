@@ -1,13 +1,13 @@
-// Clerk-based "Sign in with GitHub" for Dashban.
+// Clerk-based "Sign in with GitHub" for Dashban — the only authentication method.
 //
-// This is the primary authentication path when the app is served by its backend
-// (e.g. on Railway): the user signs in with their own GitHub account through
-// Clerk, and GitHub API calls are routed through the server-side proxy, which
-// attaches the user's own token. The browser never sees a GitHub token.
+// When the app is served by its backend (e.g. on Railway) the user signs in with
+// their own GitHub account through Clerk, and GitHub API calls are routed through
+// the server-side proxy, which attaches the user's own token. The browser never
+// sees a GitHub token.
 //
 // When the app is served without a backend (the static GitHub Pages build),
-// /api/config is unavailable, Clerk stays disabled, and github-auth.js falls
-// back to the manual Personal Access Token flow. Initialization is driven by
+// /api/config is unavailable and Clerk stays disabled — that build is then
+// read-only (anonymous, public issues only). Initialization is driven by
 // github.js so the module has no side effects at load time.
 (function () {
     'use strict';
@@ -104,13 +104,11 @@
         const user = window.Clerk && window.Clerk.user;
         if (user) {
             auth.isAuthenticated = true;
-            auth.accessToken = null;
             auth.mode = 'clerk';
             auth.user = { login: githubUsername(user) };
         } else if (auth.mode === 'clerk') {
             // Was signed in with Clerk, now signed out.
             auth.isAuthenticated = false;
-            auth.accessToken = null;
             auth.mode = null;
             auth.user = null;
         } else {

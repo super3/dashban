@@ -87,18 +87,15 @@ async function loadRequiredLabels() {
 
 // Check which labels exist in the repository
 async function checkExistingLabels() {
-    if (!window.GitHubAuth?.githubAuth?.isAuthenticated || !window.GitHubAuth?.githubAuth?.accessToken) {
+    if (!window.GitHubAuth?.isGitHubAuthed?.()) {
         console.log('❌ Not authenticated with GitHub - cannot check labels');
         return [];
     }
 
     try {
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/labels`, {
-            headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`
-            }
-        });
+        const response = await window.GitHubAuth.githubFetch(
+            `/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/labels`
+        );
 
         if (!response.ok) {
             throw new Error(`GitHub API error: ${response.status}`);
@@ -134,7 +131,7 @@ async function findMissingLabels() {
 
 // Install missing labels
 async function installMissingLabels(missingLabels) {
-    if (!window.GitHubAuth?.githubAuth?.isAuthenticated || !window.GitHubAuth?.githubAuth?.accessToken) {
+    if (!window.GitHubAuth?.isGitHubAuthed?.()) {
         throw new Error('Not authenticated with GitHub');
     }
 
@@ -145,11 +142,9 @@ async function installMissingLabels(missingLabels) {
 
     for (const label of missingLabels) {
         try {
-            const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/labels`, {
+            const response = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/labels`, {
                 method: 'POST',
                 headers: {
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
