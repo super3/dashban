@@ -576,14 +576,15 @@ describe('GitHub API', () => {
             expect(window.updateColumnCounts).toHaveBeenCalled();
         });
 
-        test('archiveGitHubIssue should handle API errors', async () => {
+        test('archiveGitHubIssue keeps the card and warns about write access on 403', async () => {
             const mockElement = {
                 remove: jest.fn()
             };
 
             mockFetch.mockResolvedValueOnce({
                 ok: false,
-                status: 403
+                status: 403,
+                json: async () => ({ message: 'Resource not accessible by integration' })
             });
 
             window.GitHubAuth.githubAuth.isAuthenticated = true;
@@ -591,11 +592,13 @@ describe('GitHub API', () => {
 
             await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
 
-            expect(mockElement.remove).toHaveBeenCalled();
-            expect(window.updateColumnCounts).toHaveBeenCalled();
+            // The archive did not happen on GitHub, so the card must stay put.
+            expect(mockElement.remove).not.toHaveBeenCalled();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining("Couldn't archive this issue on GitHub"));
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('write access to this repository'));
         });
 
-        test('archiveGitHubIssue should handle API error with missing message', async () => {
+        test('archiveGitHubIssue keeps the card on a generic API error', async () => {
             const mockElement = {
                 remove: jest.fn()
             };
@@ -611,12 +614,11 @@ describe('GitHub API', () => {
 
             await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
 
-            expect(mockElement.remove).toHaveBeenCalled();
-            expect(window.updateColumnCounts).toHaveBeenCalled();
+            expect(mockElement.remove).not.toHaveBeenCalled();
             expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('GitHub API error: 500 - Unknown error'));
         });
 
-        test('archiveGitHubIssue should handle network errors', async () => {
+        test('archiveGitHubIssue keeps the card on a network error', async () => {
             const mockElement = {
                 remove: jest.fn()
             };
@@ -628,12 +630,11 @@ describe('GitHub API', () => {
 
             await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
 
-            expect(mockElement.remove).toHaveBeenCalled();
-            expect(window.updateColumnCounts).toHaveBeenCalled();
-            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to add archive label to GitHub issue'));
+            expect(mockElement.remove).not.toHaveBeenCalled();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining("Couldn't archive this issue on GitHub"));
         });
 
-        test('archiveGitHubIssue should handle JSON parsing errors', async () => {
+        test('archiveGitHubIssue keeps the card when the error body cannot be parsed', async () => {
             const mockElement = {
                 remove: jest.fn()
             };
@@ -651,9 +652,8 @@ describe('GitHub API', () => {
 
             await window.GitHubAPI.archiveGitHubIssue('123', mockElement);
 
-            expect(mockElement.remove).toHaveBeenCalled();
-            expect(window.updateColumnCounts).toHaveBeenCalled();
-            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Failed to add archive label to GitHub issue'));
+            expect(mockElement.remove).not.toHaveBeenCalled();
+            expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining("Couldn't archive this issue on GitHub"));
         });
 
         test('archiveGitHubIssue should handle error logging in non-jest environment', async () => {

@@ -52,11 +52,14 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
         
     } catch (error) {
         console.error('❌ Failed to archive GitHub issue:', error);
-        
-        // Show user-friendly error message but still remove from UI
-        notifyError(`Failed to add archive label to GitHub issue: ${error.message}\n\nThe task will be removed from the board anyway.`);
-        taskElement.remove();
-        window.updateColumnCounts();
+
+        // The archive did NOT take effect on GitHub, so keep the card — removing
+        // it would desync (it reappears on the next reload). 403 / "not accessible"
+        // almost always means the signed-in user lacks write access to the repo.
+        const hint = /403|not accessible/i.test(error.message)
+            ? ' You may not have write access to this repository.'
+            : '';
+        notifyError(`Couldn't archive this issue on GitHub: ${error.message}.${hint}`);
     }
 }
 
