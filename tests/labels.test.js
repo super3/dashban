@@ -12,13 +12,17 @@ const mockConsoleError = jest.fn();
 const mockGitHubAuth = {
     githubAuth: {
         isAuthenticated: true,
-        accessToken: 'test-token'
+        mode: 'clerk'
     },
     GITHUB_CONFIG: {
         apiBaseUrl: 'https://api.github.com',
         owner: 'super3',
         repo: 'dashban'
-    }
+    },
+    isGitHubAuthed() {
+        return Boolean(this.githubAuth && this.githubAuth.isAuthenticated && this.githubAuth.mode === 'clerk');
+    },
+    githubFetch: (...args) => mockFetch(...args)
 };
 
 // Set up window mock before loading module
@@ -53,17 +57,21 @@ describe('GitHub Labels Management', () => {
             <button id="install-labels-btn">Install Labels</button>
         `;
 
-        // Reset GitHubAuth to default state
+        // Reset GitHubAuth to default state (signed in via Clerk)
         window.GitHubAuth = {
             githubAuth: {
                 isAuthenticated: true,
-                accessToken: 'test-token'
+                mode: 'clerk'
             },
             GITHUB_CONFIG: {
                 apiBaseUrl: 'https://api.github.com',
                 owner: 'super3',
                 repo: 'dashban'
-            }
+            },
+            isGitHubAuthed() {
+                return Boolean(this.githubAuth && this.githubAuth.isAuthenticated && this.githubAuth.mode === 'clerk');
+            },
+            githubFetch: (...args) => mockFetch(...args)
         };
 
         // Mock global objects
@@ -120,15 +128,7 @@ describe('GitHub Labels Management', () => {
 
             const result = await checkExistingLabels();
 
-            expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.github.com/repos/super3/dashban/labels',
-                {
-                    headers: {
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Authorization': 'token test-token'
-                    }
-                }
-            );
+            expect(mockFetch).toHaveBeenCalledWith('/repos/super3/dashban/labels');
 
             expect(result).toEqual(['bug', 'enhancement', 'in progress']);
         });
@@ -142,8 +142,8 @@ describe('GitHub Labels Management', () => {
             expect(mockConsoleLog).toHaveBeenCalledWith('❌ Not authenticated with GitHub - cannot check labels');
         });
 
-        test('should return empty array when no access token', async () => {
-            window.GitHubAuth.githubAuth.accessToken = null;
+        test('should return empty array when not in Clerk mode', async () => {
+            window.GitHubAuth.githubAuth.mode = null;
 
             const result = await checkExistingLabels();
 
@@ -298,20 +298,16 @@ describe('GitHub Labels Management', () => {
 
             expect(mockFetch).toHaveBeenCalledTimes(2);
             expect(mockFetch).toHaveBeenNthCalledWith(1,
-                'https://api.github.com/repos/super3/dashban/labels',
-                {
+                '/repos/super3/dashban/labels',
+                expect.objectContaining({
                     method: 'POST',
-                    headers: {
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Authorization': 'token test-token',
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name: 'bug',
                         description: 'Bug',
                         color: 'EF4444'
                     })
-                }
+                })
             );
         });
 
@@ -356,8 +352,8 @@ describe('GitHub Labels Management', () => {
                 .rejects.toThrow('Not authenticated with GitHub');
         });
 
-        test('should throw error when no access token', async () => {
-            window.GitHubAuth.githubAuth.accessToken = null;
+        test('should throw error when not in Clerk mode', async () => {
+            window.GitHubAuth.githubAuth.mode = null;
             const missingLabels = [{ name: 'bug', description: 'Bug', color: 'EF4444' }];
 
             await expect(installMissingLabels(missingLabels))

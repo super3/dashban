@@ -123,6 +123,8 @@ describe('Rate Limit Management', () => {
 
     describe('checkRateLimit', () => {
         test('should successfully check rate limit with authentication', async () => {
+            // Signed in: checkRateLimit goes through the proxy via githubFetch.
+            window.GitHubAuth.githubFetch = (path) => global.fetch(`/api/github${path}`);
             const mockResponse = {
                 ok: true,
                 json: jest.fn().mockResolvedValue({
@@ -139,11 +141,7 @@ describe('Rate Limit Management', () => {
 
             const result = await RateLimit.checkRateLimit();
 
-            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit', {
-                headers: {
-                    'Authorization': 'token test-token'
-                }
-            });
+            expect(global.fetch).toHaveBeenCalledWith('/api/github/rate_limit');
             expect(result).toEqual({
                 isLimited: false,
                 remaining: 4500,
@@ -155,8 +153,8 @@ describe('Rate Limit Management', () => {
             expect(RateLimit.state.resetTime).toBe(1600000);
         });
 
-        test('should check rate limit without authentication', async () => {
-            window.GitHubAuth.githubAuth.accessToken = null;
+        test('should check rate limit anonymously when no proxy is available', async () => {
+            // No githubFetch on GitHubAuth -> falls back to an anonymous request.
             const mockResponse = {
                 ok: true,
                 json: jest.fn().mockResolvedValue({
@@ -173,9 +171,7 @@ describe('Rate Limit Management', () => {
 
             await RateLimit.checkRateLimit();
 
-            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit', {
-                headers: {}
-            });
+            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit');
         });
 
         test('should handle rate limit exceeded (remaining = 0)', async () => {
@@ -277,9 +273,7 @@ describe('Rate Limit Management', () => {
 
             await RateLimit.checkRateLimit();
 
-            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit', {
-                headers: {}
-            });
+            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit');
         });
     });
 
@@ -381,15 +375,30 @@ describe('Rate Limit Management', () => {
             expect(document.getElementById('rate-limit-banner').className).toContain('bg-yellow-50');
         });
 
-        test('should use default values for missing headers', () => {
+        test('falls back to default limit/reset when only the remaining header is present', () => {
+            mockResponse.status = 403;
+            mockResponse.headers.get.mockImplementation(header =>
+                header === 'x-ratelimit-remaining' ? '0' : null
+            );
+
+            const result = RateLimit.handleApiResponse(mockResponse);
+
+            expect(result).toBe(true);
+            expect(RateLimit.state.limit).toBe(5000); // default when header absent
+            expect(RateLimit.state.resetTime).toBe(0); // default when header absent
+        });
+
+        test('should NOT flag a rate limit when rate-limit headers are missing', () => {
+            // Behind the proxy, a response (or a proxy/auth error) may carry no
+            // x-ratelimit-* headers. That must not be mistaken for a 0-remaining
+            // rate limit, so handleApiResponse reports "not limited" and shows nothing.
             mockResponse.headers.get.mockReturnValue(null);
 
             const result = RateLimit.handleApiResponse(mockResponse);
 
-            expect(result).toBe(true); // Because remaining defaults to 0
-            expect(RateLimit.state.remaining).toBe(0);
-            expect(RateLimit.state.limit).toBe(5000);
-            expect(RateLimit.state.resetTime).toBe(0);
+            expect(result).toBe(false);
+            expect(RateLimit.state.isLimited).toBe(false);
+            expect(document.getElementById('rate-limit-banner').classList.contains('hidden')).toBe(true);
         });
     });
 
@@ -696,23 +705,16 @@ describe('Rate Limit Management', () => {
                 .rejects.toThrow('Rate limit exceeded');
         });
 
-        test('should handle rate limit error and show banner', async () => {
-            global.fetch.mockRejectedValue(new Error('Rate limit exceeded'));
-
-            await expect(RateLimit.rateLimitedFetch('https://example.com'))
-                .rejects.toThrow('Rate limit');
-
-            expect(RateLimit.state.isLimited).toBe(true);
-            expect(document.getElementById('rate-limit-banner').classList.contains('hidden')).toBe(false);
-        });
-
-        test('should handle 403 error and show banner', async () => {
+        test('propagates a rejected fetch without fabricating a rate-limit banner', async () => {
+            // Regression: a network/auth failure (even one whose message mentions
+            // 403) must NOT surface a phantom "0/5000 - resets in 60 minutes" banner.
             global.fetch.mockRejectedValue(new Error('Forbidden 403'));
 
             await expect(RateLimit.rateLimitedFetch('https://example.com'))
                 .rejects.toThrow('403');
 
-            expect(RateLimit.state.isLimited).toBe(true);
+            expect(RateLimit.state.isLimited).toBe(false);
+            expect(document.getElementById('rate-limit-banner').classList.contains('hidden')).toBe(true);
         });
 
         test('should handle other errors without setting rate limit', async () => {
@@ -779,7 +781,7 @@ describe('Rate Limit Management', () => {
             intervalCallback();
             
             // Since checkRateLimit makes a fetch call, we can verify it was called
-            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit', expect.any(Object));
+            expect(global.fetch).toHaveBeenCalledWith('https://api.github.com/rate_limit');
         });
 
         test('should not execute periodic check when rate limited', () => {

@@ -8,12 +8,18 @@
 // the repo root, so server code, package metadata and any .env stay private.
 const express = require('express');
 const path = require('path');
-const { clerkMiddleware, requireAuth, getAuth, clerkClient } = require('@clerk/express');
+const { clerkMiddleware, getAuth, clerkClient } = require('@clerk/express');
 
 const app = express();
 app.use(express.json());
 
 const ROOT = __dirname;
+
+// Browser-safe Clerk publishable key (ships to every visitor anyway). Used both
+// to configure the frontend (/api/config) and to initialize the Clerk middleware
+// server-side, so the proxy works even when CLERK_PUBLISHABLE_KEY is not set in
+// the environment. The SECRET key, by contrast, must always come from the env.
+const DEFAULT_CLERK_PUBLISHABLE_KEY = 'pk_test_YWJsZS1hbGJhY29yZS01Ny5jbGVyay5hY2NvdW50cy5kZXYk';
 
 // Liveness/health check (used by Railway and uptime monitors).
 app.get('/api/health', (req, res) => {
@@ -23,14 +29,11 @@ app.get('/api/health', (req, res) => {
 // Public, browser-safe configuration the frontend reads at startup (e.g. to
 // initialize Clerk). Only non-secret values belong here.
 //
-// The Clerk publishable key is browser-safe (it ships to every visitor anyway),
-// so it is hardcoded as the default. An env override is only needed to point at
-// a different Clerk instance, e.g. a production `pk_live_` key. The SECRET key,
-// by contrast, must always come from the environment.
+// An env override (CLERK_PUBLISHABLE_KEY) is only needed to point at a different
+// Clerk instance, e.g. a production `pk_live_` key.
 app.get('/api/config', (req, res) => {
     res.json({
-        clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY ||
-            'pk_test_YWJsZS1hbGJhY29yZS01Ny5jbGVyay5hY2NvdW50cy5kZXYk',
+        clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || DEFAULT_CLERK_PUBLISHABLE_KEY,
         githubRepo: process.env.GITHUB_REPO || 'super3/dashban'
     });
 });
@@ -43,8 +46,17 @@ app.get('/api/config', (req, res) => {
 // Only mounted when Clerk is configured; otherwise we return a clear 503 rather
 // than letting the Clerk middleware throw a 500 (so the board still runs before
 // the keys are set).
+//
+// We attach `clerkMiddleware` (which decorates the request with auth state) and
+// then check the session ourselves in `githubProxy`, returning a clean JSON 401
+// for unauthenticated requests. This is the pattern Clerk now recommends over the
+// deprecated `requireAuth()`, which redirects unauthenticated callers to a
+// sign-in URL instead of answering an API request with a 401.
 if (process.env.CLERK_SECRET_KEY) {
-    app.use('/api/github', clerkMiddleware(), requireAuth(), githubProxy);
+    app.use('/api/github', clerkMiddleware({
+        publishableKey: process.env.CLERK_PUBLISHABLE_KEY || DEFAULT_CLERK_PUBLISHABLE_KEY,
+        secretKey: process.env.CLERK_SECRET_KEY
+    }), githubProxy);
 } else {
     app.use('/api/github', (req, res) => {
         res.status(503).json({ error: 'GitHub proxy is not configured (set CLERK_SECRET_KEY).' });
@@ -53,6 +65,9 @@ if (process.env.CLERK_SECRET_KEY) {
 
 async function githubProxy(req, res) {
     const { userId } = getAuth(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
 
     let githubToken;
     try {
@@ -90,10 +105,26 @@ async function githubProxy(req, res) {
 
     const body = await githubResponse.text();
     res.status(githubResponse.status);
-    const contentType = githubResponse.headers.get('content-type');
-    if (contentType) {
-        res.set('Content-Type', contentType);
-    }
+
+    // Forward GitHub's content type plus its rate-limit headers, so the browser
+    // can both render responses and tell a real rate limit (x-ratelimit-remaining: 0)
+    // apart from a proxy/auth error. Without these, the frontend can't distinguish
+    // them and may misreport an auth failure as a rate limit.
+    const passthroughHeaders = [
+        'content-type',
+        'x-ratelimit-limit',
+        'x-ratelimit-remaining',
+        'x-ratelimit-reset',
+        'x-ratelimit-used',
+        'x-ratelimit-resource',
+        'retry-after'
+    ];
+    passthroughHeaders.forEach((name) => {
+        const value = githubResponse.headers.get(name);
+        if (value) {
+            res.set(name, value);
+        }
+    });
     res.send(body);
 }
 

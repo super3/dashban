@@ -35,7 +35,7 @@ document.body.innerHTML = `
     <button id="add-task-btn"></button>
 `;
 
-// Mock window.GitHubAuth
+// Mock window.GitHubAuth, including the mode-aware request layer repo.js uses.
 global.window.GitHubAuth = {
     GITHUB_CONFIG: {
         owner: 'super3',
@@ -43,7 +43,19 @@ global.window.GitHubAuth = {
     },
     githubAuth: {
         isAuthenticated: false,
-        accessToken: null
+        accessToken: null,
+        mode: null
+    },
+    isGitHubAuthed() {
+        return Boolean(
+            this.githubAuth.isAuthenticated &&
+            (this.githubAuth.accessToken || this.githubAuth.mode === 'clerk')
+        );
+    },
+    githubFetch(path, options) {
+        // Tests stub global.fetch by call order; the transport detail is covered
+        // in github-auth.test.js, so here we just forward to the mocked fetch.
+        return global.fetch(`https://api.github.com${path}`, options);
     }
 };
 
@@ -80,6 +92,7 @@ describe('Repository Management', () => {
         // Reset GitHubAuth mock state
         global.window.GitHubAuth.githubAuth.isAuthenticated = false;
         global.window.GitHubAuth.githubAuth.accessToken = null;
+        global.window.GitHubAuth.githubAuth.mode = null;
         global.window.GitHubAuth.GITHUB_CONFIG.owner = 'super3';
         global.window.GitHubAuth.GITHUB_CONFIG.repo = 'dashban';
         
@@ -188,6 +201,33 @@ describe('Repository Management', () => {
             const result = await window.RepoManager.validateRepository('super3', 'dashban');
 
             expect(result.valid).toBe(true);
+            expect(result.accessLevel).toBe('full');
+            expect(result.canModify).toBe(true);
+            expect(fetch).toHaveBeenCalledTimes(2);
+        });
+
+        test('validateRepository validates a private repo and detects write access in Clerk mode', async () => {
+            // Per-user model: signed in via Clerk (no PAT in the browser), pointing
+            // the board at the user's own private repo. The authenticated existence
+            // check makes the private repo visible and surfaces write permissions.
+            window.GitHubAuth.githubAuth.isAuthenticated = true;
+            window.GitHubAuth.githubAuth.accessToken = null;
+            window.GitHubAuth.githubAuth.mode = 'clerk';
+
+            const privateRepo = {
+                name: 'secret',
+                owner: { login: 'me' },
+                private: true,
+                open_issues_count: 3,
+                permissions: { push: true, admin: false }
+            };
+            fetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(privateRepo) });
+            fetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(privateRepo) });
+
+            const result = await window.RepoManager.validateRepository('me', 'secret');
+
+            expect(result.valid).toBe(true);
+            expect(result.isPrivate).toBe(true);
             expect(result.accessLevel).toBe('full');
             expect(result.canModify).toBe(true);
             expect(fetch).toHaveBeenCalledTimes(2);

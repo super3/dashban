@@ -17,7 +17,7 @@ function notifyError(message) {
 
 // Archive GitHub issue by adding "archive" label
 async function archiveGitHubIssue(issueNumber, taskElement) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    if (!window.GitHubAuth.isGitHubAuthed()) {
         console.log('❌ Not authenticated with GitHub - cannot archive issue');
         // Remove from UI anyway
         taskElement.remove();
@@ -29,11 +29,9 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
 
 
         // Add "archive" label to the issue
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
+        const response = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
             method: 'POST',
             headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -54,17 +52,20 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
         
     } catch (error) {
         console.error('❌ Failed to archive GitHub issue:', error);
-        
-        // Show user-friendly error message but still remove from UI
-        notifyError(`Failed to add archive label to GitHub issue: ${error.message}\n\nThe task will be removed from the board anyway.`);
-        taskElement.remove();
-        window.updateColumnCounts();
+
+        // The archive did NOT take effect on GitHub, so keep the card — removing
+        // it would desync (it reappears on the next reload). 403 / "not accessible"
+        // almost always means the signed-in user lacks write access to the repo.
+        const hint = /403|not accessible/i.test(error.message)
+            ? ' You may not have write access to this repository.'
+            : '';
+        notifyError(`Couldn't archive this issue on GitHub: ${error.message}.${hint}`);
     }
 }
 
 // Update GitHub issue labels when moved between columns
 async function updateGitHubIssueLabels(issueNumber, newColumn) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    if (!window.GitHubAuth.isGitHubAuthed()) {
         console.log('❌ Not authenticated with GitHub - cannot update issue labels');
         return;
     }
@@ -73,12 +74,7 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
 
 
         // First, get current issue to preserve existing labels
-        const getResponse = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}?_t=${Date.now()}`, {
-            headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`
-            }
-        });
+        const getResponse = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}?_t=${Date.now()}`);
 
         if (!getResponse.ok) {
             throw new Error(`Failed to fetch issue: ${getResponse.status}`);
@@ -107,11 +103,9 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
         const updatedLabels = newLabel ? [...filteredLabels, newLabel] : filteredLabels;
 
         // Update labels via API
-        const updateResponse = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
+        const updateResponse = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
             method: 'PUT',
             headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -137,18 +131,16 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
 
 // Update GitHub issue title
 async function updateGitHubIssueTitle(issueNumber, newTitle) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    if (!window.GitHubAuth.isGitHubAuthed()) {
         console.log('❌ Not authenticated with GitHub - cannot update issue title');
         return false;
     }
 
     try {
         // Update the issue title via API
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
+        const response = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
             method: 'PATCH',
             headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -176,18 +168,16 @@ async function updateGitHubIssueTitle(issueNumber, newTitle) {
 
 // Update GitHub issue description
 async function updateGitHubIssueDescription(issueNumber, newDescription) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    if (!window.GitHubAuth.isGitHubAuthed()) {
         console.log('❌ Not authenticated with GitHub - cannot update issue description');
         return false;
     }
 
     try {
         // Update the issue description via API
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
+        const response = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
             method: 'PATCH',
             headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -222,7 +212,7 @@ async function updateGitHubIssueDescription(issueNumber, newDescription) {
 
 // Close GitHub issue when moved to Done column
 async function closeGitHubIssue(issueNumber) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    if (!window.GitHubAuth.isGitHubAuthed()) {
         console.log('❌ Not authenticated with GitHub - cannot close issue');
         return;
     }
@@ -231,11 +221,9 @@ async function closeGitHubIssue(issueNumber) {
 
 
         // Close the issue via API
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
+        const response = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
             method: 'PATCH',
             headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -261,18 +249,16 @@ async function closeGitHubIssue(issueNumber) {
 
 // Reopen GitHub issue
 async function reopenGitHubIssue(issueNumber) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    if (!window.GitHubAuth.isGitHubAuthed()) {
         console.log('❌ Not authenticated with GitHub - cannot reopen issue');
         return;
     }
 
     try {
         // Reopen the issue via API
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
+        const response = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}`, {
             method: 'PATCH',
             headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -297,19 +283,14 @@ async function reopenGitHubIssue(issueNumber) {
 
 // Update GitHub issue priority or category label
 async function updateGitHubIssueMetadata(issueNumber, type, newValue) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    if (!window.GitHubAuth.isGitHubAuthed()) {
         console.log('❌ Not authenticated with GitHub - cannot update issue metadata');
         return false;
     }
 
     try {
         // First, get current issue to preserve existing labels
-        const getResponse = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}?_t=${Date.now()}`, {
-            headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`
-            }
-        });
+        const getResponse = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}?_t=${Date.now()}`);
 
         if (!getResponse.ok) {
             throw new Error(`Failed to fetch issue: ${getResponse.status}`);
@@ -343,11 +324,9 @@ async function updateGitHubIssueMetadata(issueNumber, type, newValue) {
         }
 
         // Update labels via API
-        const updateResponse = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
+        const updateResponse = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/labels`, {
             method: 'PUT',
             headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -374,7 +353,7 @@ async function updateGitHubIssueMetadata(issueNumber, type, newValue) {
 
 // Create GitHub issue via API
 async function createGitHubIssue(title, description, labels = []) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    if (!window.GitHubAuth.isGitHubAuthed()) {
         console.log('❌ Not authenticated with GitHub - cannot create issue');
         return null;
     }
@@ -382,11 +361,9 @@ async function createGitHubIssue(title, description, labels = []) {
     try {
 
 
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues`, {
+        const response = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues`, {
             method: 'POST',
             headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -427,32 +404,42 @@ async function loadGitHubIssues() {
     try {
         
         
-        // Fetch both open and closed issues with cache-busting
+        // Fetch both open and closed issues with cache-busting. buildGitHubRequest
+        // selects the right transport (the /api/github proxy in Clerk mode, or
+        // api.github.com otherwise) and the matching auth headers; unauthenticated
+        // browsing sends no auth headers, preserving anonymous read-only access.
         const timestamp = Date.now();
-        const fetchOptions = {
-            headers: window.GitHubAuth?.githubAuth?.accessToken ? {
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
-                'Accept': 'application/vnd.github.v3+json'
-            } : {}
-        };
-        
+        const base = `/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues`;
+        const openReq = await window.GitHubAuth.buildGitHubRequest(`${base}?state=open&_t=${timestamp}`);
+        const closedReq = await window.GitHubAuth.buildGitHubRequest(`${base}?state=closed&_t=${timestamp}`);
+        const doFetch = window.RateLimit?.rateLimitedFetch || fetch;
+
         const [openResponse, closedResponse] = await Promise.all([
-            window.RateLimit?.rateLimitedFetch ? 
-                window.RateLimit.rateLimitedFetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=open&_t=${timestamp}`, fetchOptions) :
-                fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=open&_t=${timestamp}`, fetchOptions),
-            window.RateLimit?.rateLimitedFetch ?
-                window.RateLimit.rateLimitedFetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=closed&_t=${timestamp}`, fetchOptions) :
-                fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues?state=closed&_t=${timestamp}`, fetchOptions)
+            doFetch(openReq.url, { headers: openReq.headers }),
+            doFetch(closedReq.url, { headers: closedReq.headers })
         ]);
         
         if (!openResponse.ok || !closedResponse.ok) {
-            // Check for rate limiting
-            if (openResponse.status === 403 || closedResponse.status === 403) {
+            const failed = openResponse.ok ? closedResponse : openResponse;
+            const remaining = failed.headers && failed.headers.get('x-ratelimit-remaining');
+
+            // A genuine GitHub rate limit: HTTP 403 with the remaining-requests
+            // header at 0 (the proxy forwards these headers).
+            if (failed.status === 403 && remaining === '0') {
                 if (window.RateLimit?.handleApiResponse) {
-                    window.RateLimit.handleApiResponse(openResponse.ok ? closedResponse : openResponse);
+                    window.RateLimit.handleApiResponse(failed);
                 }
                 throw new Error(`GitHub API rate limit exceeded`);
             }
+
+            // Auth/token failure — e.g. the Clerk proxy has no GitHub token for this
+            // user (401/403). This is NOT a rate limit; surface an actionable message
+            // instead of failing silently or mislabeling it.
+            if (failed.status === 401 || failed.status === 403) {
+                notifyError('Could not load GitHub issues — your GitHub access needs to be reconnected. Sign in again and make sure your account has access to this repository.');
+                throw new Error(`GitHub authorization failed: ${failed.status}`);
+            }
+
             throw new Error(`GitHub API error: ${openResponse.status} or ${closedResponse.status}`);
         }
         
@@ -581,18 +568,14 @@ function initializeGitHubIssues() {
 
 // Get GitHub issue comments
 async function getGitHubIssueComments(issueNumber) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    if (!window.GitHubAuth.isGitHubAuthed()) {
         console.log('❌ Not authenticated with GitHub - cannot fetch comments');
         return [];
     }
 
     try {
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/comments`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`
-            }
+        const response = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/comments`, {
+            method: 'GET'
         });
 
         if (!response.ok) {
@@ -615,17 +598,15 @@ async function getGitHubIssueComments(issueNumber) {
 
 // Create GitHub issue comment
 async function createGitHubIssueComment(issueNumber, commentBody) {
-    if (!window.GitHubAuth.githubAuth.isAuthenticated || !window.GitHubAuth.githubAuth.accessToken) {
+    if (!window.GitHubAuth.isGitHubAuthed()) {
         console.log('❌ Not authenticated with GitHub - cannot create comment');
         return null;
     }
 
     try {
-        const response = await fetch(`${window.GitHubAuth.GITHUB_CONFIG.apiBaseUrl}/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/comments`, {
+        const response = await window.GitHubAuth.githubFetch(`/repos/${window.GitHubAuth.GITHUB_CONFIG.owner}/${window.GitHubAuth.GITHUB_CONFIG.repo}/issues/${issueNumber}/comments`, {
             method: 'POST',
             headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${window.GitHubAuth.githubAuth.accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({

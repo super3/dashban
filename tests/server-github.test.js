@@ -6,16 +6,13 @@
  */
 
 // Controllable mock state (must be prefixed `mock*` to be used in jest.mock factory).
-let mockAuthed = true;
+// `mockUserId` of null models an unauthenticated request: clerkMiddleware always
+// runs and decorates the request, and getAuth then reports no signed-in user.
 let mockUserId = 'user_123';
 const mockGetUserOauthAccessToken = jest.fn();
 
 jest.mock('@clerk/express', () => ({
     clerkMiddleware: () => (req, res, next) => next(),
-    requireAuth: () => (req, res, next) => {
-        if (mockAuthed) return next();
-        return res.status(401).json({ error: 'Unauthenticated' });
-    },
     getAuth: () => ({ userId: mockUserId }),
     clerkClient: {
         users: {
@@ -34,7 +31,6 @@ describe('GitHub proxy (/api/github)', () => {
     let originalFetch;
 
     beforeEach(() => {
-        mockAuthed = true;
         mockUserId = 'user_123';
         mockGetUserOauthAccessToken.mockReset();
         mockGetUserOauthAccessToken.mockResolvedValue({ data: [{ token: 'gho_usertoken' }] });
@@ -45,16 +41,21 @@ describe('GitHub proxy (/api/github)', () => {
         global.fetch = originalFetch;
     });
 
-    function mockGitHub({ status = 200, body = '{}', contentType = 'application/json' } = {}) {
+    function mockGitHub({ status = 200, body = '{}', contentType = 'application/json', headers = {} } = {}) {
+        const all = {};
+        Object.keys(headers).forEach((k) => { all[k.toLowerCase()] = headers[k]; });
+        if (contentType) {
+            all['content-type'] = contentType;
+        }
         global.fetch = jest.fn().mockResolvedValue({
             status,
             text: async () => body,
-            headers: { get: (h) => (h.toLowerCase() === 'content-type' ? contentType : null) }
+            headers: { get: (h) => (h.toLowerCase() in all ? all[h.toLowerCase()] : null) }
         });
     }
 
     test('rejects unauthenticated requests with 401', async () => {
-        mockAuthed = false;
+        mockUserId = null;
         const res = await request(app).get('/api/github/repos/super3/dashban/issues');
         expect(res.status).toBe(401);
         expect(mockGetUserOauthAccessToken).not.toHaveBeenCalled();
@@ -120,5 +121,24 @@ describe('GitHub proxy (/api/github)', () => {
         mockGitHub({ status: 204, body: '', contentType: null });
         const res = await request(app).delete('/api/github/repos/x/y/issues/1/labels/bug');
         expect(res.status).toBe(204);
+    });
+
+    test('forwards GitHub rate-limit headers so the client can detect real limits', async () => {
+        mockGitHub({
+            status: 200,
+            body: '[]',
+            headers: {
+                'x-ratelimit-limit': '5000',
+                'x-ratelimit-remaining': '4999',
+                'x-ratelimit-reset': '1700000000'
+            }
+        });
+
+        const res = await request(app).get('/api/github/repos/super3/dashban/issues');
+
+        expect(res.status).toBe(200);
+        expect(res.headers['x-ratelimit-limit']).toBe('5000');
+        expect(res.headers['x-ratelimit-remaining']).toBe('4999');
+        expect(res.headers['x-ratelimit-reset']).toBe('1700000000');
     });
 });
