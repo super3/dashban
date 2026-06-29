@@ -966,10 +966,39 @@ describe('Status Cards Functions', () => {
 
     test('should handle coverage fetch errors', async () => {
       global.fetch.mockRejectedValue(new Error('Coverage fetch error'));
-      
+
       await statusAPI.fetchCoverageStatus();
-      
+
       expect(console.error).toHaveBeenCalledWith('Error fetching coverage status:', expect.any(Error));
+    });
+
+    test('drops a stale coverage response when the repo changed mid-request', async () => {
+      setupGitHubAuth('super3', 'dashban');
+      const coverageEl = document.querySelector('[data-coverage-status]');
+      coverageEl.innerHTML = 'SENTINEL';
+      // The user switches repos while the request is in flight.
+      global.fetch.mockImplementation(async () => {
+        global.window.GitHubAuth.GITHUB_CONFIG.repo = 'other-repo';
+        return { text: async () => '<svg><text>85%</text></svg>' };
+      });
+
+      await statusAPI.fetchCoverageStatus();
+
+      expect(coverageEl.innerHTML).toBe('SENTINEL');
+    });
+
+    test('drops a stale coverage error when the repo changed mid-request', async () => {
+      setupGitHubAuth('super3', 'dashban');
+      const coverageEl = document.querySelector('[data-coverage-status]');
+      coverageEl.innerHTML = 'SENTINEL';
+      global.fetch.mockImplementation(async () => {
+        global.window.GitHubAuth.GITHUB_CONFIG.repo = 'other-repo';
+        throw new Error('network');
+      });
+
+      await statusAPI.fetchCoverageStatus();
+
+      expect(coverageEl.innerHTML).toBe('SENTINEL');
     });
   });
 

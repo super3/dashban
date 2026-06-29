@@ -868,6 +868,142 @@ describe('Kanban Board Core Functionality', () => {
     });
   });
 
+  describe('archive all in the Done column', () => {
+    function addArchiveAllButton() {
+      const btn = document.createElement('button');
+      btn.id = 'archive-all-done-btn';
+      btn.className = 'hidden';
+      document.body.appendChild(btn);
+      return btn;
+    }
+
+    function addDoneIssueCard(number) {
+      const card = document.createElement('div');
+      card.className = 'bg-white border';
+      card.setAttribute('data-issue-number', String(number));
+      document.getElementById('done').appendChild(card);
+      return card;
+    }
+
+    beforeEach(() => {
+      global.window.GitHub.githubAuth = { isAuthenticated: true, mode: 'clerk', user: { login: 'octocat' } };
+      global.window.GitHub.archiveGitHubIssue = jest.fn();
+      global.window.confirm = jest.fn(() => true);
+    });
+
+    describe('updateArchiveAllButton', () => {
+      test('shows the button when signed in and Done has issue cards', () => {
+        const btn = addArchiveAllButton();
+        addDoneIssueCard(1);
+        api.updateArchiveAllButton();
+        expect(btn.classList.contains('hidden')).toBe(false);
+      });
+
+      test('hides the button when Done has no issue cards', () => {
+        const btn = addArchiveAllButton();
+        api.updateArchiveAllButton();
+        expect(btn.classList.contains('hidden')).toBe(true);
+      });
+
+      test('hides the button when not signed in', () => {
+        const btn = addArchiveAllButton();
+        addDoneIssueCard(1);
+        global.window.GitHub.githubAuth = { isAuthenticated: false, mode: null, user: null };
+        api.updateArchiveAllButton();
+        expect(btn.classList.contains('hidden')).toBe(true);
+      });
+
+      test('returns quietly when the button is absent', () => {
+        expect(() => api.updateArchiveAllButton()).not.toThrow();
+      });
+
+      test('returns quietly when the Done column is absent', () => {
+        const btn = addArchiveAllButton();
+        document.getElementById('done').remove();
+        expect(() => api.updateArchiveAllButton()).not.toThrow();
+        expect(btn.classList.contains('hidden')).toBe(true);
+      });
+
+      test('treats a missing GitHub integration as signed out', () => {
+        const btn = addArchiveAllButton();
+        addDoneIssueCard(1);
+        const saved = global.window.GitHub;
+        delete global.window.GitHub;
+        try {
+          api.updateArchiveAllButton();
+          expect(btn.classList.contains('hidden')).toBe(true);
+        } finally {
+          global.window.GitHub = saved;
+        }
+      });
+
+      test('treats GitHub without isGitHubAuthed as signed out', () => {
+        const btn = addArchiveAllButton();
+        addDoneIssueCard(1);
+        const saved = global.window.GitHub;
+        global.window.GitHub = {};
+        try {
+          api.updateArchiveAllButton();
+          expect(btn.classList.contains('hidden')).toBe(true);
+        } finally {
+          global.window.GitHub = saved;
+        }
+      });
+    });
+
+    describe('archive-all click handler', () => {
+      test('archives every issue card in Done after confirmation', () => {
+        addArchiveAllButton();
+        const c1 = addDoneIssueCard(1);
+        const c2 = addDoneIssueCard(2);
+
+        document.getElementById('archive-all-done-btn').dispatchEvent(new Event('click', { bubbles: true }));
+
+        expect(global.window.confirm).toHaveBeenCalledWith('Archive all 2 issues in Done?');
+        expect(global.window.GitHub.archiveGitHubIssue).toHaveBeenCalledWith('1', c1);
+        expect(global.window.GitHub.archiveGitHubIssue).toHaveBeenCalledWith('2', c2);
+      });
+
+      test('uses the singular noun for a single issue', () => {
+        addArchiveAllButton();
+        addDoneIssueCard(7);
+
+        document.getElementById('archive-all-done-btn').dispatchEvent(new Event('click', { bubbles: true }));
+
+        expect(global.window.confirm).toHaveBeenCalledWith('Archive all 1 issue in Done?');
+        expect(global.window.GitHub.archiveGitHubIssue).toHaveBeenCalledWith('7', expect.any(Object));
+      });
+
+      test('does nothing when the user cancels', () => {
+        global.window.confirm = jest.fn(() => false);
+        addArchiveAllButton();
+        addDoneIssueCard(1);
+
+        document.getElementById('archive-all-done-btn').dispatchEvent(new Event('click', { bubbles: true }));
+
+        expect(global.window.GitHub.archiveGitHubIssue).not.toHaveBeenCalled();
+      });
+
+      test('does not prompt when Done has no issue cards', () => {
+        addArchiveAllButton();
+
+        document.getElementById('archive-all-done-btn').dispatchEvent(new Event('click', { bubbles: true }));
+
+        expect(global.window.confirm).not.toHaveBeenCalled();
+        expect(global.window.GitHub.archiveGitHubIssue).not.toHaveBeenCalled();
+      });
+
+      test('does nothing when the Done column is missing', () => {
+        addArchiveAllButton();
+        document.getElementById('done').remove();
+
+        document.getElementById('archive-all-done-btn').dispatchEvent(new Event('click', { bubbles: true }));
+
+        expect(global.window.confirm).not.toHaveBeenCalled();
+      });
+    });
+  });
+
   describe('double-click edit functionality', () => {
     test('should handle double-click events on tasks', () => {
       const taskElement = document.createElement('div');

@@ -11,6 +11,7 @@
     <!-- Markdown parsing and sanitization -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.0.0/dist/markdown-it.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+    <script src="src/logger.js"></script>
     <script src="src/utils.js"></script>
     <script src="src/event-bus.js"></script>
     <script src="src/notifications.js"></script>
@@ -425,6 +426,12 @@
                                 <i class="fas fa-chevron-left"></i>
                             </button>
                         </div>
+                    </div>
+                    <div class="column-content px-4 pt-3 -mb-1">
+                        <button id="archive-all-done-btn" class="hidden w-full flex items-center justify-center space-x-2 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-md py-1.5 transition-colors" title="Archive all issues in the Done column">
+                            <i class="fas fa-archive"></i>
+                            <span>Archive all</span>
+                        </button>
                     </div>
                     <div id="done" class="p-4 space-y-3 min-h-[64px] column-content">
                     </div>
