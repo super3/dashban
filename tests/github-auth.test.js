@@ -308,7 +308,7 @@ describe('GitHub Authentication (Clerk-only)', () => {
         test('includes a link to manage the GitHub App repository access', () => {
             window.GitHubAuth.toggleUserDropdown();
 
-            const link = container.querySelector('.user-dropdown a[href="https://github.com/apps/dashban/installations/select_target"]');
+            const link = container.querySelector('.user-dropdown a[href="https://github.com/apps/dashban"]');
             expect(link).not.toBeNull();
             expect(link.getAttribute('target')).toBe('_blank');
             expect(link.textContent).toContain('Manage GitHub access');
