@@ -155,8 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (githubIssue) {
                     // Use GitHub issue data to create the task element
                     taskElement = window.GitHub.createGitHubIssueElement(githubIssue, false);
-                    console.log('✅ Created GitHub issue and local task');
-                    
+
                     // Add to appropriate column
                     document.getElementById(targetColumn).appendChild(taskElement);
                     
@@ -320,7 +319,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 taskElement.remove();
                 window.updateColumnCounts();
-                console.log('📦 About card archived');
             }
         }
     });
@@ -361,15 +359,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (window.IssueModal && window.IssueModal.openIssueModal) {
                 window.IssueModal.openIssueModal(issueNumber, taskElement);
             }
-        }
-    });
-
-    // Add double-click to edit functionality (kept for non-GitHub cards)
-    document.addEventListener('dblclick', function(e) {
-        const taskElement = e.target.closest('.bg-white.border');
-        if (taskElement && !taskElement.getAttribute('data-issue-number')) {
-            // Add edit functionality for local tasks here
-            console.log('Edit local task:', taskElement);
         }
     });
 
@@ -482,32 +471,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Export About card restore function globally for easy access
     window.restoreAboutCard = window.AboutCard ? window.AboutCard.restoreAboutCard : function() { console.warn('AboutCard module not loaded'); };
-    
-    // Debug function to check About card status for all repositories
-    window.debugAboutCardStatus = function() {
-        console.log('=== About Card Debug Info ===');
-        console.log('Current repository context:', getCurrentRepoContext());
-        
-        // Check all stored About card statuses
-        const keys = Object.keys(localStorage).filter(key => key.startsWith('aboutCardArchived_'));
-        console.log('Stored About card statuses:');
-        keys.forEach(key => {
-            const value = localStorage.getItem(key);
-            console.log(`  ${key}: ${value}`);
-        });
-        
-        // Check current repository status
-        const currentStatus = window.AboutCard ? window.AboutCard.loadAboutCardArchivedStatus() : false;
-        console.log('Current repository About card archived status:', currentStatus);
-        
-        // Check if About card exists in DOM
-        const aboutCard = document.querySelector('[data-card-id="about-card"]');
-        console.log('About card in DOM:', aboutCard ? 'Found' : 'Not found');
-        
-        console.log('=== End Debug Info ===');
-    };
-    
-    
 
     // Export certain functions for testing environments
     const testAPI = {

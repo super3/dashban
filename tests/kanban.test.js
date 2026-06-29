@@ -1004,25 +1004,6 @@ describe('Kanban Board Core Functionality', () => {
     });
   });
 
-  describe('double-click edit functionality', () => {
-    test('should handle double-click events on tasks', () => {
-      const taskElement = document.createElement('div');
-      taskElement.className = 'bg-white border';
-      
-      const backlog = document.getElementById('backlog');
-      backlog.appendChild(taskElement);
-      
-      console.log = jest.fn();
-      
-      // Simulate double-click
-      const event = new Event('dblclick', { bubbles: true });
-      taskElement.dispatchEvent(event);
-      
-      // Should log edit event (placeholder functionality)
-      expect(console.log).toHaveBeenCalledWith('Edit local task:', taskElement);
-    });
-  });
-
   describe('integration with GitHub module', () => {
     test('should check GitHub authentication state before creating GitHub issues', () => {
       const form = api.addTaskForm;
@@ -2034,23 +2015,6 @@ describe('Uncovered Lines Tests', () => {
         
         expect(document.querySelector('[data-card-id="about-card"]')).toBeFalsy();
         expect(window.updateColumnCounts).toHaveBeenCalled();
-        expect(console.log).toHaveBeenCalledWith('📦 About card hidden (was previously archived)');
-    });
-
-    test('should log when archived About card not found in DOM (line 367)', () => {
-        setupDOM();
-        
-        // Mock archived status without card in DOM
-        global.localStorage.getItem = jest.fn().mockImplementation((key) => {
-            if (key.includes('aboutCardArchived')) {
-                return 'true';
-            }
-            return null;
-        });
-        
-        kanbanTestExports.hideAboutCardIfArchived();
-        
-        expect(console.log).toHaveBeenCalledWith('📦 About card was marked as archived but not found in DOM');
     });
 
     test('should restore About card (lines 454-471)', () => {
@@ -2069,20 +2033,20 @@ describe('Uncovered Lines Tests', () => {
         expect(aboutCard).toBeTruthy();
         expect(aboutCard.querySelector('h4').textContent).toBe('About');
         expect(window.updateColumnCounts).toHaveBeenCalled();
-        expect(console.log).toHaveBeenCalledWith('📦 About card restored to Todo column');
     });
 
     test('should not restore About card if already visible (lines 458-460)', () => {
         setupDOM();
-        
+
         // Create existing About card
         const aboutCard = document.createElement('div');
         aboutCard.setAttribute('data-card-id', 'about-card');
         document.getElementById('todo').appendChild(aboutCard);
-        
+
         kanbanTestExports.restoreAboutCard();
-        
-        expect(console.log).toHaveBeenCalledWith('📦 About card is already visible');
+
+        // Already visible: no duplicate should be created.
+        expect(document.querySelectorAll('[data-card-id="about-card"]').length).toBe(1);
     });
 
     test('should update label warning on modal show (lines 496-497)', (done) => {
@@ -2219,13 +2183,11 @@ describe('Uncovered Lines Tests', () => {
                 kanbanTestExports.saveAboutCardArchivedStatus(true);
                 aboutCard.remove();
                 window.updateColumnCounts();
-                console.log('📦 About card archived');
             }
-            
+
             expect(localStorage.setItem).toHaveBeenCalled();
             expect(doneColumn.querySelector('.bg-white.border')).toBeFalsy();
             expect(window.updateColumnCounts).toHaveBeenCalled();
-            expect(console.log).toHaveBeenCalledWith('📦 About card archived');
         } finally {
             // Restore localStorage
             global.localStorage.getItem = originalGetItem;
@@ -2320,58 +2282,6 @@ describe('Uncovered Lines Tests', () => {
             expect(window.IssueModal.openIssueModal).toHaveBeenCalledWith('123', issueCard);
         } finally {
             // Restore localStorage
-            global.localStorage.getItem = originalGetItem;
-            global.localStorage.setItem = originalSetItem;
-        }
-    });
-
-    test('should run debugAboutCardStatus function (lines 925-944)', () => {
-        // Ensure clean localStorage and setup
-        const originalGetItem = global.localStorage.getItem;
-        const originalSetItem = global.localStorage.setItem;
-        const originalKeys = Object.keys;
-        
-        // Create a mock storage object that supports Object.keys
-        const mockStorage = {
-            'aboutCardArchived_owner1_repo1': 'true',
-            'aboutCardArchived_owner2_repo2': 'false',
-            'other_key': 'value'
-        };
-        
-        global.localStorage.getItem = jest.fn().mockImplementation((key) => {
-            return mockStorage[key] || null;
-        });
-        global.localStorage.setItem = jest.fn();
-        
-        try {
-            setupDOM();
-            
-            // Create About card
-            const aboutCard = document.createElement('div');
-            aboutCard.setAttribute('data-card-id', 'about-card');
-            document.body.appendChild(aboutCard);
-            
-            // Mock Object.keys for localStorage
-            Object.keys = jest.fn().mockImplementation((obj) => {
-                if (obj === localStorage) {
-                    return Object.keys(mockStorage);
-                }
-                return originalKeys(obj);
-            });
-            
-            // Call debug function
-            window.debugAboutCardStatus();
-            
-            expect(console.log).toHaveBeenCalledWith('=== About Card Debug Info ===');
-            expect(console.log).toHaveBeenCalledWith('Current repository context:', expect.any(Object));
-            expect(console.log).toHaveBeenCalledWith('Stored About card statuses:');
-            expect(console.log).toHaveBeenCalledWith('  aboutCardArchived_owner1_repo1: true');
-            expect(console.log).toHaveBeenCalledWith('  aboutCardArchived_owner2_repo2: false');
-            expect(console.log).toHaveBeenCalledWith('About card in DOM:', 'Found');
-            expect(console.log).toHaveBeenCalledWith('=== End Debug Info ===');
-        } finally {
-            // Restore everything
-            Object.keys = originalKeys;
             global.localStorage.getItem = originalGetItem;
             global.localStorage.setItem = originalSetItem;
         }
@@ -2496,10 +2406,7 @@ describe('Uncovered Lines Tests', () => {
         
         // Verify updateColumnCounts was called
         expect(mockUpdateColumnCounts).toHaveBeenCalled();
-        
-        // Verify console.log was called
-        expect(console.log).toHaveBeenCalledWith('📦 About card archived');
-        
+
         // Verify the card was removed from DOM
         expect(document.body.contains(aboutCard)).toBe(false);
         
@@ -2702,7 +2609,6 @@ describe('100% coverage: document archive-btn click handler (lines 318-326)', ()
         // The card should have been removed and counts updated even without AboutCard module
         expect(document.body.contains(card)).toBe(false);
         expect(global.window.updateColumnCounts).toHaveBeenCalled();
-        expect(console.log).toHaveBeenCalledWith('📦 About card archived');
 
         global.window.AboutCard = savedAboutCard;
     });
@@ -2804,23 +2710,6 @@ describe('100% coverage: document card click -> issue modal (lines 334-343)', ()
         expect(global.window.IssueModal.openIssueModal).not.toHaveBeenCalled();
 
         delete global.window.IssueModal;
-        card.remove();
-    });
-});
-
-describe('100% coverage: dblclick handler issue-number guard (line 350)', () => {
-    test('double-click on issue card (with issue number) does not log local edit (branch 79 FALSE)', () => {
-        console.log = jest.fn();
-
-        const card = document.createElement('div');
-        card.className = 'bg-white border';
-        card.setAttribute('data-issue-number', '888');
-        document.body.appendChild(card);
-
-        card.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-
-        expect(console.log).not.toHaveBeenCalledWith('Edit local task:', card);
-
         card.remove();
     });
 });
@@ -2933,30 +2822,19 @@ describe('100% coverage: updateColumnCounts missing badge (branch 47 @234 FALSE)
     });
 });
 
-describe('100% coverage: debugAboutCardStatus cond-exprs (lines 480, 485, func 464)', () => {
-    test('debug reports Not found and false status when AboutCard absent (branches 105, 106 FALSE + fallback fn)', () => {
+describe('100% coverage: restoreAboutCard fallback when AboutCard absent', () => {
+    test('window.restoreAboutCard falls back to a warning function when AboutCard is missing', () => {
         // Re-require kanban.js with AboutCard absent so window.restoreAboutCard becomes
-        // the fallback function (line 464 col 98-142) and debug cond-exprs take the false path.
+        // the fallback function (the ternary's false branch) instead of the module method.
         const savedAboutCard = global.window.AboutCard;
         delete global.window.AboutCard;
-        console.log = jest.fn();
         console.warn = jest.fn();
 
         delete require.cache[require.resolve('../src/kanban.js')];
         require('../src/kanban.js');
         document.dispatchEvent(new Event('DOMContentLoaded'));
 
-        // Ensure no About card in DOM
-        const existing = document.querySelector('[data-card-id="about-card"]');
-        if (existing) existing.remove();
-
-        // Run debug -> exercises window.AboutCard ? ... : false  and aboutCard ? 'Found' : 'Not found'
-        window.debugAboutCardStatus();
-
-        expect(console.log).toHaveBeenCalledWith('Current repository About card archived status:', false);
-        expect(console.log).toHaveBeenCalledWith('About card in DOM:', 'Not found');
-
-        // The fallback restoreAboutCard function should warn when invoked
+        // The fallback restoreAboutCard function should warn when invoked.
         window.restoreAboutCard();
         expect(console.warn).toHaveBeenCalledWith('AboutCard module not loaded');
 

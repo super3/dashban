@@ -802,16 +802,13 @@ describe('Rate Limit Management', () => {
             // Verify that fetch was not called (meaning checkRateLimit was not called)
             expect(global.fetch).not.toHaveBeenCalled();
         });
-
-        test('should log initialization message', () => {
-            expect(global.console.log).toHaveBeenCalledWith('📊 Rate limit manager initialized');
-        });
     });
 
     describe('DOM ready states', () => {
         test('should initialize immediately when DOM is ready', () => {
-            // Already tested in the main initialization since DOM is ready in beforeEach
-            expect(global.console.log).toHaveBeenCalledWith('📊 Rate limit manager initialized');
+            // DOM is ready in beforeEach, so initialize() runs immediately and sets
+            // up the periodic rate-limit check.
+            expect(global.setInterval).toHaveBeenCalled();
         });
 
         test('should add event listener when DOM is loading', () => {
@@ -945,8 +942,8 @@ describe('Rate Limit Management', () => {
             jest.resetModules();
             expect(() => require('../src/rate-limit.js')).not.toThrow();
 
-            // Initialization completed (logged) even though no dismiss button existed.
-            expect(global.console.log).toHaveBeenCalledWith('📊 Rate limit manager initialized');
+            // Initialization completed even though no dismiss button existed.
+            expect(global.setInterval).toHaveBeenCalled();
         });
     });
 });

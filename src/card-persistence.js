@@ -12,12 +12,10 @@
     // Get current repository context
     function getCurrentRepoContext() {
         let context = null;
-        let source = 'unknown';
-        
+
         // Try to get from RepoManager first (most reliable)
         if (window.RepoManager?.repoState?.currentRepo) {
             context = window.RepoManager.repoState.currentRepo;
-            source = 'RepoManager';
         }
         // Try to get from localStorage directly
         else {
@@ -25,26 +23,22 @@
                 const current = localStorage.getItem('dashban_current_repo');
                 if (current) {
                     context = JSON.parse(current);
-                    source = 'localStorage';
                 }
             } catch (error) {
                 console.warn('Failed to load current repo from localStorage:', error);
             }
         }
-        
+
         // Fallback to GitHub config
         if (!context && window.GitHubAuth?.GITHUB_CONFIG) {
             context = window.GitHubAuth.GITHUB_CONFIG;
-            source = 'GitHubAuth';
         }
-        
+
         // Final fallback
         if (!context) {
             context = { owner: 'super3', repo: 'dashban' };
-            source = 'default';
         }
-        
-        console.log(`📦 Repository context from ${source}:`, context);
+
         return context;
     }
 
@@ -333,10 +327,7 @@
             return;
         }
 
-        console.log('💾 Card Persistence module initializing...');
-        
         state.initialized = true;
-        console.log('💾 Card Persistence module initialized');
     }
 
     function cleanupClosedIssuesFromStorage() {

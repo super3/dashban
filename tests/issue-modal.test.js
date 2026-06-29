@@ -620,12 +620,13 @@ describe('Issue Modal', () => {
 
     test('should handle save title without GitHubAPI', async () => {
       document.getElementById('issue-title-edit').value = 'New Title';
-      
+
       window.IssueModal.setupIssueModalEventHandlers();
 
       await saveTitleBtn.click();
-      
-      expect(console.log).toHaveBeenCalledWith('GitHub API not available, title updated locally only');
+
+      // With no GitHubAPI present the title is still updated locally.
+      expect(document.getElementById('issue-modal-title').textContent).toBe('New Title');
     });
 
     test('should set up description editing handlers', () => {
@@ -694,7 +695,6 @@ describe('Issue Modal', () => {
       
       expect(document.getElementById('issue-description-display').textContent).toBe('New description');
       expect(descEl.textContent).toBe('New description');
-      expect(console.log).toHaveBeenCalledWith('Updated local task description: "New description"');
     });
 
     test('should handle save description API error', async () => {
@@ -753,13 +753,17 @@ describe('Issue Modal', () => {
     });
 
     test('should handle priority change without API', async () => {
-      // Create task element with label container
+      // Label container present but with no existing priority badge, and no
+      // getPriorityColor helper, so neither a removal nor an addition occurs.
       const taskElement = document.createElement('div');
       taskElement.setAttribute('data-issue-number', '123');
       const labelContainer = document.createElement('div');
       labelContainer.className = 'flex items-center space-x-2';
       taskElement.appendChild(labelContainer);
       document.body.appendChild(taskElement);
+
+      // getPriorityColor intentionally absent -> no replacement badge is added.
+      delete window.getPriorityColor;
 
       window.IssueModal.setupIssueModalEventHandlers();
 
@@ -768,7 +772,8 @@ describe('Issue Modal', () => {
 
       await new Promise(resolve => setTimeout(resolve, 0)); // Wait for async
 
-      expect(console.log).toHaveBeenCalledWith('GitHub API not available, priority updated locally only');
+      // No GitHubAPI and no color helper -> the container stays empty.
+      expect(labelContainer.querySelectorAll('span').length).toBe(0);
     });
 
     test('should handle priority change without issue number element', async () => {
@@ -819,13 +824,19 @@ describe('Issue Modal', () => {
     });
 
     test('should handle category change without API', async () => {
-      // Create task element with label container
+      // Create task element with label container holding an existing category badge.
       const taskElement = document.createElement('div');
       taskElement.setAttribute('data-issue-number', '123');
       const labelContainer = document.createElement('div');
       labelContainer.className = 'flex items-center space-x-2';
+      const existingBadge = document.createElement('span');
+      existingBadge.textContent = 'Frontend';
+      labelContainer.appendChild(existingBadge);
       taskElement.appendChild(labelContainer);
       document.body.appendChild(taskElement);
+
+      // getCategoryColor intentionally absent -> no replacement badge is added.
+      delete window.getCategoryColor;
 
       window.IssueModal.setupIssueModalEventHandlers();
 
@@ -834,7 +845,9 @@ describe('Issue Modal', () => {
 
       await new Promise(resolve => setTimeout(resolve, 0)); // Wait for async
 
-      expect(console.log).toHaveBeenCalledWith('GitHub API not available, category updated locally only');
+      // The old category badge is removed and, with no color helper, none is re-added.
+      expect(Array.from(labelContainer.querySelectorAll('span')).map(s => s.textContent)).not.toContain('Frontend');
+      expect(labelContainer.querySelectorAll('span').length).toBe(0);
     });
 
     test('should handle category change without issue number element', async () => {
@@ -891,7 +904,9 @@ describe('Issue Modal', () => {
 
       await new Promise(resolve => setTimeout(resolve, 0)); // Wait for async
 
-      expect(console.log).toHaveBeenCalledWith('GitHub API not available, issue closed locally only');
+      // No GitHubAPI present, but the issue is still closed locally.
+      expect(document.getElementById('issue-state-badge').textContent).toBe('Closed');
+      expect(closeIssueBtn.classList.contains('hidden')).toBe(true);
     });
 
     test('should handle close issue without issue number element', async () => {
@@ -947,7 +962,9 @@ describe('Issue Modal', () => {
 
       await new Promise(resolve => setTimeout(resolve, 0)); // Wait for async
 
-      expect(console.log).toHaveBeenCalledWith('GitHub API not available, issue reopened locally only');
+      // No GitHubAPI present, but the issue is still reopened locally.
+      expect(document.getElementById('issue-state-badge').textContent).toBe('Open');
+      expect(reopenIssueBtn.classList.contains('hidden')).toBe(true);
     });
 
     test('should handle reopen issue without issue number element', async () => {
@@ -1468,8 +1485,7 @@ describe('Issue Modal', () => {
 
         // Title in modal updated even though card had no h4.
         expect(document.getElementById('issue-modal-title').textContent).toBe('A New Title');
-        // No GitHubAPI -> local-only log path.
-        expect(console.log).toHaveBeenCalledWith('GitHub API not available, title updated locally only');
+        // No GitHubAPI present -> local-only update path.
         expect(numberEl.textContent).toBe('#123');
       });
 
@@ -1489,11 +1505,9 @@ describe('Issue Modal', () => {
 
         // No GitHubUI -> textContent path used for display.
         expect(document.getElementById('issue-description-display').textContent).toBe('Some description');
-        // No matching task -> local update log.
-        expect(console.log).toHaveBeenCalledWith('Updated local task description: "Some description"');
       });
 
-      test('should log success when GitHub description update resolves truthy (line 318)', async () => {
+      test('should update GitHub description when task is a GitHub issue', async () => {
         document.body.innerHTML = '';
         const saveDescBtn = makeButton('save-description-btn');
         makeEl('div', 'issue-description-display');
@@ -1521,9 +1535,6 @@ describe('Issue Modal', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
 
         expect(window.GitHubAPI.updateGitHubIssueDescription).toHaveBeenCalledWith('321', 'Updated body');
-        expect(console.log).toHaveBeenCalledWith(
-          '✅ Successfully updated GitHub issue #321 description locally and on GitHub'
-        );
       });
 
       test('should handle priority change when no matching task element exists (line 352)', async () => {
@@ -1536,10 +1547,10 @@ describe('Issue Modal', () => {
 
         window.IssueModal.setupIssueModalEventHandlers();
         prioritySelect.value = 'High';
-        prioritySelect.dispatchEvent(new Event('change'));
-        await new Promise(resolve => setTimeout(resolve, 0));
 
-        expect(console.log).toHaveBeenCalledWith('GitHub API not available, priority updated locally only');
+        // No matching task element -> the `if (taskElement)` guard is false.
+        expect(() => prioritySelect.dispatchEvent(new Event('change'))).not.toThrow();
+        await new Promise(resolve => setTimeout(resolve, 0));
       });
 
       test('should handle priority change when task has no label container (line 355)', async () => {
@@ -1560,7 +1571,8 @@ describe('Issue Modal', () => {
         prioritySelect.dispatchEvent(new Event('change'));
         await new Promise(resolve => setTimeout(resolve, 0));
 
-        expect(console.log).toHaveBeenCalledWith('GitHub API not available, priority updated locally only');
+        // No label container -> no badge added to the task.
+        expect(taskElement.querySelector('span')).toBeNull();
       });
 
       test('should handle category change when no matching task element exists (line 397)', async () => {
@@ -1573,10 +1585,10 @@ describe('Issue Modal', () => {
 
         window.IssueModal.setupIssueModalEventHandlers();
         categorySelect.value = 'Backend';
-        categorySelect.dispatchEvent(new Event('change'));
-        await new Promise(resolve => setTimeout(resolve, 0));
 
-        expect(console.log).toHaveBeenCalledWith('GitHub API not available, category updated locally only');
+        // No matching task element -> the `if (taskElement)` guard is false.
+        expect(() => categorySelect.dispatchEvent(new Event('change'))).not.toThrow();
+        await new Promise(resolve => setTimeout(resolve, 0));
       });
 
       test('should handle category change when task has no label container (line 400)', async () => {
@@ -1596,7 +1608,8 @@ describe('Issue Modal', () => {
         categorySelect.dispatchEvent(new Event('change'));
         await new Promise(resolve => setTimeout(resolve, 0));
 
-        expect(console.log).toHaveBeenCalledWith('GitHub API not available, category updated locally only');
+        // No label container -> no badge added to the task.
+        expect(taskElement.querySelector('span')).toBeNull();
       });
 
       test('should insert category badge AFTER an existing priority badge (lines 418-424, branch 423 true)', async () => {
@@ -1652,7 +1665,6 @@ describe('Issue Modal', () => {
 
         expect(closeIssueBtn.classList.contains('hidden')).toBe(true);
         expect(reopenIssueBtn.classList.contains('hidden')).toBe(false);
-        expect(console.log).toHaveBeenCalledWith('GitHub API not available, issue closed locally only');
       });
 
       test('should handle close issue when reopen button is absent at setup (line 461)', async () => {
@@ -1691,7 +1703,6 @@ describe('Issue Modal', () => {
         expect(document.getElementById('done')).toBeNull();
         // Task NOT moved (no done column), still attached to body.
         expect(taskElement.parentElement).toBe(document.body);
-        expect(console.log).toHaveBeenCalledWith('GitHub API not available, issue closed locally only');
       });
 
       test('should handle reopen issue when state badge is missing and no task (lines 501,510)', async () => {
@@ -1707,7 +1718,6 @@ describe('Issue Modal', () => {
 
         expect(reopenIssueBtn.classList.contains('hidden')).toBe(true);
         expect(closeIssueBtn.classList.contains('hidden')).toBe(false);
-        expect(console.log).toHaveBeenCalledWith('GitHub API not available, issue reopened locally only');
       });
 
       test('should handle reopen issue when close button is absent at setup (line 506)', async () => {
@@ -1744,12 +1754,11 @@ describe('Issue Modal', () => {
 
         expect(document.getElementById('backlog')).toBeNull();
         expect(taskElement.parentElement).toBe(document.body);
-        expect(console.log).toHaveBeenCalledWith('GitHub API not available, issue reopened locally only');
       });
     });
 
     describe('save description success-resolve false branch', () => {
-      test('should not log success when GitHub description update resolves falsy (line 318 false path)', async () => {
+      test('should still call the GitHub description update when it resolves falsy', async () => {
         document.body.innerHTML = '';
         const saveDescBtn = document.createElement('button');
         saveDescBtn.id = 'save-description-btn';
@@ -1787,10 +1796,6 @@ describe('Issue Modal', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
 
         expect(window.GitHubAPI.updateGitHubIssueDescription).toHaveBeenCalledWith('888', 'Body that fails to persist');
-        // Success log must NOT have been emitted (success was falsy).
-        expect(console.log).not.toHaveBeenCalledWith(
-          expect.stringContaining('Successfully updated GitHub issue')
-        );
       });
     });
 

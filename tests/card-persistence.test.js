@@ -104,17 +104,10 @@ describe('Card Persistence Module', () => {
     });
 
     describe('initialize', () => {
-        test('should initialize the module', () => {
-            CardPersistence.initialize();
-            expect(console.log).toHaveBeenCalledWith('💾 Card Persistence module initializing...');
-            expect(console.log).toHaveBeenCalledWith('💾 Card Persistence module initialized');
-        });
-
-        test('should not initialize twice', () => {
-            CardPersistence.initialize();
-            jest.clearAllMocks();
-            CardPersistence.initialize();
-            expect(console.log).not.toHaveBeenCalled();
+        test('should not throw when initialized once or twice', () => {
+            expect(() => CardPersistence.initialize()).not.toThrow();
+            // Second call hits the early-return guard.
+            expect(() => CardPersistence.initialize()).not.toThrow();
         });
     });
 
@@ -128,7 +121,6 @@ describe('Card Persistence Module', () => {
             
             const context = CardPersistence.getCurrentRepoContext();
             expect(context).toEqual({ owner: 'test-owner', repo: 'test-repo' });
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from RepoManager:', context);
         });
 
         test('should get context from localStorage when RepoManager not available', () => {
@@ -137,7 +129,6 @@ describe('Card Persistence Module', () => {
             
             const context = CardPersistence.getCurrentRepoContext();
             expect(context).toEqual({ owner: 'local-owner', repo: 'local-repo' });
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from localStorage:', context);
         });
 
         test('should handle invalid JSON in localStorage', () => {
@@ -157,7 +148,6 @@ describe('Card Persistence Module', () => {
             
             const context = CardPersistence.getCurrentRepoContext();
             expect(context).toEqual({ owner: 'github-owner', repo: 'github-repo' });
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from GitHubAuth:', context);
         });
 
         test('should use default fallback', () => {
@@ -166,7 +156,6 @@ describe('Card Persistence Module', () => {
             
             const context = CardPersistence.getCurrentRepoContext();
             expect(context).toEqual({ owner: 'super3', repo: 'dashban' });
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from default:', context);
         });
     });
 

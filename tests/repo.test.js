@@ -1175,10 +1175,9 @@ describe('Repository Management', () => {
      });
 
      describe('Additional Coverage Edge Cases', () => {
-         test('validateRepository should log write access check failure', async () => {
+         test('validateRepository defaults to read-only when write access check fails', async () => {
              window.GitHubAuth.githubAuth.isAuthenticated = true;
              window.GitHubAuth.githubAuth.accessToken = 'test-token';
-             const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
              const mockRepoData = {
                  name: 'test-repo',
@@ -1203,9 +1202,6 @@ describe('Repository Management', () => {
 
              expect(result.valid).toBe(true);
              expect(result.accessLevel).toBe('read-only');
-             expect(consoleSpy).toHaveBeenCalledWith('Could not determine write access, defaulting to read-only');
-
-             consoleSpy.mockRestore();
          });
 
          test('handleAddRepository should update dropdown when it exists', async () => {

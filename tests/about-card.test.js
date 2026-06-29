@@ -65,17 +65,10 @@ describe('About Card Module', () => {
     });
 
     describe('initialize', () => {
-        test('should initialize the module', () => {
-            AboutCard.initialize();
-            expect(console.log).toHaveBeenCalledWith('📦 About Card module initializing...');
-            expect(console.log).toHaveBeenCalledWith('📦 About Card module initialized');
-        });
-
-        test('should not initialize twice', () => {
-            AboutCard.initialize();
-            jest.clearAllMocks();
-            AboutCard.initialize();
-            expect(console.log).not.toHaveBeenCalled();
+        test('should not throw when initialized once or twice', () => {
+            expect(() => AboutCard.initialize()).not.toThrow();
+            // Second call hits the early-return guard.
+            expect(() => AboutCard.initialize()).not.toThrow();
         });
     });
 
@@ -88,7 +81,7 @@ describe('About Card Module', () => {
             };
             
             AboutCard.saveAboutCardArchivedStatus(true);
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from RepoManager:', { owner: 'test-owner', repo: 'test-repo' });
+            expect(mockLocalStorage.setItem).toHaveBeenCalledWith('aboutCardArchived_test-owner_test-repo', 'true');
         });
 
         test('should get context from localStorage when RepoManager not available', () => {
@@ -102,7 +95,7 @@ describe('About Card Module', () => {
             AboutCard = window.AboutCard;
             
             AboutCard.saveAboutCardArchivedStatus(true);
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from localStorage:', { owner: 'local-owner', repo: 'local-repo' });
+            expect(mockLocalStorage.setItem).toHaveBeenCalledWith('aboutCardArchived_local-owner_local-repo', 'true');
         });
 
         test('should handle invalid JSON in localStorage', () => {
@@ -134,8 +127,8 @@ describe('About Card Module', () => {
             AboutCard.saveAboutCardArchivedStatus(true);
             
             expect(console.warn).toHaveBeenCalledWith('Failed to load current repo from localStorage:', expect.any(Error));
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from default:', { owner: 'super3', repo: 'dashban' });
-            
+            expect(mockLocalStorage.setItem).toHaveBeenCalledWith('aboutCardArchived_super3_dashban', 'true');
+
             // Restore
             global.JSON.parse = originalParse;
         });
@@ -147,15 +140,15 @@ describe('About Card Module', () => {
             };
             
             AboutCard.saveAboutCardArchivedStatus(true);
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from GitHubAuth:', { owner: 'github-owner', repo: 'github-repo' });
+            expect(mockLocalStorage.setItem).toHaveBeenCalledWith('aboutCardArchived_github-owner_github-repo', 'true');
         });
 
         test('should use default fallback', () => {
             window.RepoManager = null;
             window.GitHubAuth = null;
-            
+
             AboutCard.saveAboutCardArchivedStatus(true);
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from default:', { owner: 'super3', repo: 'dashban' });
+            expect(mockLocalStorage.setItem).toHaveBeenCalledWith('aboutCardArchived_super3_dashban', 'true');
         });
     });
 
@@ -304,7 +297,6 @@ describe('About Card Module', () => {
         test('should save archived status to localStorage', () => {
             AboutCard.saveAboutCardArchivedStatus(true);
             expect(mockLocalStorage.setItem).toHaveBeenCalledWith('aboutCardArchived_super3_dashban', 'true');
-            expect(console.log).toHaveBeenCalledWith('📦 Saved About card archived status for super3/dashban: true');
         });
 
         test('should handle localStorage error', () => {
@@ -322,7 +314,6 @@ describe('About Card Module', () => {
             mockStore['aboutCardArchived_super3_dashban'] = 'true';
             const result = AboutCard.loadAboutCardArchivedStatus();
             expect(result).toBe(true);
-            expect(console.log).toHaveBeenCalledWith('📦 Loaded About card archived status for super3/dashban: true');
         });
 
         test('should return false when no saved status', () => {
@@ -337,7 +328,6 @@ describe('About Card Module', () => {
             
             const result = AboutCard.loadAboutCardArchivedStatus();
             expect(result).toBe(false);
-            expect(console.log).toHaveBeenCalledWith('📦 Loaded About card archived status for super3/dashban: false');
         });
 
         test('should handle localStorage error', () => {
@@ -361,14 +351,15 @@ describe('About Card Module', () => {
             AboutCard.hideAboutCardIfArchived();
             expect(document.querySelector('[data-card-id="about-card"]')).toBeFalsy();
             expect(window.updateColumnCounts).toHaveBeenCalled();
-            expect(console.log).toHaveBeenCalledWith('📦 About card hidden (was previously archived)');
         });
 
-        test('should log when archived card not found in DOM', () => {
+        test('should not throw when archived card not found in DOM', () => {
             mockStore['aboutCardArchived_super3_dashban'] = 'true';
-            
-            AboutCard.hideAboutCardIfArchived();
-            expect(console.log).toHaveBeenCalledWith('📦 About card was marked as archived but not found in DOM');
+
+            // Archived but no card present: the in-DOM guard is false, so nothing
+            // is removed and no counts update happens.
+            expect(() => AboutCard.hideAboutCardIfArchived()).not.toThrow();
+            expect(window.updateColumnCounts).not.toHaveBeenCalled();
         });
 
         test('should ensure About card exists if not archived', () => {
@@ -377,26 +368,11 @@ describe('About Card Module', () => {
             
             // Ensure not archived - return null to simulate no saved state
             mockLocalStorage.getItem = jest.fn(() => null);
-            
+
             // Call the function
             AboutCard.hideAboutCardIfArchived();
-            
-            // Check the logs
-            const logs = console.log.mock.calls.map(call => call[0]);
-            
-            // Verify the expected flow
-            expect(logs).toContain('📦 Loaded About card archived status for super3/dashban: false');
-            expect(logs).toContain('📦 Checking if About card should be hidden. Archived status:');
-            expect(logs).toContain('📦 About card should be visible');
-            
-            // Check that the archived status was logged as false
-            expect(console.log).toHaveBeenCalledWith('📦 Checking if About card should be hidden. Archived status:', false);
-            
-            // Check that ensureAboutCardExists was called by verifying its side effects
-            expect(logs).toContain('📦 About card missing but should be visible - creating it');
-            expect(logs).toContain('📦 About card recreated in Todo column');
-            
-            // Verify the card was created
+
+            // Not archived: ensureAboutCardExists should recreate the missing card.
             const todoColumn = document.getElementById('todo');
             const aboutCard = todoColumn.querySelector('[data-card-id="about-card"]');
             expect(aboutCard).toBeTruthy();
@@ -412,7 +388,6 @@ describe('About Card Module', () => {
             const aboutCard = todoColumn.querySelector('[data-card-id="about-card"]');
             expect(aboutCard).toBeTruthy();
             expect(window.updateColumnCounts).toHaveBeenCalled();
-            expect(console.log).toHaveBeenCalledWith('📦 About card recreated in Todo column');
         });
 
         test('should not create duplicate About card', () => {
@@ -428,8 +403,9 @@ describe('About Card Module', () => {
 
         test('should handle missing todo column', () => {
             document.body.innerHTML = '';
-            AboutCard.ensureAboutCardExists();
-            expect(console.log).toHaveBeenCalledWith('📦 About card missing but should be visible - creating it');
+            // No todo column: the inner guard is false, so no card is created.
+            expect(() => AboutCard.ensureAboutCardExists()).not.toThrow();
+            expect(document.querySelector('[data-card-id="about-card"]')).toBeFalsy();
         });
     });
 
@@ -464,19 +440,17 @@ describe('About Card Module', () => {
             const aboutCard = todoColumn.querySelector('[data-card-id="about-card"]');
             expect(aboutCard).toBeTruthy();
             expect(window.updateColumnCounts).toHaveBeenCalled();
-            expect(console.log).toHaveBeenCalledWith('📦 About card restored to Todo column');
         });
 
         test('should not create duplicate when About card already visible', () => {
             const existingCard = document.createElement('div');
             existingCard.setAttribute('data-card-id', 'about-card');
             document.body.appendChild(existingCard);
-            
+
             AboutCard.restoreAboutCard();
-            
+
             const cards = document.querySelectorAll('[data-card-id="about-card"]');
             expect(cards.length).toBe(1);
-            expect(console.log).toHaveBeenCalledWith('📦 About card is already visible');
         });
 
         test('should handle missing todo column', () => {
@@ -513,17 +487,17 @@ describe('About Card Module', () => {
         test('should handle RepoManager with truthy but invalid structure', () => {
             window.RepoManager = { repoState: null };
             window.GitHubAuth = null;
-            
+
             AboutCard.saveAboutCardArchivedStatus(true);
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from default:', { owner: 'super3', repo: 'dashban' });
+            expect(mockLocalStorage.setItem).toHaveBeenCalledWith('aboutCardArchived_super3_dashban', 'true');
         });
 
         test('should handle GitHubAuth without GITHUB_CONFIG', () => {
             window.RepoManager = null;
             window.GitHubAuth = {};
-            
+
             AboutCard.saveAboutCardArchivedStatus(true);
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from default:', { owner: 'super3', repo: 'dashban' });
+            expect(mockLocalStorage.setItem).toHaveBeenCalledWith('aboutCardArchived_super3_dashban', 'true');
         });
 
         test('should handle localStorage without current repo key', () => {
@@ -532,7 +506,7 @@ describe('About Card Module', () => {
             mockStore['dashban_current_repo'] = null;
 
             AboutCard.saveAboutCardArchivedStatus(true);
-            expect(console.log).toHaveBeenCalledWith('📦 Repository context from default:', { owner: 'super3', repo: 'dashban' });
+            expect(mockLocalStorage.setItem).toHaveBeenCalledWith('aboutCardArchived_super3_dashban', 'true');
         });
     });
 
@@ -562,7 +536,6 @@ describe('About Card Module', () => {
 
             expect(() => AboutCard.hideAboutCardIfArchived()).not.toThrow();
             expect(document.querySelector('[data-card-id="about-card"]')).toBeFalsy();
-            expect(console.log).toHaveBeenCalledWith('📦 About card hidden (was previously archived)');
         });
 
         // Covers line 170 else-path: About card recreated but
@@ -573,7 +546,6 @@ describe('About Card Module', () => {
             expect(() => AboutCard.ensureAboutCardExists()).not.toThrow();
             const todoColumn = document.getElementById('todo');
             expect(todoColumn.querySelector('[data-card-id="about-card"]')).toBeTruthy();
-            expect(console.log).toHaveBeenCalledWith('📦 About card recreated in Todo column');
         });
 
         // Covers line 256 else-path: About card restored but
@@ -585,7 +557,6 @@ describe('About Card Module', () => {
             expect(() => AboutCard.restoreAboutCard()).not.toThrow();
             const todoColumn = document.getElementById('todo');
             expect(todoColumn.querySelector('[data-card-id="about-card"]')).toBeTruthy();
-            expect(console.log).toHaveBeenCalledWith('📦 About card restored to Todo column');
         });
 
         // Exercises the module-export guard's browser path (line 296 else-branch

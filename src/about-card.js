@@ -12,12 +12,10 @@
     // Get current repository context
     function getCurrentRepoContext() {
         let context = null;
-        let source = 'unknown';
-        
+
         // Try to get from RepoManager first (most reliable)
         if (window.RepoManager?.repoState?.currentRepo) {
             context = window.RepoManager.repoState.currentRepo;
-            source = 'RepoManager';
         }
         // Try to get from localStorage directly
         else {
@@ -25,26 +23,22 @@
                 const current = localStorage.getItem('dashban_current_repo');
                 if (current) {
                     context = JSON.parse(current);
-                    source = 'localStorage';
                 }
             } catch (error) {
                 console.warn('Failed to load current repo from localStorage:', error);
             }
         }
-        
+
         // Fallback to GitHub config
         if (!context && window.GitHubAuth?.GITHUB_CONFIG) {
             context = window.GitHubAuth.GITHUB_CONFIG;
-            source = 'GitHubAuth';
         }
-        
+
         // Final fallback
         if (!context) {
             context = { owner: 'super3', repo: 'dashban' };
-            source = 'default';
         }
-        
-        console.log(`📦 Repository context from ${source}:`, context);
+
         return context;
     }
 
@@ -112,7 +106,6 @@
             const config = getCurrentRepoContext();
             const storageKey = `aboutCardArchived_${config.owner}_${config.repo}`;
             localStorage.setItem(storageKey, JSON.stringify(isArchived));
-            console.log(`📦 Saved About card archived status for ${config.owner}/${config.repo}: ${isArchived}`);
         } catch (error) {
             console.warn('Failed to save About card archived status to localStorage:', error);
         }
@@ -126,7 +119,6 @@
             const storageKey = `aboutCardArchived_${config.owner}_${config.repo}`;
             const saved = localStorage.getItem(storageKey);
             const result = saved ? JSON.parse(saved) : false;
-            console.log(`📦 Loaded About card archived status for ${config.owner}/${config.repo}: ${result}`);
             return result;
         } catch (error) {
             console.warn('Failed to load About card archived status from localStorage:', error);
@@ -137,8 +129,7 @@
     // Hide About card if it was archived
     function hideAboutCardIfArchived() {
         const isArchived = loadAboutCardArchivedStatus();
-        console.log('📦 Checking if About card should be hidden. Archived status:', isArchived);
-        
+
         if (isArchived) {
             const aboutCard = document.querySelector('[data-card-id="about-card"]');
             if (aboutCard) {
@@ -146,12 +137,8 @@
                 if (typeof window.updateColumnCounts === 'function') {
                     window.updateColumnCounts();
                 }
-                console.log('📦 About card hidden (was previously archived)');
-            } else {
-                console.log('📦 About card was marked as archived but not found in DOM');
             }
         } else {
-            console.log('📦 About card should be visible');
             // If not archived and About card doesn't exist, ensure it exists
             ensureAboutCardExists();
         }
@@ -161,7 +148,6 @@
     function ensureAboutCardExists() {
         const aboutCard = document.querySelector('[data-card-id="about-card"]');
         if (!aboutCard) {
-            console.log('📦 About card missing but should be visible - creating it');
             // Create About card and add it to todo column (it will be moved by applyCardOrder if needed)
             const todoColumn = document.getElementById('todo');
             if (todoColumn) {
@@ -170,7 +156,6 @@
                 if (typeof window.updateColumnCounts === 'function') {
                     window.updateColumnCounts();
                 }
-                console.log('📦 About card recreated in Todo column');
             }
         }
     }
@@ -242,7 +227,6 @@
         // Check if About card already exists
         const existingAboutCard = document.querySelector('[data-card-id="about-card"]');
         if (existingAboutCard) {
-            console.log('📦 About card is already visible');
             return;
         }
         
@@ -256,7 +240,6 @@
             if (typeof window.updateColumnCounts === 'function') {
                 window.updateColumnCounts();
             }
-            console.log('📦 About card restored to Todo column');
         }
     }
 
@@ -266,13 +249,10 @@
             return;
         }
 
-        console.log('📦 About Card module initializing...');
-        
         // Set up event delegation for archive button clicks (will be called from kanban.js)
         // Note: The actual event handler setup remains in kanban.js to maintain event flow
-        
+
         state.initialized = true;
-        console.log('📦 About Card module initialized');
     }
 
     // React to board card moves: add/remove the About card's archive button

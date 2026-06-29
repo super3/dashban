@@ -88,7 +88,6 @@ async function loadRequiredLabels() {
 // Check which labels exist in the repository
 async function checkExistingLabels() {
     if (!window.GitHubAuth?.isGitHubAuthed?.()) {
-        console.log('❌ Not authenticated with GitHub - cannot check labels');
         return [];
     }
 
@@ -156,7 +155,6 @@ async function installMissingLabels(missingLabels) {
 
             if (response.ok) {
                 results.success.push(label.name);
-                console.log(`✅ Created label: ${label.name}`);
             } else {
                 const errorData = await response.json();
                 results.failed.push({ name: label.name, error: errorData.message });

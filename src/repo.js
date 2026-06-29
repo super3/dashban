@@ -54,7 +54,7 @@ async function validateRepository(owner, repo) {
                     }
                 }
             } catch (error) {
-                console.log('Could not determine write access, defaulting to read-only');
+                // Could not determine write access; keep the read-only default.
             }
         }
         
