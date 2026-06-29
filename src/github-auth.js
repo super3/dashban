@@ -184,6 +184,12 @@ function toggleUserDropdown() {
     const dropdown = document.createElement('div');
     dropdown.className = 'user-dropdown absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50';
     dropdown.innerHTML = `
+        <a href="https://github.com/settings/installations" target="_blank" rel="noopener noreferrer"
+           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+            <i class="fas fa-key text-xs"></i>
+            <span>Manage GitHub access</span>
+        </a>
+        <div class="border-t border-gray-100 my-1"></div>
         <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
             <i class="fas fa-sign-out-alt text-xs"></i>
             <span>Sign out</span>

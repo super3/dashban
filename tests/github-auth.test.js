@@ -305,6 +305,15 @@ describe('GitHub Authentication (Clerk-only)', () => {
             expect(container.querySelector('.user-dropdown')).toBeNull();
         });
 
+        test('includes a link to manage the GitHub App repository access', () => {
+            window.GitHubAuth.toggleUserDropdown();
+
+            const link = container.querySelector('.user-dropdown a[href="https://github.com/settings/installations"]');
+            expect(link).not.toBeNull();
+            expect(link.getAttribute('target')).toBe('_blank');
+            expect(link.textContent).toContain('Manage GitHub access');
+        });
+
         test('Sign out triggers Clerk sign-out', () => {
             window.ClerkAuth = { signOut: jest.fn() };
             window.GitHubAuth.toggleUserDropdown();
