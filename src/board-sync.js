@@ -39,8 +39,6 @@
             return;
         }
 
-        console.log(`🏷️ GitHub issue #${issueNumber} moved from ${fromColumnId} to ${toColumnId}`);
-
         const labelsOk = await window.safeInvoke('GitHub', 'updateGitHubIssueLabels', issueNumber, toColumnId);
 
         let closeOk = true;

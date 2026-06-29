@@ -242,8 +242,6 @@ function setupIssueModalEventHandlers() {
             // Save to GitHub API
             if (window.GitHubAPI && window.GitHubAPI.updateGitHubIssueTitle) {
                 await window.GitHubAPI.updateGitHubIssueTitle(issueNumber, newTitle);
-            } else {
-                console.log('GitHub API not available, title updated locally only');
             }
         });
     }
@@ -314,15 +312,10 @@ function setupIssueModalEventHandlers() {
             // Update via GitHub API if this is a GitHub issue
             if (taskElement && taskElement.hasAttribute('data-github-issue')) {
                 try {
-                    const success = await window.GitHubAPI.updateGitHubIssueDescription(issueNumber, newDesc);
-                    if (success) {
-                        console.log(`✅ Successfully updated GitHub issue #${issueNumber} description locally and on GitHub`);
-                    }
+                    await window.GitHubAPI.updateGitHubIssueDescription(issueNumber, newDesc);
                 } catch (error) {
                     console.error('❌ Failed to update GitHub issue description:', error);
                 }
-            } else {
-                console.log(`Updated local task description: "${newDesc}"`);
             }
         });
     }
@@ -378,8 +371,6 @@ function setupIssueModalEventHandlers() {
             // Update GitHub issue labels
             if (window.GitHubAPI && window.GitHubAPI.updateGitHubIssueMetadata) {
                 await window.GitHubAPI.updateGitHubIssueMetadata(issueNumber, 'priority', newPriority);
-            } else {
-                console.log('GitHub API not available, priority updated locally only');
             }
         });
     }
@@ -432,8 +423,6 @@ function setupIssueModalEventHandlers() {
             // Update GitHub issue labels
             if (window.GitHubAPI && window.GitHubAPI.updateGitHubIssueMetadata) {
                 await window.GitHubAPI.updateGitHubIssueMetadata(issueNumber, 'category', newCategory);
-            } else {
-                console.log('GitHub API not available, category updated locally only');
             }
         });
     }
@@ -482,8 +471,6 @@ function setupIssueModalEventHandlers() {
             // Close issue via GitHub API
             if (window.GitHubAPI && window.GitHubAPI.closeGitHubIssue) {
                 await window.GitHubAPI.closeGitHubIssue(issueNumber);
-            } else {
-                console.log('GitHub API not available, issue closed locally only');
             }
         });
     }
@@ -527,8 +514,6 @@ function setupIssueModalEventHandlers() {
             // Reopen issue via GitHub API
             if (window.GitHubAPI && window.GitHubAPI.reopenGitHubIssue) {
                 await window.GitHubAPI.reopenGitHubIssue(issueNumber);
-            } else {
-                console.log('GitHub API not available, issue reopened locally only');
             }
         });
     }

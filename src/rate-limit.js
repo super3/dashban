@@ -62,9 +62,7 @@ async function checkRateLimit() {
             } else {
                 hideBanner();
             }
-            
-            console.log(`📊 GitHub API Rate Limit: ${core.remaining}/${core.limit} remaining (resets at ${new Date(core.reset * 1000).toLocaleTimeString()})`);
-            
+
             return {
                 isLimited: core.remaining === 0,
                 remaining: core.remaining,
@@ -224,8 +222,6 @@ function initializeRateLimitManager() {
             checkRateLimit();
         }
     }, 5 * 60 * 1000);
-    
-    console.log('📊 Rate limit manager initialized');
 }
 
 // Wrapper for fetch that automatically handles rate limiting

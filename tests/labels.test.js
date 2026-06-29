@@ -139,7 +139,6 @@ describe('GitHub Labels Management', () => {
             const result = await checkExistingLabels();
 
             expect(result).toEqual([]);
-            expect(mockConsoleLog).toHaveBeenCalledWith('❌ Not authenticated with GitHub - cannot check labels');
         });
 
         test('should return empty array when not in Clerk mode', async () => {
@@ -148,7 +147,6 @@ describe('GitHub Labels Management', () => {
             const result = await checkExistingLabels();
 
             expect(result).toEqual([]);
-            expect(mockConsoleLog).toHaveBeenCalledWith('❌ Not authenticated with GitHub - cannot check labels');
         });
 
         test('should handle API error response', async () => {
@@ -178,7 +176,6 @@ describe('GitHub Labels Management', () => {
             const result = await checkExistingLabels();
 
             expect(result).toEqual([]);
-            expect(mockConsoleLog).toHaveBeenCalledWith('❌ Not authenticated with GitHub - cannot check labels');
         });
 
         test('should handle undefined githubAuth', async () => {
@@ -187,7 +184,6 @@ describe('GitHub Labels Management', () => {
             const result = await checkExistingLabels();
 
             expect(result).toEqual([]);
-            expect(mockConsoleLog).toHaveBeenCalledWith('❌ Not authenticated with GitHub - cannot check labels');
         });
     });
 

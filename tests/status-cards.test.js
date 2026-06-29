@@ -364,10 +364,9 @@ describe('Status Cards Functions', () => {
         expect(element).not.toBeNull();
       });
 
-      test('should log error and return null when element not found', () => {
+      test('should return null when element not found', () => {
         const element = statusAPI.safeQuerySelector('[data-nonexistent]');
         expect(element).toBeNull();
-        expect(console.log).toHaveBeenCalledWith('❌ Element not found: [data-nonexistent]');
       });
     });
   });
@@ -424,21 +423,8 @@ describe('Status Cards Functions', () => {
       Date.now = jest.fn(() => mockNow);
       
       refreshBtn.click();
-      
-      expect(badgeImg.src).toContain(`?t=${mockNow}`);
-      expect(console.log).toHaveBeenCalledWith('Badge refreshed manually');
-    });
 
-    test('should handle badge image load event', () => {
-      const badgeImg = document.getElementById('github-badge');
-      
-      Object.defineProperty(badgeImg, 'naturalWidth', { value: 100 });
-      Object.defineProperty(badgeImg, 'naturalHeight', { value: 20 });
-      Object.defineProperty(badgeImg, 'src', { value: 'test-url.svg' });
-      
-      badgeImg.dispatchEvent(new Event('load'));
-      
-      expect(console.log).toHaveBeenCalledWith('Badge loaded successfully');
+      expect(badgeImg.src).toContain(`?t=${mockNow}`);
     });
 
     test('should handle badge image error event', () => {
@@ -472,8 +458,6 @@ describe('Status Cards Functions', () => {
       expect(() => {
         refreshBtn.click();
       }).not.toThrow();
-      
-      expect(console.log).toHaveBeenCalledWith('Badge refreshed manually');
     });
   });
 
@@ -1081,10 +1065,8 @@ describe('Status Cards Functions', () => {
 
       localStatusAPI.setupBadgeDebugging();
 
-      // Fire the click; with no badge image present the handler must not throw
-      // and must still log the manual refresh message.
+      // Fire the click; with no badge image present the handler must not throw.
       expect(() => refreshBtn.click()).not.toThrow();
-      expect(console.log).toHaveBeenCalledWith('Badge refreshed manually');
     });
   });
 

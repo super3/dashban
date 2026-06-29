@@ -145,11 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function safeQuerySelector(selector) {
-        const element = document.querySelector(selector);
-        if (!element) {
-            console.log(`❌ Element not found: ${selector}`);
-        }
-        return element;
+        return document.querySelector(selector);
     }
 
     // ============================================================================
@@ -426,8 +422,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================================================
     
     function refreshStatusCardsForRepository() {
-        console.log('🔄 Refreshing status cards for repository:', getCurrentRepoConfig());
-        
         // Clear any existing status to show loading state
         const statusElements = [
             document.querySelector(CONFIG.SELECTORS.FRONTEND_STATUS),
@@ -470,16 +464,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Also refresh our status detection and timestamp
                 refreshAllStatuses();
-                
-                console.log('Badge refreshed manually');
             });
         }
-        
+
         if (badgeImg) {
-            badgeImg.addEventListener('load', function() {
-                console.log('Badge loaded successfully');
-            });
-            
             badgeImg.addEventListener('error', function() {
                 console.error('Badge failed to load');
             });

@@ -18,7 +18,6 @@ function notifyError(message) {
 // Archive GitHub issue by adding "archive" label
 async function archiveGitHubIssue(issueNumber, taskElement) {
     if (!window.GitHubAuth.isGitHubAuthed()) {
-        console.log('❌ Not authenticated with GitHub - cannot archive issue');
         // Remove from UI anyway
         taskElement.remove();
         window.updateColumnCounts();
@@ -66,7 +65,6 @@ async function archiveGitHubIssue(issueNumber, taskElement) {
 // Update GitHub issue labels when moved between columns
 async function updateGitHubIssueLabels(issueNumber, newColumn) {
     if (!window.GitHubAuth.isGitHubAuthed()) {
-        console.log('❌ Not authenticated with GitHub - cannot update issue labels');
         return;
     }
 
@@ -132,7 +130,6 @@ async function updateGitHubIssueLabels(issueNumber, newColumn) {
 // Update GitHub issue title
 async function updateGitHubIssueTitle(issueNumber, newTitle) {
     if (!window.GitHubAuth.isGitHubAuthed()) {
-        console.log('❌ Not authenticated with GitHub - cannot update issue title');
         return false;
     }
 
@@ -154,7 +151,6 @@ async function updateGitHubIssueTitle(issueNumber, newTitle) {
         }
 
         const issue = await response.json();
-        console.log(`✅ Successfully updated GitHub issue #${issueNumber} title to: "${newTitle}"`);
         return true;
         
     } catch (error) {
@@ -169,7 +165,6 @@ async function updateGitHubIssueTitle(issueNumber, newTitle) {
 // Update GitHub issue description
 async function updateGitHubIssueDescription(issueNumber, newDescription) {
     if (!window.GitHubAuth.isGitHubAuthed()) {
-        console.log('❌ Not authenticated with GitHub - cannot update issue description');
         return false;
     }
 
@@ -191,8 +186,7 @@ async function updateGitHubIssueDescription(issueNumber, newDescription) {
         }
 
         const issue = await response.json();
-        console.log(`✅ Successfully updated GitHub issue #${issueNumber} description`);
-        
+
         // Update the stored raw description in the task element for future edits
         const taskElement = document.querySelector(`[data-issue-number="${issueNumber}"]`);
         if (taskElement) {
@@ -213,7 +207,6 @@ async function updateGitHubIssueDescription(issueNumber, newDescription) {
 // Close GitHub issue when moved to Done column
 async function closeGitHubIssue(issueNumber) {
     if (!window.GitHubAuth.isGitHubAuthed()) {
-        console.log('❌ Not authenticated with GitHub - cannot close issue');
         return;
     }
 
@@ -250,7 +243,6 @@ async function closeGitHubIssue(issueNumber) {
 // Reopen GitHub issue
 async function reopenGitHubIssue(issueNumber) {
     if (!window.GitHubAuth.isGitHubAuthed()) {
-        console.log('❌ Not authenticated with GitHub - cannot reopen issue');
         return;
     }
 
@@ -271,8 +263,6 @@ async function reopenGitHubIssue(issueNumber) {
             throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
         }
 
-        console.log(`✅ Successfully reopened GitHub issue #${issueNumber}`);
-        
     } catch (error) {
         console.error('❌ Failed to reopen GitHub issue:', error);
         
@@ -284,7 +274,6 @@ async function reopenGitHubIssue(issueNumber) {
 // Update GitHub issue priority or category label
 async function updateGitHubIssueMetadata(issueNumber, type, newValue) {
     if (!window.GitHubAuth.isGitHubAuthed()) {
-        console.log('❌ Not authenticated with GitHub - cannot update issue metadata');
         return false;
     }
 
@@ -339,7 +328,6 @@ async function updateGitHubIssueMetadata(issueNumber, type, newValue) {
             throw new Error(`GitHub API error: ${updateResponse.status} - ${errorData.message || 'Unknown error'}`);
         }
 
-        console.log(`✅ Successfully updated GitHub issue #${issueNumber} ${type} to: "${newValue}"`);
         return true;
         
     } catch (error) {
@@ -354,7 +342,6 @@ async function updateGitHubIssueMetadata(issueNumber, type, newValue) {
 // Create GitHub issue via API
 async function createGitHubIssue(title, description, labels = []) {
     if (!window.GitHubAuth.isGitHubAuthed()) {
-        console.log('❌ Not authenticated with GitHub - cannot create issue');
         return null;
     }
 
@@ -522,7 +509,6 @@ async function loadGitHubIssues() {
 
             // Handle rate limiting gracefully
             if (error.message.includes('Rate limit') || error.message.includes('rate limit')) {
-                console.log('📊 GitHub API rate limited - banner should be visible');
                 // Don't show additional alert - rate limit banner handles this
                 return;
             }
@@ -569,7 +555,6 @@ function initializeGitHubIssues() {
 // Get GitHub issue comments
 async function getGitHubIssueComments(issueNumber) {
     if (!window.GitHubAuth.isGitHubAuthed()) {
-        console.log('❌ Not authenticated with GitHub - cannot fetch comments');
         return [];
     }
 
@@ -584,7 +569,6 @@ async function getGitHubIssueComments(issueNumber) {
         }
 
         const comments = await response.json();
-        console.log(`✅ Successfully fetched ${comments.length} comments for issue #${issueNumber}`);
         return comments;
 
     } catch (error) {
@@ -599,7 +583,6 @@ async function getGitHubIssueComments(issueNumber) {
 // Create GitHub issue comment
 async function createGitHubIssueComment(issueNumber, commentBody) {
     if (!window.GitHubAuth.isGitHubAuthed()) {
-        console.log('❌ Not authenticated with GitHub - cannot create comment');
         return null;
     }
 
@@ -620,7 +603,6 @@ async function createGitHubIssueComment(issueNumber, commentBody) {
         }
 
         const comment = await response.json();
-        console.log(`✅ Successfully created comment on issue #${issueNumber}`);
         return comment;
 
     } catch (error) {
