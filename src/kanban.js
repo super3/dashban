@@ -219,6 +219,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+
+        updateArchiveAllButton();
+    }
+
+    // Show the Done column's "Archive all" button only when signed in and there
+    // is at least one GitHub issue card available to archive.
+    function updateArchiveAllButton() {
+        const btn = document.getElementById('archive-all-done-btn');
+        const doneColumn = document.getElementById('done');
+        if (!btn || !doneColumn) {
+            return;
+        }
+        const authed = Boolean(window.GitHub?.isGitHubAuthed?.());
+        const issueCount = doneColumn.querySelectorAll('.bg-white.border[data-issue-number]').length;
+        btn.classList.toggle('hidden', !(authed && issueCount > 0));
     }
 
     // Expose updateColumnCounts globally for modal use
@@ -308,6 +323,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('📦 About card archived');
             }
         }
+    });
+
+    // Archive every GitHub issue currently in the Done column at once.
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#archive-all-done-btn')) {
+            return;
+        }
+        const doneColumn = document.getElementById('done');
+        if (!doneColumn) {
+            return;
+        }
+        const issueCards = Array.from(doneColumn.querySelectorAll('.bg-white.border[data-issue-number]'));
+        if (issueCards.length === 0) {
+            return;
+        }
+        const plural = issueCards.length === 1 ? 'issue' : 'issues';
+        if (!window.confirm(`Archive all ${issueCards.length} ${plural} in Done?`)) {
+            return;
+        }
+        issueCards.forEach(card => {
+            window.GitHub.archiveGitHubIssue(card.getAttribute('data-issue-number'), card);
+        });
     });
 
     // Add click to open issue modal functionality
@@ -476,6 +513,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const testAPI = {
         createTaskElement,
         updateColumnCounts,
+        updateArchiveAllButton,
         hideModal,
         addTaskBtn,
         addTaskModal,

@@ -217,12 +217,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function fetchCoverageStatus() {
+        // Remember which repo this request is for. If the user switches repos
+        // while the request is in flight, a slow/late response must not overwrite
+        // the now-current repo's coverage (switching to a repo with no coverage
+        // and back was leaving dashban stuck on "unknown").
+        const { OWNER, REPO } = getCurrentRepoConfig();
+        const isStale = () => {
+            const current = getCurrentRepoConfig();
+            return current.OWNER !== OWNER || current.REPO !== REPO;
+        };
+
         try {
             // The coverage badge URL already carries a query (?branch=main), so
             // join the cache-buster with & rather than ?.
             const badgeUrl = `${buildBadgeUrl('coverage')}&t=${Date.now()}`;
             
             const svgText = await fetch(badgeUrl).then(r => r.text());
+            if (isStale()) {
+                return;
+            }
             const coverage = parseCoverageFromSVG(svgText);
             
             const coverageData = {
@@ -234,7 +247,10 @@ document.addEventListener('DOMContentLoaded', function() {
             updateCoverageStatusUI(coverageData);
         } catch (error) {
             console.error('Error fetching coverage status:', error);
-            
+
+            if (isStale()) {
+                return;
+            }
             const fallbackData = {
                 coverage: 'unknown',
                 updatedAt: new Date(),
