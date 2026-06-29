@@ -1,10 +1,12 @@
 // GitHub Authentication for Dashban — Clerk "Sign in with GitHub" only.
 //
 // Authentication is handled by Clerk (see clerk-auth.js). When a user signs in,
-// GitHub API calls are routed through the server-side proxy (/api/github), which
+// GitHub API calls are routed through the backend proxy (/api/github), which
 // attaches the user's own GitHub token — so no token is ever stored in the
-// browser. Unauthenticated visitors get read-only public access straight from
-// api.github.com.
+// browser. The proxy is same-origin when the app is served by its backend, and
+// cross-origin (an absolute Railway URL, see getApiBase) when served as a static
+// build such as GitHub Pages. Unauthenticated visitors get read-only public
+// access straight from api.github.com.
 
 // GitHub configuration
 const GITHUB_CONFIG = {
@@ -12,6 +14,22 @@ const GITHUB_CONFIG = {
     owner: 'super3',
     repo: 'dashban'
 };
+
+// Origin of the backend API. The frontend can be served three ways:
+//   • locally (localhost) — the dev server serves the API too, so relative paths.
+//   • by the backend itself on Railway — same origin, relative paths work.
+//   • as a static build on another host (e.g. GitHub Pages on dashban.com) —
+//     there is no co-located API, so call the Railway backend by its absolute
+//     URL (CORS is enabled server-side for this).
+// `hostname` is injectable for testing; it defaults to the current page's host.
+const BACKEND_ORIGIN = 'https://dashban-production.up.railway.app';
+function getApiBase(hostname) {
+    const host = hostname !== undefined ? hostname : window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+        return '';
+    }
+    return BACKEND_ORIGIN;
+}
 
 // GitHub authentication state. `mode` is 'clerk' when signed in via Clerk, else null.
 let githubAuth = {
@@ -28,9 +46,10 @@ function isGitHubAuthed() {
 
 // Build the URL and headers for a GitHub REST request.
 //
-// Authenticated calls go through the same-origin proxy with a short-lived Clerk
-// session token (the proxy swaps in the user's real GitHub token). Anonymous
-// calls go straight to GitHub for public, read-only access with no auth headers.
+// Authenticated calls go through the backend proxy (getApiBase() picks the right
+// origin) with a short-lived Clerk session token — the proxy swaps in the user's
+// real GitHub token. Anonymous calls go straight to GitHub for public, read-only
+// access with no auth headers.
 async function buildGitHubRequest(path, extraHeaders = {}) {
     const headers = { ...extraHeaders };
 
@@ -40,7 +59,7 @@ async function buildGitHubRequest(path, extraHeaders = {}) {
             headers['Authorization'] = `Bearer ${token}`;
             headers['Accept'] = 'application/vnd.github.v3+json';
         }
-        return { url: `/api/github${path}`, headers };
+        return { url: `${getApiBase()}/api/github${path}`, headers };
     }
 
     return { url: `${GITHUB_CONFIG.apiBaseUrl}${path}`, headers };
@@ -209,6 +228,7 @@ window.GitHubAuth = {
 
     // Mode-aware request layer (used by github-api.js, repo.js and labels.js)
     isGitHubAuthed,
+    getApiBase,
     buildGitHubRequest,
     githubFetch,
 

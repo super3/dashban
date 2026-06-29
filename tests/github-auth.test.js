@@ -82,6 +82,23 @@ describe('GitHub Authentication (Clerk-only)', () => {
         });
     });
 
+    describe('getApiBase', () => {
+        test('uses relative paths on localhost (the dev server serves the API too)', () => {
+            expect(window.GitHubAuth.getApiBase('localhost')).toBe('');
+            expect(window.GitHubAuth.getApiBase('127.0.0.1')).toBe('');
+        });
+
+        test('uses the absolute Railway backend URL for a static host (e.g. dashban.com)', () => {
+            expect(window.GitHubAuth.getApiBase('dashban.com'))
+                .toBe('https://dashban-production.up.railway.app');
+        });
+
+        test('defaults to the current page hostname when none is given', () => {
+            // jsdom serves the tests from http://localhost, so this resolves to relative.
+            expect(window.GitHubAuth.getApiBase()).toBe('');
+        });
+    });
+
     describe('buildGitHubRequest', () => {
         test('routes through the proxy with a Bearer token when signed in', async () => {
             signInClerk();
@@ -338,7 +355,7 @@ describe('GitHub Authentication (Clerk-only)', () => {
     describe('Export API', () => {
         test('exposes the Clerk-only surface', () => {
             const api = window.GitHubAuth;
-            ['isGitHubAuthed', 'buildGitHubRequest', 'githubFetch', 'initializeGitHubAuth',
+            ['isGitHubAuthed', 'getApiBase', 'buildGitHubRequest', 'githubFetch', 'initializeGitHubAuth',
                 'signInWithGitHub', 'signOutGitHub', 'updateGitHubSignInUI',
                 'updateAddIssueButtonState', 'toggleUserDropdown', 'updateHeaderRepoName']
                 .forEach((fn) => expect(typeof api[fn]).toBe('function'));

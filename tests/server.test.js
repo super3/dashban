@@ -18,6 +18,13 @@ describe('Dashban server', () => {
         });
     });
 
+    describe('CORS', () => {
+        test('sends an allow-origin header so a static frontend can call the API', async () => {
+            const res = await request(app).get('/api/health');
+            expect(res.headers['access-control-allow-origin']).toBe('*');
+        });
+    });
+
     describe('GET /api/config', () => {
         const ORIGINAL = { ...process.env };
 

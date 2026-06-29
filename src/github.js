@@ -12,8 +12,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Render the initial (signed-out) auth UI.
     window.GitHubAuth.initializeGitHubAuth();
 
-    // Initialize Clerk "Sign in with GitHub". It is a no-op on the static build
-    // where /api/config is absent (that build is read-only, public issues only).
+    // Initialize Clerk "Sign in with GitHub". This works on the static build too:
+    // config is fetched from the backend cross-origin (with a built-in fallback
+    // key), so sign-in is available wherever the app is served.
     if (window.ClerkAuth) {
         window.ClerkAuth.initialize();
     }

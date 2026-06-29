@@ -39,6 +39,24 @@ describe('ClerkAuth', () => {
             global.fetch.mockRejectedValue(new Error('network'));
             await expect(ClerkAuth.fetchConfig()).resolves.toBeNull();
         });
+
+        test('prefixes the API base from GitHubAuth (cross-origin static build)', async () => {
+            window.GitHubAuth = { getApiBase: () => 'https://dashban-production.up.railway.app' };
+            global.fetch.mockResolvedValue({ ok: true, json: async () => ({ clerkPublishableKey: 'pk' }) });
+
+            await ClerkAuth.fetchConfig();
+
+            expect(global.fetch).toHaveBeenCalledWith('https://dashban-production.up.railway.app/api/config');
+        });
+
+        test('uses a relative path when GitHubAuth exposes no getApiBase', async () => {
+            window.GitHubAuth = {};
+            global.fetch.mockResolvedValue({ ok: true, json: async () => ({}) });
+
+            await ClerkAuth.fetchConfig();
+
+            expect(global.fetch).toHaveBeenCalledWith('/api/config');
+        });
     });
 
     describe('frontendApiFromKey', () => {
@@ -246,15 +264,27 @@ describe('ClerkAuth', () => {
     });
 
     describe('initialize', () => {
-        test('returns false when there is no config (no backend)', async () => {
+        test('falls back to the built-in key when there is no backend config', async () => {
+            // No /api/config (e.g. the static GitHub Pages build).
             global.fetch.mockResolvedValue({ ok: false });
-            await expect(ClerkAuth.initialize()).resolves.toBe(false);
-            expect(ClerkAuth.isAvailable()).toBe(false);
+            // Pre-set Clerk so loadClerkScript resolves immediately.
+            window.Clerk = { load: jest.fn().mockResolvedValue(), addListener: jest.fn(), user: null };
+
+            await expect(ClerkAuth.initialize()).resolves.toBe(true);
+            expect(ClerkAuth.isAvailable()).toBe(true);
+            expect(ClerkAuth.state.publishableKey)
+                .toBe('pk_test_YWJsZS1hbGJhY29yZS01Ny5jbGVyay5hY2NvdW50cy5kZXYk');
+            expect(ClerkAuth.state.githubRepo).toBeNull();
         });
 
-        test('returns false when config has no publishable key', async () => {
+        test('falls back to the built-in key when config omits the publishable key', async () => {
             global.fetch.mockResolvedValue({ ok: true, json: async () => ({ githubRepo: 'a/b' }) });
-            await expect(ClerkAuth.initialize()).resolves.toBe(false);
+            window.Clerk = { load: jest.fn().mockResolvedValue(), addListener: jest.fn(), user: null };
+
+            await expect(ClerkAuth.initialize()).resolves.toBe(true);
+            expect(ClerkAuth.state.publishableKey)
+                .toBe('pk_test_YWJsZS1hbGJhY29yZS01Ny5jbGVyay5hY2NvdW50cy5kZXYk');
+            expect(ClerkAuth.state.githubRepo).toBe('a/b');
         });
 
         test('loads Clerk and wires up the listener on success', async () => {
