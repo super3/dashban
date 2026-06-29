@@ -118,7 +118,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (type === 'workflow') {
             return `https://img.shields.io/github/actions/workflow/status/${OWNER}/${REPO}/${workflowFile}`;
         } else if (type === 'coverage') {
-            return `https://img.shields.io/coveralls/github/${OWNER}/${REPO}/main.svg`;
+            // shields.io deprecated the /coveralls/ path — it now 301-redirects
+            // to a URL that fails CORS, which breaks reading the SVG body from
+            // the browser. The current /coverallsCoverage/ endpoint serves the
+            // badge directly with CORS headers.
+            return `https://img.shields.io/coverallsCoverage/github/${OWNER}/${REPO}?branch=main`;
         }
         throw new Error(`Unknown badge type: ${type}`);
     }
@@ -214,7 +218,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function fetchCoverageStatus() {
         try {
-            const badgeUrl = `${buildBadgeUrl('coverage')}?t=${Date.now()}`;
+            // The coverage badge URL already carries a query (?branch=main), so
+            // join the cache-buster with & rather than ?.
+            const badgeUrl = `${buildBadgeUrl('coverage')}&t=${Date.now()}`;
             
             const svgText = await fetch(badgeUrl).then(r => r.text());
             const coverage = parseCoverageFromSVG(svgText);

@@ -303,7 +303,7 @@ describe('Status Cards Functions', () => {
 
       test('should build coverage badge URL correctly', () => {
         const result = statusAPI.buildBadgeUrl('coverage');
-        expect(result).toBe('https://img.shields.io/coveralls/github/super3/dashban/main.svg');
+        expect(result).toBe('https://img.shields.io/coverallsCoverage/github/super3/dashban?branch=main');
       });
 
       test('should throw error for unknown badge type', () => {
@@ -960,7 +960,7 @@ describe('Status Cards Functions', () => {
       
       // With no GitHubAuth setup, it uses default config
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('https://img.shields.io/coveralls/github/super3/dashban/main.svg?t=')
+        expect.stringContaining('https://img.shields.io/coverallsCoverage/github/super3/dashban?branch=main&t=')
       );
     });
 
