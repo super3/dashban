@@ -1,16 +1,22 @@
 // Clerk-based "Sign in with GitHub" for Dashban — the only authentication method.
 //
-// When the app is served by its backend (e.g. on Railway) the user signs in with
-// their own GitHub account through Clerk, and GitHub API calls are routed through
-// the server-side proxy, which attaches the user's own token. The browser never
-// sees a GitHub token.
+// The user signs in with their own GitHub account through Clerk, and GitHub API
+// calls are routed through the backend proxy, which attaches the user's own
+// token. The browser never sees a GitHub token.
 //
-// When the app is served without a backend (the static GitHub Pages build),
-// /api/config is unavailable and Clerk stays disabled — that build is then
-// read-only (anonymous, public issues only). Initialization is driven by
+// This works whether the app is served by its own backend (Railway) or as a
+// static build on another host (e.g. GitHub Pages on dashban.com): config is
+// fetched from the backend via getApiBase(), and if that is unreachable we fall
+// back to the built-in publishable key so Clerk still initializes. Clerk-js is
+// loaded cross-origin from Clerk's frontend API. Initialization is driven by
 // github.js so the module has no side effects at load time.
 (function () {
     'use strict';
+
+    // Browser-safe Clerk publishable key. Used as a fallback so Clerk can still
+    // initialize when the backend's /api/config is unreachable (e.g. on the
+    // static GitHub Pages build, or before the cross-origin request resolves).
+    const DEFAULT_CLERK_PUBLISHABLE_KEY = 'pk_test_YWJsZS1hbGJhY29yZS01Ny5jbGVyay5hY2NvdW50cy5kZXYk';
 
     const state = {
         available: false,   // Clerk has loaded and is ready to use
@@ -18,11 +24,13 @@
         githubRepo: null
     };
 
-    // Read the browser-safe config the backend exposes. Returns null when there
-    // is no backend (static hosting) or the request otherwise fails.
+    // Read the browser-safe config the backend exposes (via getApiBase() so the
+    // static build can reach the backend cross-origin). Returns null when the
+    // backend is unreachable or the request otherwise fails.
     async function fetchConfig() {
         try {
-            const response = await fetch('/api/config');
+            const base = window.GitHubAuth?.getApiBase?.() || '';
+            const response = await fetch(`${base}/api/config`);
             if (!response.ok) {
                 return null;
             }
@@ -128,19 +136,17 @@
     }
 
     // Initialize Clerk. Resolves to true when Clerk is available for use, false
-    // when there is no backend/config or clerk-js fails to load.
+    // when clerk-js fails to load.
     async function initialize() {
         const config = await fetchConfig();
-        if (!config || !config.clerkPublishableKey) {
-            state.available = false;
-            return false;
-        }
-
-        state.publishableKey = config.clerkPublishableKey;
-        state.githubRepo = config.githubRepo || null;
+        // Fall back to the built-in key so Clerk still initializes when the
+        // backend config is unreachable (e.g. the static GitHub Pages build).
+        const publishableKey = (config && config.clerkPublishableKey) || DEFAULT_CLERK_PUBLISHABLE_KEY;
+        state.publishableKey = publishableKey;
+        state.githubRepo = (config && config.githubRepo) || null;
 
         try {
-            await loadClerkScript(config.clerkPublishableKey);
+            await loadClerkScript(publishableKey);
         } catch (error) {
             /* istanbul ignore next: console noise only runs outside the Jest test environment */
             if (typeof jest === 'undefined') {

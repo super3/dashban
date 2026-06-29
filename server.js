@@ -8,9 +8,15 @@
 // the repo root, so server code, package metadata and any .env stay private.
 const express = require('express');
 const path = require('path');
+const cors = require('cors');
 const { clerkMiddleware, getAuth, clerkClient } = require('@clerk/express');
 
 const app = express();
+// Allow cross-origin calls so a statically-hosted frontend (e.g. the GitHub
+// Pages build on dashban.com) can reach this API on its own Railway origin.
+// Requests must still carry a valid Clerk session token to use the GitHub proxy,
+// so opening CORS here does not by itself grant any access.
+app.use(cors());
 app.use(express.json());
 
 const ROOT = __dirname;
