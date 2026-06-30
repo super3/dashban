@@ -27,7 +27,7 @@ describe('GitHub Authentication (Clerk-only)', () => {
         document.body.appendChild(container);
 
         delete window.ClerkAuth;
-        delete require.cache[require.resolve('../src/github-auth.js')];
+        jest.resetModules();
         require('../src/github-auth.js');
 
         // Start signed out.
@@ -305,13 +305,29 @@ describe('GitHub Authentication (Clerk-only)', () => {
             expect(container.querySelector('.user-dropdown')).toBeNull();
         });
 
-        test('includes a link to manage the GitHub App repository access', () => {
+        test('includes a Manage GitHub access link (app page by default)', () => {
             window.GitHubAuth.toggleUserDropdown();
 
-            const link = container.querySelector('.user-dropdown a[href="https://github.com/apps/dashban"]');
+            const link = container.querySelector('.user-dropdown #manage-github-access');
             expect(link).not.toBeNull();
+            expect(link.getAttribute('href')).toBe('https://github.com/apps/dashban');
             expect(link.getAttribute('target')).toBe('_blank');
             expect(link.textContent).toContain('Manage GitHub access');
+        });
+
+        test('upgrades the access link to the exact installation page once resolved', async () => {
+            window.ClerkAuth = { getToken: jest.fn().mockResolvedValue('jwt') };
+            global.fetch = jest.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({ installations: [{ app_slug: 'dashban', id: 9999 }] })
+            });
+
+            window.GitHubAuth.toggleUserDropdown();
+            // Let refreshManageAccessUrl()'s promise and the in-place href update settle.
+            await new Promise((resolve) => setTimeout(resolve, 0));
+
+            const link = container.querySelector('.user-dropdown #manage-github-access');
+            expect(link.getAttribute('href')).toBe('https://github.com/settings/installations/9999');
         });
 
         test('Sign out triggers Clerk sign-out', () => {
@@ -345,6 +361,69 @@ describe('GitHub Authentication (Clerk-only)', () => {
             dropdown.click(); // inside the container -> stays open
 
             expect(container.querySelector('.user-dropdown')).not.toBeNull();
+        });
+    });
+
+    describe('refreshManageAccessUrl', () => {
+        const FALLBACK = 'https://github.com/apps/dashban';
+
+        test('returns the app-page fallback when signed out', async () => {
+            await expect(window.GitHubAuth.refreshManageAccessUrl()).resolves.toBe(FALLBACK);
+        });
+
+        test('resolves to the exact installation settings page when found', async () => {
+            signInClerk();
+            window.ClerkAuth = { getToken: jest.fn().mockResolvedValue('jwt') };
+            global.fetch = jest.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({ installations: [{ app_slug: 'other', id: 1 }, { app_slug: 'dashban', id: 42 }] })
+            });
+
+            const url = await window.GitHubAuth.refreshManageAccessUrl();
+
+            expect(url).toBe('https://github.com/settings/installations/42');
+            expect(global.fetch).toHaveBeenCalledWith(
+                '/api/github/user/installations',
+                expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer jwt' }) })
+            );
+        });
+
+        test('keeps the fallback when the dashban installation is not in the list', async () => {
+            signInClerk();
+            window.ClerkAuth = { getToken: jest.fn().mockResolvedValue('jwt') };
+            global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+
+            await expect(window.GitHubAuth.refreshManageAccessUrl()).resolves.toBe(FALLBACK);
+        });
+
+        test('keeps the fallback when the request is not ok', async () => {
+            signInClerk();
+            window.ClerkAuth = { getToken: jest.fn().mockResolvedValue('jwt') };
+            global.fetch = jest.fn().mockResolvedValue({ ok: false });
+
+            await expect(window.GitHubAuth.refreshManageAccessUrl()).resolves.toBe(FALLBACK);
+        });
+
+        test('keeps the fallback when the request throws', async () => {
+            signInClerk();
+            window.ClerkAuth = { getToken: jest.fn().mockResolvedValue('jwt') };
+            global.fetch = jest.fn().mockRejectedValue(new Error('network'));
+
+            await expect(window.GitHubAuth.refreshManageAccessUrl()).resolves.toBe(FALLBACK);
+        });
+
+        test('caches the resolved URL and does not look it up again', async () => {
+            signInClerk();
+            window.ClerkAuth = { getToken: jest.fn().mockResolvedValue('jwt') };
+            global.fetch = jest.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({ installations: [{ app_slug: 'dashban', id: 7 }] })
+            });
+
+            await window.GitHubAuth.refreshManageAccessUrl();
+            await window.GitHubAuth.refreshManageAccessUrl();
+
+            expect(global.fetch).toHaveBeenCalledTimes(1);
         });
     });
 

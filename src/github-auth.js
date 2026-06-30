@@ -12,7 +12,8 @@
 const GITHUB_CONFIG = {
     apiBaseUrl: 'https://api.github.com',
     owner: 'super3',
-    repo: 'dashban'
+    repo: 'dashban',
+    appSlug: 'dashban'
 };
 
 // Origin of the backend API. The frontend can be served three ways:
@@ -70,6 +71,36 @@ async function buildGitHubRequest(path, extraHeaders = {}) {
 async function githubFetch(path, options = {}) {
     const { url, headers } = await buildGitHubRequest(path, options.headers || {});
     return fetch(url, { ...options, headers });
+}
+
+// "Manage GitHub access" deep link. GitHub's only page that lands directly on an
+// app's repository access is /settings/installations/<installation-id>, and that
+// id is unique to each user's installation — it can't be hardcoded. So we look it
+// up once (via the authenticated proxy: GET /user/installations) and cache it,
+// falling back to the app's public page until/unless the lookup succeeds.
+const MANAGE_ACCESS_FALLBACK_URL = `https://github.com/apps/${GITHUB_CONFIG.appSlug}`;
+let manageAccessUrl = MANAGE_ACCESS_FALLBACK_URL;
+
+async function refreshManageAccessUrl() {
+    // Already resolved to a real installation, or no session to look it up with.
+    if (manageAccessUrl !== MANAGE_ACCESS_FALLBACK_URL || !isGitHubAuthed()) {
+        return manageAccessUrl;
+    }
+    try {
+        const response = await githubFetch('/user/installations');
+        if (response.ok) {
+            const data = await response.json();
+            const installation = (data.installations || []).find(
+                (entry) => entry.app_slug === GITHUB_CONFIG.appSlug
+            );
+            if (installation) {
+                manageAccessUrl = `https://github.com/settings/installations/${installation.id}`;
+            }
+        }
+    } catch {
+        // Network/parse error — keep the fallback URL.
+    }
+    return manageAccessUrl;
 }
 
 // Initialize auth UI. Clerk (clerk-auth.js, kicked off by github.js) drives the
@@ -184,7 +215,7 @@ function toggleUserDropdown() {
     const dropdown = document.createElement('div');
     dropdown.className = 'user-dropdown absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50';
     dropdown.innerHTML = `
-        <a href="https://github.com/apps/dashban" target="_blank" rel="noopener noreferrer"
+        <a id="manage-github-access" href="${manageAccessUrl}" target="_blank" rel="noopener noreferrer"
            class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 whitespace-nowrap">
             <i class="fas fa-key text-xs"></i>
             <span>Manage GitHub access</span>
@@ -213,6 +244,12 @@ function toggleUserDropdown() {
     }, 0);
 
     container.appendChild(dropdown);
+
+    // Look up the user's exact installation and upgrade the access link in place
+    // (and cache it, so the next open renders the direct link immediately).
+    refreshManageAccessUrl().then((url) => {
+        dropdown.querySelector('#manage-github-access').setAttribute('href', url);
+    });
 }
 
 // Function to update the header with repo name
@@ -247,5 +284,6 @@ window.GitHubAuth = {
 
     // UI functions
     toggleUserDropdown,
-    updateHeaderRepoName
+    updateHeaderRepoName,
+    refreshManageAccessUrl
 };
